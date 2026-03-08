@@ -19,8 +19,26 @@ runs:
       env:
         VERSION: ${{ inputs.version }}
       run: |
+        case "$(uname -s)" in
+          Linux) os="linux" ;;
+          Darwin) os="darwin" ;;
+          *)
+            echo "Unsupported operating system: $(uname -s)" >&2
+            exit 1
+            ;;
+        esac
+
+        case "$(uname -m)" in
+          x86_64) arch="amd64" ;;
+          arm64|aarch64) arch="arm64" ;;
+          *)
+            echo "Unsupported architecture: $(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+
         base="https://github.com/trufflesecurity/trufflehog/releases/download"
-        curl -sSfL "${base}/v${VERSION}/trufflehog_${VERSION}_linux_amd64.tar.gz" \
+        curl -sSfL "${base}/v${VERSION}/trufflehog_${VERSION}_${os}_${arch}.tar.gz" \
           | tar -xz -C /usr/local/bin trufflehog
         trufflehog --version
 

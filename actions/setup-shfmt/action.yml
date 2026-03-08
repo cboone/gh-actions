@@ -15,7 +15,25 @@ runs:
       env:
         VERSION: ${{ inputs.version }}
       run: |
-        curl -sSfL "https://github.com/mvdan/sh/releases/download/v${VERSION}/shfmt_v${VERSION}_linux_amd64" \
+        case "$(uname -s)" in
+          Linux) os="linux" ;;
+          Darwin) os="darwin" ;;
+          *)
+            echo "Unsupported operating system: $(uname -s)" >&2
+            exit 1
+            ;;
+        esac
+
+        case "$(uname -m)" in
+          x86_64) arch="amd64" ;;
+          arm64|aarch64) arch="arm64" ;;
+          *)
+            echo "Unsupported architecture: $(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+
+        curl -sSfL "https://github.com/mvdan/sh/releases/download/v${VERSION}/shfmt_v${VERSION}_${os}_${arch}" \
           -o /usr/local/bin/shfmt
         chmod +x /usr/local/bin/shfmt
         shfmt --version
