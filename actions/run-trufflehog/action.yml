@@ -1,0 +1,32 @@
+name: Run trufflehog
+description: Install trufflehog binary and run a scan.
+
+inputs:
+  version:
+    description: trufflehog version to install
+    required: false
+    default: "3.93.7"
+  args:
+    description: Arguments to pass to trufflehog
+    required: false
+    default: "filesystem --directory ."
+
+runs:
+  using: composite
+  steps:
+    - name: Install trufflehog
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        base="https://github.com/trufflesecurity/trufflehog/releases/download"
+        curl -sSfL "${base}/v${VERSION}/trufflehog_${VERSION}_linux_amd64.tar.gz" \
+          | tar -xz -C /usr/local/bin trufflehog
+        trufflehog --version
+
+    - name: Run trufflehog
+      shell: bash
+      env:
+        TRUFFLEHOG_ARGS: ${{ inputs.args }}
+      run: |
+        trufflehog ${TRUFFLEHOG_ARGS} --results=verified,unknown

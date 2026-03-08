@@ -1,0 +1,20 @@
+name: Setup golangci-lint
+description: Install golangci-lint binary with a pinned version.
+
+inputs:
+  version:
+    description: golangci-lint version to install
+    required: false
+    default: "2.11.2"
+
+runs:
+  using: composite
+  steps:
+    - name: Install golangci-lint
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh \
+          | sh -s -- -b "$(go env GOPATH)/bin" "v${VERSION}"
+        golangci-lint version

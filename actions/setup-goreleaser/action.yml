@@ -1,0 +1,21 @@
+name: Setup GoReleaser
+description: Install GoReleaser binary with a pinned version.
+
+inputs:
+  version:
+    description: GoReleaser version to install
+    required: false
+    default: "2.14.2"
+
+runs:
+  using: composite
+  steps:
+    - name: Install GoReleaser
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        base="https://github.com/goreleaser/goreleaser/releases/download"
+        curl -sSfL "${base}/v${VERSION}/goreleaser_Linux_x86_64.tar.gz" \
+          | tar -xz -C /usr/local/bin goreleaser
+        goreleaser --version

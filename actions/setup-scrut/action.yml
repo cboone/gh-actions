@@ -1,0 +1,22 @@
+name: Setup scrut
+description: Install scrut CLI testing tool with a pinned version.
+
+inputs:
+  version:
+    description: scrut version to install
+    required: false
+    default: "0.4.3"
+
+runs:
+  using: composite
+  steps:
+    - name: Install scrut
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        ARCH="$(uname -m)"
+        OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+        URL="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}/scrut-v${VERSION}-${OS}-${ARCH}.tar.gz"
+        curl -sSfL "${URL}" | tar -xz -C /usr/local/bin scrut
+        scrut --version

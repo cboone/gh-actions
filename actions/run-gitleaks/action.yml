@@ -1,0 +1,32 @@
+name: Run gitleaks
+description: Install gitleaks binary and run a scan.
+
+inputs:
+  version:
+    description: gitleaks version to install
+    required: false
+    default: "8.30.0"
+  args:
+    description: Arguments to pass to gitleaks
+    required: false
+    default: "detect --source ."
+
+runs:
+  using: composite
+  steps:
+    - name: Install gitleaks
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        base="https://github.com/gitleaks/gitleaks/releases/download"
+        curl -sSfL "${base}/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+          | tar -xz -C /usr/local/bin gitleaks
+        gitleaks version
+
+    - name: Run gitleaks
+      shell: bash
+      env:
+        GITLEAKS_ARGS: ${{ inputs.args }}
+      run: |
+        gitleaks ${GITLEAKS_ARGS} --verbose
