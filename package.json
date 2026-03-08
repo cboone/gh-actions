@@ -1,0 +1,19 @@
+{
+  "private": true,
+  "name": "gh-actions",
+  "description": "A collection of reusable GitHub Actions for CI/CD workflows.",
+  "license": "MIT",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:md": "markdownlint-cli2 \"**/*.md\"",
+    "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\"",
+    "spell": "cspell .",
+    "spell:list": "cspell . --unique --words-only --no-progress"
+  },
+  "devDependencies": {
+    "cspell": "^9.7.0",
+    "markdownlint-cli2": "^0.21.0",
+    "prettier": "^3.8.1"
+  }
+}
