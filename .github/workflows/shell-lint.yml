@@ -63,7 +63,7 @@ jobs:
         env:
           SHELL_SCRIPTS: ${{ steps.find-scripts.outputs.files }}
         run: |
-          echo "${SHELL_SCRIPTS}" | xargs shellcheck
+          echo "${SHELL_SCRIPTS}" | tr '\n' '\0' | xargs -0 shellcheck
 
       - name: Install shfmt
         if: >-
@@ -105,4 +105,4 @@ jobs:
         env:
           SHELL_SCRIPTS: ${{ steps.find-scripts.outputs.files }}
         run: |
-          echo "${SHELL_SCRIPTS}" | xargs shfmt -d
+          echo "${SHELL_SCRIPTS}" | tr '\n' '\0' | xargs -0 shfmt -d

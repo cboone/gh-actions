@@ -13,7 +13,9 @@ on:
         type: string
         default: go.mod
       runs-on:
-        description: Runner label.
+        description: >-
+          Runner label (ubuntu-latest or macos-latest recommended;
+          Windows is not supported).
         type: string
         default: ubuntu-latest
       run-lint:
