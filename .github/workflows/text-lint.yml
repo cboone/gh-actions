@@ -71,13 +71,29 @@ jobs:
 
       - name: Install uv
         if: inputs.run-yamllint
-        env:
-          INSTALLER_NO_MODIFY_PATH: 1
-        run: curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
+        run: |
+          archive="uv-x86_64-unknown-linux-gnu.tar.gz"
+          base_url="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
+          curl -sSfL "${base_url}/${archive}.sha256" -o "${archive_path}.sha256"
+          expected="$(awk '{print $1}' "${archive_path}.sha256")"
+          actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          install_dir="${RUNNER_TEMP}/uv-bin"
+          mkdir -p "${install_dir}"
+          tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
+          install -m 0755 "${RUNNER_TEMP}/uv-x86_64-unknown-linux-gnu/uv" "${install_dir}/uv"
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run yamllint
         if: inputs.run-yamllint
-        run: |
-          "${HOME}/.local/bin/uv" tool run \
-            --from "yamllint==${YAMLLINT_VERSION}" \
-            yamllint .
+        run: >-
+          uv tool run
+          --from "yamllint==${YAMLLINT_VERSION}"
+          yamllint .

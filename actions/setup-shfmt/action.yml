@@ -35,8 +35,27 @@ runs:
 
         install_dir="${RUNNER_TEMP}/shfmt-bin"
         mkdir -p "${install_dir}"
-        curl -sSfL "https://github.com/mvdan/sh/releases/download/v${VERSION}/shfmt_v${VERSION}_${os}_${arch}" \
-          -o "${install_dir}/shfmt"
-        chmod +x "${install_dir}/shfmt"
+        binary_name="shfmt_v${VERSION}_${os}_${arch}"
+        binary_path="${install_dir}/shfmt"
+        base="https://github.com/mvdan/sh/releases/download/v${VERSION}"
+        curl -sSfL "${base}/${binary_name}" -o "${binary_path}"
+        curl -sSfL "${base}/sha256sums.txt" -o "${install_dir}/checksums.txt"
+        expected="$(grep -F "${binary_name}" "${install_dir}/checksums.txt" | head -1 | awk '{print $1}')"
+        if [ -z "${expected}" ]; then
+          echo "Checksum entry not found for ${binary_name}" >&2
+          exit 1
+        fi
+        if command -v sha256sum >/dev/null 2>&1; then
+          actual="$(sha256sum "${binary_path}" | awk '{print $1}')"
+        else
+          actual="$(shasum -a 256 "${binary_path}" | awk '{print $1}')"
+        fi
+        if [ "${expected}" != "${actual}" ]; then
+          echo "Checksum verification failed for ${binary_name}" >&2
+          echo "Expected: ${expected}" >&2
+          echo "Actual:   ${actual}" >&2
+          exit 1
+        fi
+        chmod +x "${binary_path}"
         printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
         "${install_dir}/shfmt" --version

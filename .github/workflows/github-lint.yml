@@ -49,8 +49,28 @@ jobs:
           archive="actionlint_${VERSION}_${os}_${arch}.tar.gz"
           install_dir="${RUNNER_TEMP}/actionlint-bin"
           mkdir -p "${install_dir}"
-          curl -sSfL "https://github.com/rhysd/actionlint/releases/download/v${VERSION}/${archive}" \
-            | tar -xz -C "${install_dir}" actionlint
+          base="https://github.com/rhysd/actionlint/releases/download/v${VERSION}"
+          archive_path="${install_dir}/${archive}"
+          curl -sSfL "${base}/${archive}" -o "${archive_path}"
+          curl -sSfL "${base}/actionlint_${VERSION}_checksums.txt" \
+            -o "${install_dir}/checksums.txt"
+          expected="$(grep -F "${archive}" "${install_dir}/checksums.txt" | head -1 | awk '{print $1}')"
+          if [ -z "${expected}" ]; then
+            echo "Checksum entry not found for ${archive}" >&2
+            exit 1
+          fi
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          tar -xz -C "${install_dir}" -f "${archive_path}" actionlint
           printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run actionlint

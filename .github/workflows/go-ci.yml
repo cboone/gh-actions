@@ -55,7 +55,7 @@ on:
         type: string
         default: "10.4.0"
       codecov-files:
-        description: Coverage file(s) to upload to Codecov.
+        description: Single coverage file path (used for -coverprofile and Codecov upload).
         type: string
         default: coverage.out
       timeout-minutes:
@@ -113,8 +113,21 @@ jobs:
           esac
 
           codecov_bin="${RUNNER_TEMP}/codecov"
-          curl -sSfL "https://cli.codecov.io/v${CODECOV_CLI_VERSION}/${codecov_os}/codecov" \
-            -o "${codecov_bin}"
+          base_url="https://cli.codecov.io/v${CODECOV_CLI_VERSION}/${codecov_os}"
+          curl -sSfL "${base_url}/codecov" -o "${codecov_bin}"
+          curl -sSfL "${base_url}/codecov.SHA256SUM" -o "${codecov_bin}.sha256"
+          expected="$(awk '{print $1}' "${codecov_bin}.sha256")"
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${codecov_bin}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${codecov_bin}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for codecov" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
           chmod +x "${codecov_bin}"
           "${codecov_bin}" upload-process \
             --file "${{ inputs.codecov-files }}" \
@@ -161,8 +174,28 @@ jobs:
           archive="golangci-lint-${VERSION}-${os}-${arch}.tar.gz"
           bin_dir="${RUNNER_TEMP}/golangci-lint-bin"
           mkdir -p "${bin_dir}"
-          curl -sSfL "https://github.com/golangci/golangci-lint/releases/download/v${VERSION}/${archive}" \
-            | tar -xz -C "${RUNNER_TEMP}"
+          base_url="https://github.com/golangci/golangci-lint/releases/download/v${VERSION}"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
+          curl -sSfL "${base_url}/golangci-lint-${VERSION}-checksums.txt" \
+            -o "${RUNNER_TEMP}/golangci-lint-checksums.txt"
+          expected="$(grep -F "${archive}" "${RUNNER_TEMP}/golangci-lint-checksums.txt" | head -1 | awk '{print $1}')"
+          if [ -z "${expected}" ]; then
+            echo "Checksum entry not found for ${archive}" >&2
+            exit 1
+          fi
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
           install -m 0755 \
             "${RUNNER_TEMP}/golangci-lint-${VERSION}-${os}-${arch}/golangci-lint" \
             "${bin_dir}/golangci-lint"
@@ -212,12 +245,29 @@ jobs:
         env:
           VERSION: "0.4.3"
         run: |
-          arch="$(uname -m)"
-          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-          url="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}/scrut-v${VERSION}-${os}-${arch}.tar.gz"
+          case "$(uname -s)" in
+            Linux) os="linux" ;;
+            Darwin) os="macos" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64) arch="x86_64" ;;
+            arm64|aarch64) arch="aarch64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)" >&2
+              exit 1
+              ;;
+          esac
+
+          tarball="scrut-v${VERSION}-${os}-${arch}.tar.gz"
+          base="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}"
           install_dir="${RUNNER_TEMP}/scrut-bin"
           mkdir -p "${install_dir}"
-          curl -sSfL "${url}" | tar -xz -C "${install_dir}" scrut
+          curl -sSfL "${base}/${tarball}" | tar -xz -C "${install_dir}" scrut
           printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run scrut tests

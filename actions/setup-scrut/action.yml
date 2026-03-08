@@ -15,11 +15,28 @@ runs:
       env:
         VERSION: ${{ inputs.version }}
       run: |
-        ARCH="$(uname -m)"
-        OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-        URL="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}/scrut-v${VERSION}-${OS}-${ARCH}.tar.gz"
+        case "$(uname -s)" in
+          Linux) os="linux" ;;
+          Darwin) os="macos" ;;
+          *)
+            echo "Unsupported operating system: $(uname -s)" >&2
+            exit 1
+            ;;
+        esac
+
+        case "$(uname -m)" in
+          x86_64) arch="x86_64" ;;
+          arm64|aarch64) arch="aarch64" ;;
+          *)
+            echo "Unsupported architecture: $(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+
+        tarball="scrut-v${VERSION}-${os}-${arch}.tar.gz"
+        base="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}"
         install_dir="${RUNNER_TEMP}/scrut-bin"
         mkdir -p "${install_dir}"
-        curl -sSfL "${URL}" | tar -xz -C "${install_dir}" scrut
+        curl -sSfL "${base}/${tarball}" | tar -xz -C "${install_dir}" scrut
         printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
         "${install_dir}/scrut" --version
