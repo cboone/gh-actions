@@ -2,7 +2,7 @@
 
 ## Context
 
-Across 26 non-archived, non-fork repositories, CI/CD pipelines use 17+ third-party GitHub Actions with inconsistent versions, duplicated configuration, and unnecessary supply-chain exposure. Each third-party action is a potential attack vector and maintenance burden.
+Across 26 non-archived, non-fork repositories, CI/CD pipelines use 16 third-party GitHub Actions with inconsistent versions, duplicated configuration, and unnecessary supply-chain exposure. Each third-party action is a potential attack vector and maintenance burden.
 
 This plan centralizes common CI/CD patterns into reusable workflows and composite actions in the `gh-actions` repo, so that consuming repos can replace large blocks of duplicated job logic with reusable `uses:` calls. The goals are:
 
@@ -23,24 +23,24 @@ Reusable workflows centralize job internals, but consuming repos still own repo-
 
 ### Third-Party Actions by Usage
 
-| Action                                 | Repos | Assessment                                                                                                                                    |
-| -------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `golangci/golangci-lint-action`        | 8     | **Replace.** Just installs a binary and runs it. Direct install with pinned version is equivalent and eliminates the dependency.              |
-| `goreleaser/goreleaser-action`         | 8     | **Replace.** Installs goreleaser and runs it. Direct install is straightforward.                                                              |
-| `gitleaks/gitleaks-action`             | 5     | **Replace.** Installs gitleaks binary and runs scan. Direct install eliminates the action's `pull-requests: write` permission requirement.    |
-| `raven-actions/actionlint`             | 4     | **Replace.** Just runs actionlint. Direct binary install is trivial.                                                                          |
-| `rhysd/actionlint` (container)         | 1     | **Replace.** Container action in gh-actions repo. Replace with binary install.                                                                |
-| `trufflehog` (container)               | 1     | **Replace.** Container action. Replace with binary install.                                                                                   |
-| `codecov/codecov-action`               | 1     | **Replace.** Uploads coverage file. Direct `codecov` CLI upload is equivalent if auth and permissions are defined explicitly in the workflow. |
-| `mfinelli/setup-shfmt`                 | 1     | **Replace.** Just installs shfmt. `go install` or binary download works.                                                                      |
-| `streetsidesoftware/cspell-action`     | 1     | **Replace.** Just runs `npx cspell`. Inline command is identical.                                                                             |
-| `stefanzweifel/git-auto-commit-action` | 1     | **Replace.** Three git commands: add, commit, push.                                                                                           |
-| `astral-sh/setup-uv`                   | 1     | **Replace.** Installs uv. Direct install script is equivalent.                                                                                |
-| `dtolnay/rust-toolchain`               | 1     | **Replace.** Runs `rustup`. Direct command works.                                                                                             |
-| `peter-evans/create-pull-request`      | 1     | **Replace.** `gh pr create` is equivalent for the use case.                                                                                   |
-| `peter-evans/repository-dispatch`      | 1     | **Replace.** `gh api` call is equivalent.                                                                                                     |
-| `github/codeql-action/*`               | 1     | **Keep.** Deeply integrated with GitHub's security infrastructure. No practical alternative.                                                  |
-| `charmbracelet/readme-scribe`          | 1     | **Keep.** Unique template engine for profile READMEs. Single use, low risk.                                                                   |
+| Action                                 | Repos | Assessment                                                                                                                                                                                                         |
+| -------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `golangci/golangci-lint-action`        | 8     | **Replace.** Just installs a binary and runs it. Direct install with pinned version is equivalent and eliminates the dependency.                                                                                   |
+| `goreleaser/goreleaser-action`         | 8     | **Replace.** Installs goreleaser and runs it. Direct install is straightforward.                                                                                                                                   |
+| `gitleaks/gitleaks-action`             | 5     | **Replace.** Installs gitleaks binary and runs scan. Direct install eliminates the action's `pull-requests: write` permission requirement.                                                                         |
+| `raven-actions/actionlint`             | 4     | **Replace.** Just runs actionlint. Direct binary install is trivial.                                                                                                                                               |
+| `rhysd/actionlint` (container)         | 1     | **Replace.** Container action in gh-actions repo. Replace with binary install.                                                                                                                                     |
+| `trufflehog` (container)               | 1     | **Replace.** Container action. Replace with binary install.                                                                                                                                                        |
+| `codecov/codecov-action`               | 1     | **Replace.** Uploads coverage file. Direct `codecov` CLI upload is equivalent if auth and permissions are defined explicitly in the workflow.                                                                      |
+| `mfinelli/setup-shfmt`                 | 1     | **Replace.** Just installs shfmt. `go install` or binary download works.                                                                                                                                           |
+| `streetsidesoftware/cspell-action`     | 1     | **Replace.** Just runs `npx cspell`. Inline command is identical.                                                                                                                                                  |
+| `stefanzweifel/git-auto-commit-action` | 1     | **Replace.** Three git commands: add, commit, push.                                                                                                                                                                |
+| `astral-sh/setup-uv`                   | 1     | **Replace.** Installs uv. Direct install script is equivalent.                                                                                                                                                     |
+| `dtolnay/rust-toolchain`               | 1     | **Replace.** Runs `rustup`. Direct command works.                                                                                                                                                                  |
+| `peter-evans/create-pull-request`      | 1     | **Replace.** `gh pr create` is equivalent. Requires a token with `contents: write` and PR permissions (the default `GITHUB_TOKEN` is sufficient for same-repo PRs; cross-repo PRs need a PAT or GitHub App token). |
+| `peter-evans/repository-dispatch`      | 1     | **Replace.** `gh api` call is equivalent. Cross-repo dispatch requires a PAT or GitHub App token with `repo` scope (the default `GITHUB_TOKEN` is repo-scoped and cannot trigger workflows in other repos).        |
+| `github/codeql-action/*`               | 1     | **Keep.** Deeply integrated with GitHub's security infrastructure. No practical alternative.                                                                                                                       |
+| `charmbracelet/readme-scribe`          | 1     | **Keep.** Unique template engine for profile READMEs. Single use, low risk.                                                                                                                                        |
 
 ### Official GitHub Actions (keep all)
 
@@ -68,6 +68,8 @@ No reusable workflow or composite action in this effort should default to `lates
 - Each composite action pins an exact tool version in one place in this repo
 - Each reusable workflow consumes that pinned default unless the caller explicitly overrides it
 - Version bumps happen in dedicated maintenance PRs after validation, not implicitly at runtime
+
+**Exception: Node.js runtime version.** `actions/setup-node` resolves a major version like `22` to the latest `22.x.x` patch. This is intentional: Node.js is a build-time runtime (not a shipped dependency), GitHub maintains the version matrix, and pinning an exact patch would create churn across every consuming repo for non-breaking updates. Major-version pinning is sufficient here.
 
 The workflow and action definitions below therefore refer to exact pinned defaults maintained in this repo.
 
@@ -302,7 +304,7 @@ These workflows are project-specific and not worth generalizing:
 - **`cboone` profile README** (`update-readme.yaml`): Uses `charmbracelet/readme-scribe` (kept) + `stefanzweifel/git-auto-commit-action` (can be replaced with git commands in a one-off fix, not a reusable workflow)
 - **`tmux-default-bindings` auto-update** (`update-defaults.yml`): Complex project-specific automation
 - **`bopca` benchmark** (`benchmark.yml`): Project-specific performance testing
-- **`bopca` docs dispatch** (`dispatch-docs-update.yaml`): Cross-repo trigger, can be replaced with `gh api` in a one-off fix
+- **`bopca` docs dispatch** (`dispatch-docs-update.yaml`): Cross-repo trigger, can be replaced with `gh api` in a one-off fix (requires a PAT or GitHub App token for cross-repo dispatch)
 - **`homebrew-tap` README update** (`update-readme.yml`): Simple project-specific script
 - **`pbcopy2` Swift CI and release**: Only 1 Swift repo. Low ROI for a reusable workflow. Can be cleaned up independently (replace `raven-actions/actionlint` with the composite action).
 - **`tmux-binding-help` scrut workflow**: Only uses `dtolnay/rust-toolchain` + scrut. Can use the `setup-scrut` composite action directly.
@@ -505,22 +507,22 @@ For the `secret-scan.yml` workflow:
 
 ## Third-Party Action Elimination Summary
 
-| Current Action                         | Replaced By                                              | Repos Affected |
-| -------------------------------------- | -------------------------------------------------------- | -------------- |
-| `golangci/golangci-lint-action`        | `actions/setup-golangci-lint` composite + `go-ci.yml`    | 8              |
-| `goreleaser/goreleaser-action`         | `actions/setup-goreleaser` composite + `go-release.yml`  | 8              |
-| `gitleaks/gitleaks-action`             | `actions/run-gitleaks` composite + `secret-scan.yml`     | 5              |
-| `raven-actions/actionlint`             | `actions/setup-actionlint` composite + `github-lint.yml` | 4              |
-| `rhysd/actionlint` (container)         | `actions/setup-actionlint` composite                     | 1              |
-| `trufflehog` (container)               | `actions/run-trufflehog` composite + `secret-scan.yml`   | 1              |
-| `codecov/codecov-action`               | Direct codecov CLI in `go-ci.yml`                        | 1              |
-| `mfinelli/setup-shfmt`                 | `actions/setup-shfmt` composite + `shell-lint.yml`       | 1              |
-| `streetsidesoftware/cspell-action`     | `npx cspell` in `text-lint.yml`                          | 1              |
-| `astral-sh/setup-uv`                   | Encapsulated in `actions/setup-scrut`                    | 1              |
-| `stefanzweifel/git-auto-commit-action` | Direct git commands (one-off fix)                        | 1              |
-| `peter-evans/repository-dispatch`      | `gh api` call (one-off fix)                              | 1              |
-| `peter-evans/create-pull-request`      | `gh pr create` (one-off fix)                             | 1              |
-| `dtolnay/rust-toolchain`               | `rustup` commands (one-off fix)                          | 1              |
+| Current Action                         | Replaced By                                                                        | Repos Affected |
+| -------------------------------------- | ---------------------------------------------------------------------------------- | -------------- |
+| `golangci/golangci-lint-action`        | `actions/setup-golangci-lint` composite + `go-ci.yml`                              | 8              |
+| `goreleaser/goreleaser-action`         | `actions/setup-goreleaser` composite + `go-release.yml`                            | 8              |
+| `gitleaks/gitleaks-action`             | `actions/run-gitleaks` composite + `secret-scan.yml`                               | 5              |
+| `raven-actions/actionlint`             | `actions/setup-actionlint` composite + `github-lint.yml`                           | 4              |
+| `rhysd/actionlint` (container)         | `actions/setup-actionlint` composite                                               | 1              |
+| `trufflehog` (container)               | `actions/run-trufflehog` composite + `secret-scan.yml`                             | 1              |
+| `codecov/codecov-action`               | Direct codecov CLI in `go-ci.yml`                                                  | 1              |
+| `mfinelli/setup-shfmt`                 | `actions/setup-shfmt` composite + `shell-lint.yml`                                 | 1              |
+| `streetsidesoftware/cspell-action`     | `npx cspell` in `text-lint.yml`                                                    | 1              |
+| `astral-sh/setup-uv`                   | Encapsulated in `actions/setup-scrut`                                              | 1              |
+| `stefanzweifel/git-auto-commit-action` | Direct git commands (one-off fix)                                                  | 1              |
+| `peter-evans/repository-dispatch`      | `gh api` call (one-off fix; needs PAT or GitHub App token for cross-repo dispatch) | 1              |
+| `peter-evans/create-pull-request`      | `gh pr create` (one-off fix; needs appropriate token for PR creation)              | 1              |
+| `dtolnay/rust-toolchain`               | `rustup` commands (one-off fix)                                                    | 1              |
 
 **Kept (justified):**
 
