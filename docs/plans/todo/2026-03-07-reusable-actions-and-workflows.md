@@ -4,11 +4,13 @@
 
 Across 26 non-archived, non-fork repositories, CI/CD pipelines use 17+ third-party GitHub Actions with inconsistent versions, duplicated configuration, and unnecessary supply-chain exposure. Each third-party action is a potential attack vector and maintenance burden.
 
-This plan centralizes common CI/CD patterns into reusable workflows and composite actions in the `gh-actions` repo, so that consuming repos can replace 50+ line workflow files with single `uses:` calls. The goals are:
+This plan centralizes common CI/CD patterns into reusable workflows and composite actions in the `gh-actions` repo, so that consuming repos can replace large blocks of duplicated job logic with reusable `uses:` calls. The goals are:
 
 1. **Security**: Eliminate third-party action dependencies where possible; install tools directly with pinned versions
 2. **Simplicity**: Each consuming repo needs minimal workflow config
 3. **Consistency**: Standardize versions, permissions, and patterns across all repos
+
+Reusable workflows centralize job internals, but consuming repos still own repo-specific wrapper concerns such as `on:` triggers, path filters, concurrency policy, and any top-level permissions or environment settings that differ by repo.
 
 ---
 
@@ -21,24 +23,24 @@ This plan centralizes common CI/CD patterns into reusable workflows and composit
 
 ### Third-Party Actions by Usage
 
-| Action | Repos | Assessment |
-|--------|-------|------------|
-| `golangci/golangci-lint-action` | 8 | **Replace.** Just installs a binary and runs it. Direct install with pinned version is equivalent and eliminates the dependency. |
-| `goreleaser/goreleaser-action` | 8 | **Replace.** Installs goreleaser and runs it. Direct install is straightforward. |
-| `gitleaks/gitleaks-action` | 5 | **Replace.** Installs gitleaks binary and runs scan. Direct install eliminates the action's `pull-requests: write` permission requirement. |
-| `raven-actions/actionlint` | 4 | **Replace.** Just runs actionlint. Direct binary install is trivial. |
-| `rhysd/actionlint` (container) | 1 | **Replace.** Container action in gh-actions repo. Replace with binary install. |
-| `trufflehog` (container) | 1 | **Replace.** Container action. Replace with binary install. |
-| `codecov/codecov-action` | 1 | **Replace.** Uploads coverage file. Direct `codecov` CLI upload is equivalent. |
-| `mfinelli/setup-shfmt` | 1 | **Replace.** Just installs shfmt. `go install` or binary download works. |
-| `streetsidesoftware/cspell-action` | 1 | **Replace.** Just runs `npx cspell`. Inline command is identical. |
-| `stefanzweifel/git-auto-commit-action` | 1 | **Replace.** Three git commands: add, commit, push. |
-| `astral-sh/setup-uv` | 1 | **Replace.** Installs uv. Direct install script is equivalent. |
-| `dtolnay/rust-toolchain` | 1 | **Replace.** Runs `rustup`. Direct command works. |
-| `peter-evans/create-pull-request` | 1 | **Replace.** `gh pr create` is equivalent for the use case. |
-| `peter-evans/repository-dispatch` | 1 | **Replace.** `gh api` call is equivalent. |
-| `github/codeql-action/*` | 1 | **Keep.** Deeply integrated with GitHub's security infrastructure. No practical alternative. |
-| `charmbracelet/readme-scribe` | 1 | **Keep.** Unique template engine for profile READMEs. Single use, low risk. |
+| Action                                 | Repos | Assessment                                                                                                                                    |
+| -------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `golangci/golangci-lint-action`        | 8     | **Replace.** Just installs a binary and runs it. Direct install with pinned version is equivalent and eliminates the dependency.              |
+| `goreleaser/goreleaser-action`         | 8     | **Replace.** Installs goreleaser and runs it. Direct install is straightforward.                                                              |
+| `gitleaks/gitleaks-action`             | 5     | **Replace.** Installs gitleaks binary and runs scan. Direct install eliminates the action's `pull-requests: write` permission requirement.    |
+| `raven-actions/actionlint`             | 4     | **Replace.** Just runs actionlint. Direct binary install is trivial.                                                                          |
+| `rhysd/actionlint` (container)         | 1     | **Replace.** Container action in gh-actions repo. Replace with binary install.                                                                |
+| `trufflehog` (container)               | 1     | **Replace.** Container action. Replace with binary install.                                                                                   |
+| `codecov/codecov-action`               | 1     | **Replace.** Uploads coverage file. Direct `codecov` CLI upload is equivalent if auth and permissions are defined explicitly in the workflow. |
+| `mfinelli/setup-shfmt`                 | 1     | **Replace.** Just installs shfmt. `go install` or binary download works.                                                                      |
+| `streetsidesoftware/cspell-action`     | 1     | **Replace.** Just runs `npx cspell`. Inline command is identical.                                                                             |
+| `stefanzweifel/git-auto-commit-action` | 1     | **Replace.** Three git commands: add, commit, push.                                                                                           |
+| `astral-sh/setup-uv`                   | 1     | **Replace.** Installs uv. Direct install script is equivalent.                                                                                |
+| `dtolnay/rust-toolchain`               | 1     | **Replace.** Runs `rustup`. Direct command works.                                                                                             |
+| `peter-evans/create-pull-request`      | 1     | **Replace.** `gh pr create` is equivalent for the use case.                                                                                   |
+| `peter-evans/repository-dispatch`      | 1     | **Replace.** `gh api` call is equivalent.                                                                                                     |
+| `github/codeql-action/*`               | 1     | **Keep.** Deeply integrated with GitHub's security infrastructure. No practical alternative.                                                  |
+| `charmbracelet/readme-scribe`          | 1     | **Keep.** Unique template engine for profile READMEs. Single use, low risk.                                                                   |
 
 ### Official GitHub Actions (keep all)
 
@@ -47,6 +49,16 @@ This plan centralizes common CI/CD patterns into reusable workflows and composit
 ---
 
 ## What to Build
+
+### Versioning and Pinning Policy
+
+No reusable workflow or composite action in this effort should default to `latest`, `latest stable`, or any other floating third-party tool version.
+
+- Each composite action pins an exact tool version in one place in this repo
+- Each reusable workflow consumes that pinned default unless the caller explicitly overrides it
+- Version bumps happen in dedicated maintenance PRs after validation, not implicitly at runtime
+
+The workflow and action definitions below therefore refer to exact pinned defaults maintained in this repo.
 
 ### Reusable Workflows
 
@@ -57,66 +69,124 @@ Reusable workflows live in `.github/workflows/` and are called by consuming repo
 Replaces: `golangci/golangci-lint-action`, `raven-actions/actionlint`, `codecov/codecov-action`, `astral-sh/setup-uv`, ad-hoc scrut installation
 
 Inputs:
-- `go-version` (string, default: read from go.mod via `go-version-file`)
+
+- `go-version` (string, default: empty; when set, overrides `go-version-file`)
+- `go-version-file` (string, default: `go.mod`)
 - `runs-on` (string, default: `ubuntu-latest`; some repos need `macos-latest`)
 - `run-lint` (bool, default: true) -- golangci-lint
-- `golangci-lint-version` (string, default: latest stable)
+- `golangci-lint-version` (string, default: exact pinned version from `actions/setup-golangci-lint`)
 - `run-scrut` (bool, default: false)
 - `run-actionlint` (bool, default: false)
 - `run-format-check` (bool, default: false) -- gofmt/goimports
 - `run-build` (bool, default: false)
 - `build-flags` (string, default: empty)
 - `test-flags` (string, default: `-race`)
-- `coverage` (bool, default: false) -- upload to codecov
+- `coverage` (bool, default: false) -- generate coverage and optionally upload to Codecov
+- `codecov-files` (string, default: `coverage.out`)
 - `timeout-minutes` (number, default: 15)
 
+Secrets:
+
+- `CODECOV_TOKEN` (optional, required only when `coverage: true` and the target repo cannot use tokenless upload)
+
 Jobs: test, lint (conditional), build (conditional), test-scrut (conditional)
+
+Coverage upload design:
+
+- Generate coverage in the workflow itself
+- Upload with the Codecov CLI, installed directly with a pinned version
+- Keep Codecov permissions narrow and document them explicitly in the workflow
+- If `coverage: true` is requested and the repo cannot use tokenless upload, require `CODECOV_TOKEN`
 
 #### 2. `go-release.yml` (covers 8 repos)
 
 Replaces: `goreleaser/goreleaser-action`
 
 Inputs:
+
 - `go-version-file` (string, default: `go.mod`)
-- `runs-on` (string, default: `macos-latest`; all current release workflows use macOS)
-- `goreleaser-version` (string, default: latest v2)
+- `runs-on` (string, default: `ubuntu-latest`)
+- `goreleaser-version` (string, default: exact pinned version from `actions/setup-goreleaser`)
 - `goreleaser-args` (string, default: `release --clean`)
 - `timeout-minutes` (number, default: 30)
 
 Secrets:
+
 - `GITHUB_TOKEN` (required)
 - `HOMEBREW_TAP_TOKEN` (optional)
+
+Runner policy:
+
+- Start with `ubuntu-latest` for every release workflow
+- Use `macos-latest` only when a repo has a documented macOS-only requirement
+- Treat existing macOS usage as something to justify and reduce, not preserve by default
 
 #### 3. `secret-scan.yml` (covers 5+ repos)
 
 Replaces: `gitleaks/gitleaks-action`, `trufflehog` container action
 
 Inputs:
+
 - `tool` (string, default: `gitleaks`; options: `gitleaks`, `trufflehog`, `both`)
-- `gitleaks-version` (string, default: pinned latest)
-- `trufflehog-version` (string, default: pinned latest)
+- `scan-scope` (string, default: `full-history`; options: `full-history`, `working-tree`, `both`)
+- `gitleaks-version` (string, default: exact pinned version from `actions/run-gitleaks`)
+- `trufflehog-version` (string, default: exact pinned version from `actions/run-trufflehog`)
+- `fetch-depth` (number, default: `0` for `full-history` and `both`, `1` for `working-tree`)
+- `allowlist-config` (string, default: empty)
 - `timeout-minutes` (number, default: 15)
 
-#### 4. `lint.yml` (covers 4+ repos)
+Secret scanning semantics:
 
-Replaces: `raven-actions/actionlint`, `rhysd/actionlint`, `mfinelli/setup-shfmt`, `streetsidesoftware/cspell-action`
+- Default to full-history scans so the replacement is at least as strong as the current repo workflows
+- Check out with `fetch-depth: 0` whenever history scanning is enabled
+- Support working-tree-only scans as an explicit opt-in for faster checks
+- Keep allowlists or baselines in-repo and versioned, rather than embedded in workflow YAML
+- Avoid `pull-requests: write`; findings should fail the job and surface in logs and artifacts instead
+
+#### 4. `text-lint.yml` (covers 4+ repos)
+
+Replaces the document- and config-focused portion of current ad-hoc lint workflows.
 
 Inputs:
+
 - `node-version` (string, default: `22`)
 - `run-markdownlint` (bool, default: true)
 - `run-prettier` (bool, default: true)
 - `run-cspell` (bool, default: false)
 - `run-yamllint` (bool, default: false)
-- `run-actionlint` (bool, default: false)
-- `run-shellcheck` (bool, default: false)
-- `run-shfmt` (bool, default: false)
 - `timeout-minutes` (number, default: 10)
 
-#### 5. `pages-deploy.yml` (covers 3 repos)
+This workflow intentionally excludes shell and GitHub Actions linting so repos do not pay setup cost for unrelated tooling.
+
+#### 5. `shell-lint.yml` (covers 2+ repos)
+
+Replaces: `mfinelli/setup-shfmt` and ad-hoc `shellcheck` / `shfmt` steps.
+
+Inputs:
+
+- `run-shellcheck` (bool, default: true)
+- `run-shfmt` (bool, default: true)
+- `shfmt-version` (string, default: exact pinned version from `actions/setup-shfmt`)
+- `timeout-minutes` (number, default: 10)
+
+#### 6. `github-lint.yml` (covers 4+ repos)
+
+Replaces: `raven-actions/actionlint`, `rhysd/actionlint`
+
+Inputs:
+
+- `run-actionlint` (bool, default: true)
+- `actionlint-version` (string, default: exact pinned version from `actions/setup-actionlint`)
+- `timeout-minutes` (number, default: 10)
+
+This workflow is separate so repos that only need Action linting do not also install Node.js or shell tooling.
+
+#### 7. `pages-deploy.yml` (covers 3 repos)
 
 Uses official GitHub Pages actions (kept as dependencies). Provides a standard build-then-deploy pattern.
 
 Inputs:
+
 - `build-command` (string, required)
 - `artifact-path` (string, default: `./_site`)
 - `runs-on` (string, default: `ubuntu-latest`)
@@ -126,14 +196,16 @@ Inputs:
 - `node-version` (string, default: `22`)
 - `timeout-minutes` (number, default: 15)
 
-#### 6. `npm-publish.yml` (covers 2 repos)
+#### 8. `npm-publish.yml` (covers 2 repos)
 
 Inputs:
+
 - `node-version` (string, default: `20`)
 - `registry-url` (string, default: `https://npm.pkg.github.com`)
 - `timeout-minutes` (number, default: 10)
 
 Secrets:
+
 - `NODE_AUTH_TOKEN` (required)
 
 ### Composite Actions
@@ -144,43 +216,43 @@ Composite actions live in `actions/<name>/action.yml` and are building blocks us
 
 Installs golangci-lint binary with pinned version and checksum verification.
 
-Inputs: `version` (default: latest stable)
+Inputs: `version` (default: exact pinned version defined in the action)
 
 #### 2. `actions/setup-goreleaser/action.yml`
 
 Installs goreleaser binary with pinned version.
 
-Inputs: `version` (default: latest v2)
+Inputs: `version` (default: exact pinned version defined in the action)
 
 #### 3. `actions/setup-scrut/action.yml`
 
 Installs scrut CLI testing tool. Currently done ad-hoc in 5+ repos with varying install methods (curl installer script, gh release download, pip install).
 
-Inputs: `version` (default: latest)
+Inputs: `version` (default: exact pinned version defined in the action)
 
 #### 4. `actions/setup-actionlint/action.yml`
 
 Installs actionlint binary with pinned version.
 
-Inputs: `version` (default: latest)
+Inputs: `version` (default: exact pinned version defined in the action)
 
 #### 5. `actions/run-gitleaks/action.yml`
 
 Installs gitleaks binary and runs a scan. No `pull-requests: write` needed (unlike the third-party action).
 
-Inputs: `version` (default: pinned latest), `args` (default: `detect --source .`)
+Inputs: `version` (default: exact pinned version defined in the action), `args` (default: determined by `scan-scope`, with history-aware defaults)
 
 #### 6. `actions/run-trufflehog/action.yml`
 
 Installs trufflehog binary and runs a scan.
 
-Inputs: `version` (default: pinned latest), `args` (default: `filesystem --directory .`)
+Inputs: `version` (default: exact pinned version defined in the action), `args` (default: determined by `scan-scope`, with history-aware defaults)
 
 #### 7. `actions/setup-shfmt/action.yml`
 
 Installs shfmt binary with pinned version.
 
-Inputs: `version` (default: latest)
+Inputs: `version` (default: exact pinned version defined in the action)
 
 ---
 
@@ -225,7 +297,9 @@ gh-actions/
 │       ├── go-ci.yml           (reusable workflow)
 │       ├── go-release.yml      (reusable workflow)
 │       ├── secret-scan.yml     (reusable workflow)
-│       ├── lint.yml            (reusable workflow)
+│       ├── text-lint.yml       (reusable workflow)
+│       ├── shell-lint.yml      (reusable workflow)
+│       ├── github-lint.yml     (reusable workflow)
 │       ├── pages-deploy.yml    (reusable workflow)
 │       └── npm-publish.yml     (reusable workflow)
 ├── docs/
@@ -260,39 +334,48 @@ Build the workflows that cover the most repos.
 
 ### Phase 3: Medium-Impact Reusable Workflows
 
-4. `lint.yml` (4+ repos)
-5. `npm-publish.yml` (2 repos)
-6. `pages-deploy.yml` (3 repos)
+4. `github-lint.yml` (4+ repos)
+5. `text-lint.yml` (4+ repos)
+6. `shell-lint.yml` (2+ repos)
+7. `npm-publish.yml` (2 repos)
+8. `pages-deploy.yml` (3 repos)
 
 ### Phase 4: Self-Hosting
 
 Migrate this repo's own workflows to use its own reusable workflows and composite actions:
+
 - `gitleaks.yml` calls `secret-scan.yml`
-- `ci.yml` uses `actions/setup-actionlint`
+- `trufflehog.yml` calls `secret-scan.yml`
+- `ci.yml` either calls `github-lint.yml` or uses `actions/setup-actionlint` directly
 
 ### Phase 5: Consuming Repo Migration
 
 Migrate consuming repos one at a time, starting with simpler ones:
 
 **Pilot repos (simplest, good for validating the workflows):**
+
 - `crawler` (Go CI only, no release)
 - `right-round` (Go CI + release, minimal config)
 - `claude-dotfiles` / `dotfiles` (secret scanning only)
 
 **Then Go repos with standard patterns:**
+
 - `gh-problemas`, `fm`, `stipple`, `tracker`, `quod`
 
 **Then complex Go repos:**
+
 - `snappy` (matrix OS, scrut, actionlint, Node.js tooling)
 - `bopca` (5 workflows, coverage, CodeQL)
 - `xylem` (Go matrix, scrut, Node.js tooling)
 
 **Then non-Go repos:**
+
 - `cboone-alpine-plugins`, `cboone-tailwind-plugins` (npm publish)
 - `snappy-sh-site`, `bopca-sh-site`, `cboone.github.io` (Pages deploy)
-- `compbox`, `cboone-cc-plugins` (lint)
+- `compbox`, `cboone-cc-plugins` (text lint and GitHub lint, with shell lint only where needed)
 
 **One-off cleanups (not reusable workflow migrations):**
+
 - `pbcopy2`: Replace `raven-actions/actionlint` with `actions/setup-actionlint` composite action
 - `tmux-binding-help`: Replace `dtolnay/rust-toolchain` with `rustup`, use `actions/setup-scrut`
 - `cboone` profile: Replace `stefanzweifel/git-auto-commit-action` with git commands
@@ -327,7 +410,7 @@ jobs:
         run: scrut test tests/
 ```
 
-### After (~10 lines)
+### After (job body shrinks, wrapper workflow stays repo-specific)
 
 ```yaml
 name: CI
@@ -348,11 +431,12 @@ jobs:
 ## Security Improvements
 
 1. **14 third-party actions eliminated** across the portfolio
-2. **Tool versions pinned** with known-good defaults in composite actions
+2. **Tool versions pinned** with exact defaults in composite actions, updated only by explicit PRs
 3. **Minimal permissions** enforced by reusable workflows (consuming repos inherit)
 4. **Single update point**: Bumping a tool version in `gh-actions` updates it everywhere
 5. **No `pull-requests: write`** needed for secret scanning (gitleaks-action required this)
 6. **Audit surface reduced**: Only need to review `gh-actions` repo for supply-chain risks
+7. **macOS minimized**: Ubuntu is the default runner unless a repo proves it truly needs macOS
 
 ---
 
@@ -366,37 +450,49 @@ For each reusable workflow and composite action:
 4. **Gradual rollout**: Migrate remaining repos one at a time, verifying CI passes before proceeding
 
 For the `go-ci.yml` workflow specifically:
-- Test with `runs-on: ubuntu-latest` and `runs-on: macos-latest`
+
+- Test with `runs-on: ubuntu-latest` by default, and test `macos-latest` only for repos that claim to require it
 - Test with `run-scrut: true` and `run-scrut: false`
 - Test with `run-lint: true` using a repo with `.golangci.yml`
 - Test with `coverage: true` and verify upload
+- Test Codecov upload in both tokenless and `CODECOV_TOKEN`-backed modes if both are expected across the portfolio
+
+For the `go-release.yml` workflow specifically:
+
+- Validate `ubuntu-latest` as the default release runner first
+- Require a documented reason before switching any repo to `macos-latest`
+- Verify Homebrew-related release steps from Ubuntu before assuming macOS is necessary
 
 For the `secret-scan.yml` workflow:
+
 - Test with `tool: gitleaks`, `tool: trufflehog`, and `tool: both`
+- Test with `scan-scope: full-history` and confirm `fetch-depth: 0`
+- Test with `scan-scope: working-tree` and confirm shallow checkout behavior
 - Verify it detects a known test secret in a test fixture
 
 ---
 
 ## Third-Party Action Elimination Summary
 
-| Current Action | Replaced By | Repos Affected |
-|---|---|---|
-| `golangci/golangci-lint-action` | `actions/setup-golangci-lint` composite + `go-ci.yml` | 8 |
-| `goreleaser/goreleaser-action` | `actions/setup-goreleaser` composite + `go-release.yml` | 8 |
-| `gitleaks/gitleaks-action` | `actions/run-gitleaks` composite + `secret-scan.yml` | 5 |
-| `raven-actions/actionlint` | `actions/setup-actionlint` composite + `lint.yml` | 4 |
-| `rhysd/actionlint` (container) | `actions/setup-actionlint` composite | 1 |
-| `trufflehog` (container) | `actions/run-trufflehog` composite + `secret-scan.yml` | 1 |
-| `codecov/codecov-action` | Direct codecov CLI in `go-ci.yml` | 1 |
-| `mfinelli/setup-shfmt` | `actions/setup-shfmt` composite + `lint.yml` | 1 |
-| `streetsidesoftware/cspell-action` | `npx cspell` in `lint.yml` | 1 |
-| `astral-sh/setup-uv` | Direct install in `go-ci.yml` (for scrut) | 1 |
-| `stefanzweifel/git-auto-commit-action` | Direct git commands (one-off fix) | 1 |
-| `peter-evans/repository-dispatch` | `gh api` call (one-off fix) | 1 |
-| `peter-evans/create-pull-request` | `gh pr create` (one-off fix) | 1 |
-| `dtolnay/rust-toolchain` | `rustup` commands (one-off fix) | 1 |
+| Current Action                         | Replaced By                                              | Repos Affected |
+| -------------------------------------- | -------------------------------------------------------- | -------------- |
+| `golangci/golangci-lint-action`        | `actions/setup-golangci-lint` composite + `go-ci.yml`    | 8              |
+| `goreleaser/goreleaser-action`         | `actions/setup-goreleaser` composite + `go-release.yml`  | 8              |
+| `gitleaks/gitleaks-action`             | `actions/run-gitleaks` composite + `secret-scan.yml`     | 5              |
+| `raven-actions/actionlint`             | `actions/setup-actionlint` composite + `github-lint.yml` | 4              |
+| `rhysd/actionlint` (container)         | `actions/setup-actionlint` composite                     | 1              |
+| `trufflehog` (container)               | `actions/run-trufflehog` composite + `secret-scan.yml`   | 1              |
+| `codecov/codecov-action`               | Direct codecov CLI in `go-ci.yml`                        | 1              |
+| `mfinelli/setup-shfmt`                 | `actions/setup-shfmt` composite + `shell-lint.yml`       | 1              |
+| `streetsidesoftware/cspell-action`     | `npx cspell` in `text-lint.yml`                          | 1              |
+| `astral-sh/setup-uv`                   | Direct install in `go-ci.yml` (for scrut)                | 1              |
+| `stefanzweifel/git-auto-commit-action` | Direct git commands (one-off fix)                        | 1              |
+| `peter-evans/repository-dispatch`      | `gh api` call (one-off fix)                              | 1              |
+| `peter-evans/create-pull-request`      | `gh pr create` (one-off fix)                             | 1              |
+| `dtolnay/rust-toolchain`               | `rustup` commands (one-off fix)                          | 1              |
 
 **Kept (justified):**
+
 - All `actions/*` official GitHub actions (first-party, well-maintained, necessary)
 - `github/codeql-action/*` (deeply integrated with GitHub security, no alternative)
 - `charmbracelet/readme-scribe` (unique functionality, single use, used at `master` tag for profile repo only)
