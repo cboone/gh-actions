@@ -31,14 +31,36 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Detect npm cache lockfile
+        id: npm-cache
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "cache=npm" >> "${GITHUB_OUTPUT}"
+            echo "cache-dependency-path=package-lock.json" >> "${GITHUB_OUTPUT}"
+          elif [ -f npm-shrinkwrap.json ]; then
+            echo "cache=npm" >> "${GITHUB_OUTPUT}"
+            echo "cache-dependency-path=npm-shrinkwrap.json" >> "${GITHUB_OUTPUT}"
+          else
+            echo "cache=" >> "${GITHUB_OUTPUT}"
+            echo "cache-dependency-path=" >> "${GITHUB_OUTPUT}"
+          fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
           registry-url: ${{ inputs.registry-url }}
-          cache: npm
+          cache: ${{ steps.npm-cache.outputs.cache }}
+          cache-dependency-path: >-
+            ${{ steps.npm-cache.outputs.cache-dependency-path }}
 
       - name: Install dependencies
-        run: npm ci
+        run: >-
+          ${{
+            steps.npm-cache.outputs.cache-dependency-path != ''
+            && 'npm ci'
+            || 'npm install'
+          }}
 
       - name: Publish
         env:
