@@ -35,6 +35,7 @@ env:
   MARKDOWNLINT_CLI2_VERSION: 0.21.0
   PRETTIER_VERSION: 3.8.1
   CSPELL_VERSION: 9.7.0
+  UV_VERSION: 0.10.9
   YAMLLINT_VERSION: 1.37.1
 
 jobs:
@@ -70,7 +71,9 @@ jobs:
 
       - name: Install uv
         if: inputs.run-yamllint
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        env:
+          INSTALLER_NO_MODIFY_PATH: 1
+        run: curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
 
       - name: Run yamllint
         if: inputs.run-yamllint
