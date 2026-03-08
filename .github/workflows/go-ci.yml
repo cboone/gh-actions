@@ -117,7 +117,7 @@ jobs:
             ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
           cache: true
 
-      - uses: cboone/gh-actions/actions/setup-golangci-lint@main
+      - uses: ./actions/setup-golangci-lint
         with:
           version: ${{ inputs.golangci-lint-version }}
 
@@ -160,7 +160,7 @@ jobs:
       - name: Build binary for scrut tests
         run: go build ./...
 
-      - uses: cboone/gh-actions/actions/setup-scrut@main
+      - uses: ./actions/setup-scrut
       - name: Run scrut tests
         run: scrut test tests/
 

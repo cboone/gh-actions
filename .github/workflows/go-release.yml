@@ -47,7 +47,7 @@ jobs:
           go-version-file: ${{ inputs.go-version-file }}
           cache: true
 
-      - uses: cboone/gh-actions/actions/setup-goreleaser@main
+      - uses: ./actions/setup-goreleaser
 
       - name: Run GoReleaser
         env:

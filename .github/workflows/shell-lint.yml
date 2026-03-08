@@ -65,7 +65,7 @@ jobs:
           echo "${{ steps.find-scripts.outputs.files }}" \
             | xargs shellcheck
 
-      - uses: cboone/gh-actions/actions/setup-shfmt@main
+      - uses: ./actions/setup-shfmt
         if: >-
           inputs.run-shfmt
           && steps.find-scripts.outputs.found == 'true'

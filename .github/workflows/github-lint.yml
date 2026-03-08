@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: cboone/gh-actions/actions/setup-actionlint@main
+      - uses: ./actions/setup-actionlint
         with:
           version: ${{ inputs.actionlint-version }}
 
