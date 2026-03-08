@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".claude/**"
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".claude/**"
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Lint actions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Run actionlint
+        uses: rhysd/actionlint@v1
