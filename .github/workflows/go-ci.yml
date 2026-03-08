@@ -95,10 +95,20 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
-          curl -sSfL https://cli.codecov.io/latest/linux/codecov \
-            -o /usr/local/bin/codecov
-          chmod +x /usr/local/bin/codecov
-          codecov upload-process \
+          case "${RUNNER_OS}" in
+            Linux) codecov_os="linux" ;;
+            macOS) codecov_os="macos" ;;
+            *)
+              echo "Unsupported runner operating system: ${RUNNER_OS}" >&2
+              exit 1
+              ;;
+          esac
+
+          codecov_bin="${RUNNER_TEMP}/codecov"
+          curl -sSfL "https://cli.codecov.io/latest/${codecov_os}/codecov" \
+            -o "${codecov_bin}"
+          chmod +x "${codecov_bin}"
+          "${codecov_bin}" upload-process \
             --file "${{ inputs.codecov-files }}" \
             --disable-search
 
