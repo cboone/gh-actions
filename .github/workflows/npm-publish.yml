@@ -1,0 +1,46 @@
+name: npm Publish
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version to install.
+        type: string
+        default: "22"
+      registry-url:
+        description: npm registry URL.
+        type: string
+        default: https://npm.pkg.github.com
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 10
+    secrets:
+      NODE_AUTH_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.registry-url }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        run: npm publish

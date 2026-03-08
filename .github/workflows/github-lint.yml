@@ -1,0 +1,31 @@
+name: GitHub Lint
+
+on:
+  workflow_call:
+    inputs:
+      actionlint-version:
+        description: actionlint version to install.
+        type: string
+        default: "1.7.11"
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cboone/gh-actions/actions/setup-actionlint@main
+        with:
+          version: ${{ inputs.actionlint-version }}
+
+      - name: Run actionlint
+        run: actionlint

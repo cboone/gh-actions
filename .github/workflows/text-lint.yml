@@ -1,0 +1,66 @@
+name: Text Lint
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version to install.
+        type: string
+        default: "22"
+      run-markdownlint:
+        description: Run markdownlint-cli2.
+        type: boolean
+        default: true
+      run-prettier:
+        description: Run Prettier format check.
+        type: boolean
+        default: true
+      run-cspell:
+        description: Run cspell spell checker.
+        type: boolean
+        default: false
+      run-yamllint:
+        description: Run yamllint.
+        type: boolean
+        default: false
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+jobs:
+  text-lint:
+    name: Text lint
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run markdownlint
+        if: inputs.run-markdownlint
+        run: npx markdownlint-cli2 "**/*.md"
+
+      - name: Run Prettier check
+        if: inputs.run-prettier
+        run: npx prettier --check .
+
+      - name: Run cspell
+        if: inputs.run-cspell
+        run: npx cspell .
+
+      - name: Run yamllint
+        if: inputs.run-yamllint
+        run: |
+          pip install --user yamllint
+          yamllint .

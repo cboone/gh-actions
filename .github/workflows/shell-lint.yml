@@ -1,0 +1,81 @@
+name: Shell Lint
+
+on:
+  workflow_call:
+    inputs:
+      run-shellcheck:
+        description: Run ShellCheck.
+        type: boolean
+        default: true
+      run-shfmt:
+        description: Run shfmt format check.
+        type: boolean
+        default: true
+      shfmt-version:
+        description: shfmt version to install.
+        type: string
+        default: "3.12.0"
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+jobs:
+  shell-lint:
+    name: Shell lint
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Find shell scripts
+        id: find-scripts
+        run: |
+          {
+            find . \( -name '*.sh' -o -name '*.bash' \) \
+              -not -path '*/node_modules/*' \
+              -not -path '*/.git/*' \
+              -print0 2>/dev/null \
+              | xargs -0 -r printf '%s\n' || true
+            find bin/ scripts/ script/ -type f -print0 2>/dev/null \
+              | xargs -0 -r file --mime-type 2>/dev/null \
+              | grep 'text/x-shellscript' \
+              | cut -d: -f1 || true
+          } | sort -u | grep -v '^$' > /tmp/shell-scripts.txt || true
+          cp /tmp/shell-scripts.txt "${GITHUB_OUTPUT}.tmp"
+          {
+            echo "files<<DELIM"
+            cat /tmp/shell-scripts.txt
+            echo "DELIM"
+          } >> "${GITHUB_OUTPUT}"
+          if [ -s /tmp/shell-scripts.txt ]; then
+            echo "found=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "found=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Run ShellCheck
+        if: >-
+          inputs.run-shellcheck
+          && steps.find-scripts.outputs.found == 'true'
+        run: |
+          echo "${{ steps.find-scripts.outputs.files }}" \
+            | xargs shellcheck
+
+      - uses: cboone/gh-actions/actions/setup-shfmt@main
+        if: >-
+          inputs.run-shfmt
+          && steps.find-scripts.outputs.found == 'true'
+        with:
+          version: ${{ inputs.shfmt-version }}
+
+      - name: Run shfmt check
+        if: >-
+          inputs.run-shfmt
+          && steps.find-scripts.outputs.found == 'true'
+        run: |
+          echo "${{ steps.find-scripts.outputs.files }}" \
+            | xargs shfmt -d

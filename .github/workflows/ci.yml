@@ -22,20 +22,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   actionlint:
-    name: Lint actions
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup actionlint
-        uses: ./actions/setup-actionlint
-
-      - name: Run actionlint
-        run: actionlint
+    uses: ./.github/workflows/github-lint.yml
