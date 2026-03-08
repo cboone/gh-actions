@@ -1,0 +1,18 @@
+[extend]
+# Use the default gitleaks rules as a base.
+useDefault = true
+
+# Example: custom rule (uncomment and adapt as needed)
+# [[rules]]
+# id = "custom-api-key"
+# description = "Custom API key pattern"
+# regex = '''(?i)custom[_-]?api[_-]?key\s*[=:]\s*['"]?([a-zA-Z0-9]{32,})['"]?'''
+# keywords = ["custom_api_key", "custom-api-key"]
+
+[allowlist]
+# Paths to exclude from scanning.
+# Add lockfiles, vendored dependencies, and test fixtures that trigger false positives.
+paths = [
+  '''package-lock\.json''',
+  '''node_modules/''',
+]
