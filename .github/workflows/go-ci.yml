@@ -86,10 +86,11 @@ jobs:
         run: go vet ./...
 
       - name: Run tests
+        if: ${{ !inputs.coverage }}
         run: go test -v ${{ inputs.test-flags }} ./...
 
       - name: Run tests with coverage
-        if: inputs.coverage
+        if: ${{ inputs.coverage }}
         run: >-
           go test -v ${{ inputs.test-flags }}
           -coverprofile=${{ inputs.codecov-files }} ./...
