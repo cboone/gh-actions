@@ -133,9 +133,38 @@ jobs:
             ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
           cache: true
 
-      - uses: ./actions/setup-golangci-lint
-        with:
-          version: ${{ inputs.golangci-lint-version }}
+      - name: Install golangci-lint
+        shell: bash
+        env:
+          VERSION: ${{ inputs.golangci-lint-version }}
+        run: |
+          case "$(uname -s)" in
+            Linux) os="linux" ;;
+            Darwin) os="darwin" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64) arch="amd64" ;;
+            arm64|aarch64) arch="arm64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)" >&2
+              exit 1
+              ;;
+          esac
+
+          archive="golangci-lint-${VERSION}-${os}-${arch}.tar.gz"
+          bin_dir="${RUNNER_TEMP}/golangci-lint-bin"
+          mkdir -p "${bin_dir}"
+          curl -sSfL "https://github.com/golangci/golangci-lint/releases/download/v${VERSION}/${archive}" \
+            | tar -xz -C "${RUNNER_TEMP}"
+          install -m 0755 \
+            "${RUNNER_TEMP}/golangci-lint-${VERSION}-${os}-${arch}/golangci-lint" \
+            "${bin_dir}/golangci-lint"
+          printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"
 
       - name: Run golangci-lint
         run: golangci-lint run ./...
@@ -176,7 +205,16 @@ jobs:
       - name: Build binary for scrut tests
         run: go build ./...
 
-      - uses: ./actions/setup-scrut
+      - name: Install scrut
+        shell: bash
+        env:
+          VERSION: "0.4.3"
+        run: |
+          arch="$(uname -m)"
+          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          url="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}/scrut-v${VERSION}-${os}-${arch}.tar.gz"
+          curl -sSfL "${url}" | tar -xz -C /usr/local/bin scrut
+
       - name: Run scrut tests
         run: scrut test tests/
 

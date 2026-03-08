@@ -47,9 +47,31 @@ jobs:
           go-version-file: ${{ inputs.go-version-file }}
           cache: true
 
-      - uses: ./actions/setup-goreleaser
-        with:
-          version: ${{ inputs.goreleaser-version }}
+      - name: Install GoReleaser
+        shell: bash
+        env:
+          VERSION: ${{ inputs.goreleaser-version }}
+        run: |
+          case "$(uname -s)" in
+            Linux) os="Linux" ;;
+            Darwin) os="Darwin" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64) arch="x86_64" ;;
+            arm64|aarch64) arch="arm64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)" >&2
+              exit 1
+              ;;
+          esac
+
+          curl -sSfL "https://github.com/goreleaser/goreleaser/releases/download/v${VERSION}/goreleaser_${os}_${arch}.tar.gz" \
+            | tar -xz -C /usr/local/bin goreleaser
 
       - name: Run GoReleaser
         env:
