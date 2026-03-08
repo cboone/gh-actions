@@ -1,0 +1,56 @@
+name: Go Release
+
+on:
+  workflow_call:
+    inputs:
+      go-version-file:
+        description: File to read the Go version from.
+        type: string
+        default: go.mod
+      runs-on:
+        description: Runner label.
+        type: string
+        default: ubuntu-latest
+      goreleaser-version:
+        description: GoReleaser version to install.
+        type: string
+        default: "2.14.2"
+      goreleaser-args:
+        description: Arguments to pass to goreleaser.
+        type: string
+        default: release --clean
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 30
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+      HOMEBREW_TAP_TOKEN:
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
+
+      - uses: cboone/gh-actions/actions/setup-goreleaser@main
+
+      - name: Run GoReleaser
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: goreleaser ${{ inputs.goreleaser-args }}

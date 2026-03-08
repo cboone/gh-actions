@@ -1,0 +1,189 @@
+name: Go CI
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        description: >-
+          Go version to install. When set, overrides go-version-file.
+        type: string
+        default: ""
+      go-version-file:
+        description: File to read the Go version from.
+        type: string
+        default: go.mod
+      runs-on:
+        description: Runner label.
+        type: string
+        default: ubuntu-latest
+      run-lint:
+        description: Run golangci-lint.
+        type: boolean
+        default: true
+      golangci-lint-version:
+        description: golangci-lint version to install.
+        type: string
+        default: "2.11.2"
+      run-scrut:
+        description: Run scrut CLI tests.
+        type: boolean
+        default: false
+      run-format-check:
+        description: Run gofmt/goimports format check.
+        type: boolean
+        default: false
+      run-build:
+        description: Run go build.
+        type: boolean
+        default: false
+      build-flags:
+        description: Additional flags for go build.
+        type: string
+        default: ""
+      test-flags:
+        description: Flags for go test.
+        type: string
+        default: "-race"
+      coverage:
+        description: Generate coverage and upload to Codecov.
+        type: boolean
+        default: false
+      codecov-files:
+        description: Coverage file(s) to upload to Codecov.
+        type: string
+        default: coverage.out
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 15
+    secrets:
+      CODECOV_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test -v ${{ inputs.test-flags }} ./...
+
+      - name: Run tests with coverage
+        if: inputs.coverage
+        run: >-
+          go test -v ${{ inputs.test-flags }}
+          -coverprofile=${{ inputs.codecov-files }} ./...
+
+      - name: Upload coverage to Codecov
+        if: inputs.coverage
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          curl -sSfL https://cli.codecov.io/latest/linux/codecov \
+            -o /usr/local/bin/codecov
+          chmod +x /usr/local/bin/codecov
+          codecov upload-process \
+            --file "${{ inputs.codecov-files }}" \
+            --disable-search
+
+  lint:
+    name: Lint
+    if: inputs.run-lint
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - uses: cboone/gh-actions/actions/setup-golangci-lint@main
+        with:
+          version: ${{ inputs.golangci-lint-version }}
+
+      - name: Run golangci-lint
+        run: golangci-lint run ./...
+
+  build:
+    name: Build
+    if: inputs.run-build
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - name: Build
+        run: go build ${{ inputs.build-flags }} ./...
+
+  scrut:
+    name: Scrut
+    if: inputs.run-scrut
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - name: Build binary for scrut tests
+        run: go build ./...
+
+      - uses: cboone/gh-actions/actions/setup-scrut@main
+      - name: Run scrut tests
+        run: scrut test tests/
+
+  format-check:
+    name: Format check
+    if: inputs.run-format-check
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - name: Check gofmt
+        run: |
+          output="$(gofmt -l .)"
+          if [ -n "${output}" ]; then
+            echo "Files not formatted with gofmt:"
+            echo "${output}"
+            exit 1
+          fi

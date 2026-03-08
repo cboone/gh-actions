@@ -11,17 +11,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   scan:
-    name: trufflehog
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - uses: ./actions/run-trufflehog
+    uses: ./.github/workflows/secret-scan.yml
+    with:
+      tool: trufflehog
