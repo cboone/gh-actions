@@ -15,7 +15,25 @@ runs:
       env:
         VERSION: ${{ inputs.version }}
       run: |
+        case "$(uname -s)" in
+          Linux) os="Linux" ;;
+          Darwin) os="Darwin" ;;
+          *)
+            echo "Unsupported operating system: $(uname -s)" >&2
+            exit 1
+            ;;
+        esac
+
+        case "$(uname -m)" in
+          x86_64) arch="x86_64" ;;
+          arm64|aarch64) arch="arm64" ;;
+          *)
+            echo "Unsupported architecture: $(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+
         base="https://github.com/goreleaser/goreleaser/releases/download"
-        curl -sSfL "${base}/v${VERSION}/goreleaser_Linux_x86_64.tar.gz" \
+        curl -sSfL "${base}/v${VERSION}/goreleaser_${os}_${arch}.tar.gz" \
           | tar -xz -C /usr/local/bin goreleaser
         goreleaser --version

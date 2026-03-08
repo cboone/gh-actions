@@ -48,6 +48,8 @@ jobs:
           cache: true
 
       - uses: ./actions/setup-goreleaser
+        with:
+          version: ${{ inputs.goreleaser-version }}
 
       - name: Run GoReleaser
         env:
