@@ -37,6 +37,10 @@ runs:
         base="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}"
         install_dir="${RUNNER_TEMP}/scrut-bin"
         mkdir -p "${install_dir}"
-        curl -sSfL "${base}/${tarball}" | tar -xz -C "${install_dir}" scrut
+        tarball_path="${RUNNER_TEMP}/${tarball}"
+        curl -sSfL -o "${tarball_path}" "${base}/${tarball}"
+        # scrut upstream does not publish checksum files; download to a file
+        # for consistency with other tool installers in this repo.
+        tar -xzf "${tarball_path}" -C "${install_dir}" scrut
         printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
         "${install_dir}/scrut" --version
