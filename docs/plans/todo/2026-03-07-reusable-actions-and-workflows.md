@@ -50,7 +50,18 @@ Reusable workflows centralize job internals, but consuming repos still own repo-
 
 ## What to Build
 
-### Versioning and Pinning Policy
+### Versioning Strategy for This Repo
+
+Consuming repos reference reusable workflows and composite actions by Git ref (e.g., `cboone/gh-actions/.github/workflows/go-ci.yml@v1`). This repo uses semantic versioning with major-version floating tags:
+
+- Tag each release as `v1.0.0`, `v1.1.0`, `v1.2.0`, etc.
+- Maintain a floating `v1` tag that always points to the latest `v1.x.x` release
+- A **breaking change** is any modification that would cause an existing caller to fail without changing their `with:` inputs: removing an input, changing an input's type, changing default behavior, or renaming a workflow file
+- Breaking changes require a new major version (`v2`)
+- Additive changes (new optional inputs, new workflows) are minor version bumps
+- Callers pin to the major version tag (`@v1`) for automatic non-breaking updates, or pin to an exact tag (`@v1.2.0`) or SHA for stricter control
+
+### Tool Version Pinning Policy
 
 No reusable workflow or composite action in this effort should default to `latest`, `latest stable`, or any other floating third-party tool version.
 
@@ -60,23 +71,32 @@ No reusable workflow or composite action in this effort should default to `lates
 
 The workflow and action definitions below therefore refer to exact pinned defaults maintained in this repo.
 
+### Caching Policy
+
+Reusable workflows should enable caching where the underlying setup actions support it:
+
+- `actions/setup-go` has built-in module caching; enable it by default
+- `actions/setup-node` has built-in npm/yarn caching; enable it when a lockfile is present
+- Tool binaries installed by composite actions are small and fast to download, so binary caching is not worth the complexity initially; revisit if CI times warrant it
+
 ### Reusable Workflows
 
 Reusable workflows live in `.github/workflows/` and are called by consuming repos at the job level. Each one encapsulates a complete CI/CD pattern.
 
 #### 1. `go-ci.yml` (covers 10 repos)
 
-Replaces: `golangci/golangci-lint-action`, `raven-actions/actionlint`, `codecov/codecov-action`, `astral-sh/setup-uv`, ad-hoc scrut installation
+Replaces: `golangci/golangci-lint-action`, `codecov/codecov-action`, ad-hoc scrut installation
+
+Permissions: `contents: read`
 
 Inputs:
 
 - `go-version` (string, default: empty; when set, overrides `go-version-file`)
 - `go-version-file` (string, default: `go.mod`)
-- `runs-on` (string, default: `ubuntu-latest`; some repos need `macos-latest`)
+- `runs-on` (string, default: `ubuntu-latest`)
 - `run-lint` (bool, default: true) -- golangci-lint
 - `golangci-lint-version` (string, default: exact pinned version from `actions/setup-golangci-lint`)
 - `run-scrut` (bool, default: false)
-- `run-actionlint` (bool, default: false)
 - `run-format-check` (bool, default: false) -- gofmt/goimports
 - `run-build` (bool, default: false)
 - `build-flags` (string, default: empty)
@@ -94,13 +114,20 @@ Jobs: test, lint (conditional), build (conditional), test-scrut (conditional)
 Coverage upload design:
 
 - Generate coverage in the workflow itself
-- Upload with the Codecov CLI, installed directly with a pinned version
+- Upload with the Codecov CLI, installed directly with a pinned version (no composite action; codecov is only used in this one workflow and wrapping a single CLI upload in a composite action adds indirection without reuse value)
 - Keep Codecov permissions narrow and document them explicitly in the workflow
 - If `coverage: true` is requested and the repo cannot use tokenless upload, require `CODECOV_TOKEN`
+
+Runner and matrix notes:
+
+- `runs-on` accepts a single string, which covers the common case
+- Repos that need a matrix of operating systems (e.g., snappy) should use a thin wrapper workflow that defines the matrix and calls `go-ci.yml` once per OS; the reusable workflow itself does not need matrix support
 
 #### 2. `go-release.yml` (covers 8 repos)
 
 Replaces: `goreleaser/goreleaser-action`
+
+Permissions: `contents: write` (for creating releases and uploading artifacts)
 
 Inputs:
 
@@ -125,13 +152,15 @@ Runner policy:
 
 Replaces: `gitleaks/gitleaks-action`, `trufflehog` container action
 
+Permissions: `contents: read`
+
 Inputs:
 
 - `tool` (string, default: `gitleaks`; options: `gitleaks`, `trufflehog`, `both`)
 - `scan-scope` (string, default: `full-history`; options: `full-history`, `working-tree`, `both`)
 - `gitleaks-version` (string, default: exact pinned version from `actions/run-gitleaks`)
 - `trufflehog-version` (string, default: exact pinned version from `actions/run-trufflehog`)
-- `fetch-depth` (number, default: `0` for `full-history` and `both`, `1` for `working-tree`)
+- `fetch-depth` (number, default: `0`; the workflow sets this to `1` when `scan-scope` is `working-tree`)
 - `allowlist-config` (string, default: empty)
 - `timeout-minutes` (number, default: 15)
 
@@ -142,10 +171,13 @@ Secret scanning semantics:
 - Support working-tree-only scans as an explicit opt-in for faster checks
 - Keep allowlists or baselines in-repo and versioned, rather than embedded in workflow YAML
 - Avoid `pull-requests: write`; findings should fail the job and surface in logs and artifacts instead
+- The workflow computes tool-specific CLI args from `scan-scope` and passes them to the composite actions via the `args` input; the composite actions themselves have no knowledge of scan-scope
 
 #### 4. `text-lint.yml` (covers 4+ repos)
 
 Replaces the document- and config-focused portion of current ad-hoc lint workflows.
+
+Permissions: `contents: read`
 
 Inputs:
 
@@ -162,6 +194,8 @@ This workflow intentionally excludes shell and GitHub Actions linting so repos d
 
 Replaces: `mfinelli/setup-shfmt` and ad-hoc `shellcheck` / `shfmt` steps.
 
+Permissions: `contents: read`
+
 Inputs:
 
 - `run-shellcheck` (bool, default: true)
@@ -173,17 +207,20 @@ Inputs:
 
 Replaces: `raven-actions/actionlint`, `rhysd/actionlint`
 
+Permissions: `contents: read`
+
 Inputs:
 
-- `run-actionlint` (bool, default: true)
 - `actionlint-version` (string, default: exact pinned version from `actions/setup-actionlint`)
 - `timeout-minutes` (number, default: 10)
 
-This workflow is separate so repos that only need Action linting do not also install Node.js or shell tooling.
+This workflow always runs actionlint (that is its sole purpose). It is separate so repos that only need Action linting do not also install Node.js or shell tooling. If additional GitHub-specific linters are added in the future, they can get their own boolean inputs at that point.
 
 #### 7. `pages-deploy.yml` (covers 3 repos)
 
 Uses official GitHub Pages actions (kept as dependencies). Provides a standard build-then-deploy pattern.
+
+Permissions: `contents: read`, `pages: write`, `id-token: write` (for Pages deployment)
 
 Inputs:
 
@@ -198,9 +235,11 @@ Inputs:
 
 #### 8. `npm-publish.yml` (covers 2 repos)
 
+Permissions: `contents: read`, `packages: write`
+
 Inputs:
 
-- `node-version` (string, default: `20`)
+- `node-version` (string, default: `22`)
 - `registry-url` (string, default: `https://npm.pkg.github.com`)
 - `timeout-minutes` (number, default: 10)
 
@@ -240,13 +279,13 @@ Inputs: `version` (default: exact pinned version defined in the action)
 
 Installs gitleaks binary and runs a scan. No `pull-requests: write` needed (unlike the third-party action).
 
-Inputs: `version` (default: exact pinned version defined in the action), `args` (default: determined by `scan-scope`, with history-aware defaults)
+Inputs: `version` (default: exact pinned version defined in the action), `args` (default: `detect --source .`; callers pass specific args for different scan modes)
 
 #### 6. `actions/run-trufflehog/action.yml`
 
 Installs trufflehog binary and runs a scan.
 
-Inputs: `version` (default: exact pinned version defined in the action), `args` (default: determined by `scan-scope`, with history-aware defaults)
+Inputs: `version` (default: exact pinned version defined in the action), `args` (default: `filesystem --directory .`; callers pass specific args for different scan modes)
 
 #### 7. `actions/setup-shfmt/action.yml`
 
@@ -272,7 +311,7 @@ These workflows are project-specific and not worth generalizing:
 
 ## Directory Structure
 
-```
+```text
 gh-actions/
 ├── actions/
 │   ├── setup-golangci-lint/
@@ -312,43 +351,35 @@ gh-actions/
 
 ## Implementation Phases
 
-### Phase 1: Foundation (composite actions)
+### Phase 1: Foundation (composite actions) + self-hosting
 
-Build the atomic building blocks first, since the reusable workflows depend on them.
+Build the atomic building blocks first, since the reusable workflows depend on them. After each composite action is built, immediately use it in this repo's own CI as the cheapest possible integration test.
 
 1. `actions/setup-golangci-lint/action.yml`
 2. `actions/setup-goreleaser/action.yml`
 3. `actions/setup-scrut/action.yml`
-4. `actions/setup-actionlint/action.yml`
+4. `actions/setup-actionlint/action.yml` -- then update `ci.yml` to use it instead of the current actionlint action
 5. `actions/setup-shfmt/action.yml`
-6. `actions/run-gitleaks/action.yml`
-7. `actions/run-trufflehog/action.yml`
+6. `actions/run-gitleaks/action.yml` -- then update `gitleaks.yml` to use it
+7. `actions/run-trufflehog/action.yml` -- then update `trufflehog.yml` to use it
 
-### Phase 2: High-Impact Reusable Workflows
+### Phase 2: High-Impact Reusable Workflows + self-hosting
 
-Build the workflows that cover the most repos.
+Build the workflows that cover the most repos. After each reusable workflow is built, migrate this repo's own workflows to call it where applicable.
 
 1. `go-ci.yml` (10 repos)
 2. `go-release.yml` (8 repos)
-3. `secret-scan.yml` (5+ repos)
+3. `secret-scan.yml` (5+ repos) -- then migrate `gitleaks.yml` and `trufflehog.yml` to call it
 
 ### Phase 3: Medium-Impact Reusable Workflows
 
-4. `github-lint.yml` (4+ repos)
-5. `text-lint.yml` (4+ repos)
-6. `shell-lint.yml` (2+ repos)
-7. `npm-publish.yml` (2 repos)
-8. `pages-deploy.yml` (3 repos)
+1. `github-lint.yml` (4+ repos) -- then migrate `ci.yml` to call it
+2. `text-lint.yml` (4+ repos)
+3. `shell-lint.yml` (2+ repos)
+4. `npm-publish.yml` (2 repos)
+5. `pages-deploy.yml` (3 repos)
 
-### Phase 4: Self-Hosting
-
-Migrate this repo's own workflows to use its own reusable workflows and composite actions:
-
-- `gitleaks.yml` calls `secret-scan.yml`
-- `trufflehog.yml` calls `secret-scan.yml`
-- `ci.yml` either calls `github-lint.yml` or uses `actions/setup-actionlint` directly
-
-### Phase 5: Consuming Repo Migration
+### Phase 4: Consuming Repo Migration
 
 Migrate consuming repos one at a time, starting with simpler ones:
 
@@ -485,7 +516,7 @@ For the `secret-scan.yml` workflow:
 | `codecov/codecov-action`               | Direct codecov CLI in `go-ci.yml`                        | 1              |
 | `mfinelli/setup-shfmt`                 | `actions/setup-shfmt` composite + `shell-lint.yml`       | 1              |
 | `streetsidesoftware/cspell-action`     | `npx cspell` in `text-lint.yml`                          | 1              |
-| `astral-sh/setup-uv`                   | Direct install in `go-ci.yml` (for scrut)                | 1              |
+| `astral-sh/setup-uv`                   | Encapsulated in `actions/setup-scrut`                    | 1              |
 | `stefanzweifel/git-auto-commit-action` | Direct git commands (one-off fix)                        | 1              |
 | `peter-evans/repository-dispatch`      | `gh api` call (one-off fix)                              | 1              |
 | `peter-evans/create-pull-request`      | `gh pr create` (one-off fix)                             | 1              |
