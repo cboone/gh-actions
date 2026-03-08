@@ -45,7 +45,6 @@ jobs:
               | grep 'text/x-shellscript' \
               | cut -d: -f1 || true
           } | sort -u | grep -v '^$' > /tmp/shell-scripts.txt || true
-          cp /tmp/shell-scripts.txt "${GITHUB_OUTPUT}.tmp"
           {
             echo "files<<DELIM"
             cat /tmp/shell-scripts.txt
@@ -61,9 +60,10 @@ jobs:
         if: >-
           inputs.run-shellcheck
           && steps.find-scripts.outputs.found == 'true'
+        env:
+          SHELL_SCRIPTS: ${{ steps.find-scripts.outputs.files }}
         run: |
-          echo "${{ steps.find-scripts.outputs.files }}" \
-            | xargs shellcheck
+          echo "${SHELL_SCRIPTS}" | xargs shellcheck
 
       - uses: ./actions/setup-shfmt
         if: >-
@@ -76,6 +76,7 @@ jobs:
         if: >-
           inputs.run-shfmt
           && steps.find-scripts.outputs.found == 'true'
+        env:
+          SHELL_SCRIPTS: ${{ steps.find-scripts.outputs.files }}
         run: |
-          echo "${{ steps.find-scripts.outputs.files }}" \
-            | xargs shfmt -d
+          echo "${SHELL_SCRIPTS}" | xargs shfmt -d
