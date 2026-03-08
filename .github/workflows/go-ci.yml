@@ -48,6 +48,10 @@ on:
         description: Generate coverage and upload to Codecov.
         type: boolean
         default: false
+      codecov-cli-version:
+        description: Codecov CLI version to install.
+        type: string
+        default: "10.4.0"
       codecov-files:
         description: Coverage file(s) to upload to Codecov.
         type: string
@@ -94,6 +98,7 @@ jobs:
         if: inputs.coverage
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          CODECOV_CLI_VERSION: ${{ inputs.codecov-cli-version }}
         run: |
           case "${RUNNER_OS}" in
             Linux) codecov_os="linux" ;;
@@ -105,7 +110,7 @@ jobs:
           esac
 
           codecov_bin="${RUNNER_TEMP}/codecov"
-          curl -sSfL "https://cli.codecov.io/latest/${codecov_os}/codecov" \
+          curl -sSfL "https://cli.codecov.io/v${CODECOV_CLI_VERSION}/${codecov_os}/codecov" \
             -o "${codecov_bin}"
           chmod +x "${codecov_bin}"
           "${codecov_bin}" upload-process \
