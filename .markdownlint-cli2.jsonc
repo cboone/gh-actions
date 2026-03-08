@@ -1,6 +1,6 @@
 {
   "config": {
-    // Line length: disabled (Prettier handles wrapping)
+    // Line length: disabled (not enforced; Prettier preserves existing wrapping)
     "MD013": false,
 
     // Allow duplicate headings in different sections (e.g., ## Install / ## Notes)

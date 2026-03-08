@@ -3,6 +3,9 @@
   "name": "gh-actions",
   "description": "A collection of reusable GitHub Actions for CI/CD workflows.",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.18"
+  },
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
