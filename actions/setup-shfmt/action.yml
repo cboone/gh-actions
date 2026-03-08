@@ -33,7 +33,10 @@ runs:
             ;;
         esac
 
+        install_dir="${RUNNER_TEMP}/shfmt-bin"
+        mkdir -p "${install_dir}"
         curl -sSfL "https://github.com/mvdan/sh/releases/download/v${VERSION}/shfmt_v${VERSION}_${os}_${arch}" \
-          -o /usr/local/bin/shfmt
-        chmod +x /usr/local/bin/shfmt
-        shfmt --version
+          -o "${install_dir}/shfmt"
+        chmod +x "${install_dir}/shfmt"
+        printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+        "${install_dir}/shfmt" --version

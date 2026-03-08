@@ -37,14 +37,18 @@ runs:
             ;;
         esac
 
+        install_dir="${RUNNER_TEMP}/gitleaks-bin"
+        mkdir -p "${install_dir}"
         base="https://github.com/gitleaks/gitleaks/releases/download"
         curl -sSfL "${base}/v${VERSION}/gitleaks_${VERSION}_${os}_${arch}.tar.gz" \
-          | tar -xz -C /usr/local/bin gitleaks
-        gitleaks version
+          | tar -xz -C "${install_dir}" gitleaks
+        printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+        "${install_dir}/gitleaks" version
 
     - name: Run gitleaks
       shell: bash
       env:
         GITLEAKS_ARGS: ${{ inputs.args }}
       run: |
-        gitleaks ${GITLEAKS_ARGS} --verbose
+        read -r -a gitleaks_args <<< "${GITLEAKS_ARGS}"
+        gitleaks "${gitleaks_args[@]}" --verbose

@@ -213,7 +213,10 @@ jobs:
           arch="$(uname -m)"
           os="$(uname -s | tr '[:upper:]' '[:lower:]')"
           url="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}/scrut-v${VERSION}-${os}-${arch}.tar.gz"
-          curl -sSfL "${url}" | tar -xz -C /usr/local/bin scrut
+          install_dir="${RUNNER_TEMP}/scrut-bin"
+          mkdir -p "${install_dir}"
+          curl -sSfL "${url}" | tar -xz -C "${install_dir}" scrut
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run scrut tests
         run: scrut test tests/
@@ -244,7 +247,7 @@ jobs:
 
       - name: Check goimports
         run: |
-          go install golang.org/x/tools/cmd/goimports@latest
+          go install golang.org/x/tools/cmd/goimports@v0.42.0
           output="$(goimports -l .)"
           if [ -n "${output}" ]; then
             echo "Files not formatted with goimports:"

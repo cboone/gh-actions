@@ -37,14 +37,18 @@ runs:
             ;;
         esac
 
+        install_dir="${RUNNER_TEMP}/trufflehog-bin"
+        mkdir -p "${install_dir}"
         base="https://github.com/trufflesecurity/trufflehog/releases/download"
         curl -sSfL "${base}/v${VERSION}/trufflehog_${VERSION}_${os}_${arch}.tar.gz" \
-          | tar -xz -C /usr/local/bin trufflehog
-        trufflehog --version
+          | tar -xz -C "${install_dir}" trufflehog
+        printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+        "${install_dir}/trufflehog" --version
 
     - name: Run trufflehog
       shell: bash
       env:
         TRUFFLEHOG_ARGS: ${{ inputs.args }}
       run: |
-        trufflehog ${TRUFFLEHOG_ARGS} --results=verified,unknown
+        read -r -a trufflehog_args <<< "${TRUFFLEHOG_ARGS}"
+        trufflehog "${trufflehog_args[@]}" --results=verified,unknown

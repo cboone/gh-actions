@@ -70,8 +70,11 @@ jobs:
               ;;
           esac
 
+          install_dir="${RUNNER_TEMP}/goreleaser-bin"
+          mkdir -p "${install_dir}"
           curl -sSfL "https://github.com/goreleaser/goreleaser/releases/download/v${VERSION}/goreleaser_${os}_${arch}.tar.gz" \
-            | tar -xz -C /usr/local/bin goreleaser
+            | tar -xz -C "${install_dir}" goreleaser
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run GoReleaser
         env:

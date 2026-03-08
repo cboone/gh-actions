@@ -33,7 +33,10 @@ runs:
             ;;
         esac
 
+        install_dir="${RUNNER_TEMP}/goreleaser-bin"
+        mkdir -p "${install_dir}"
         base="https://github.com/goreleaser/goreleaser/releases/download"
         curl -sSfL "${base}/v${VERSION}/goreleaser_${os}_${arch}.tar.gz" \
-          | tar -xz -C /usr/local/bin goreleaser
-        goreleaser --version
+          | tar -xz -C "${install_dir}" goreleaser
+        printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+        "${install_dir}/goreleaser" --version

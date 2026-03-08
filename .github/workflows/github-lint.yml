@@ -47,8 +47,11 @@ jobs:
           esac
 
           archive="actionlint_${VERSION}_${os}_${arch}.tar.gz"
+          install_dir="${RUNNER_TEMP}/actionlint-bin"
+          mkdir -p "${install_dir}"
           curl -sSfL "https://github.com/rhysd/actionlint/releases/download/v${VERSION}/${archive}" \
-            | tar -xz -C /usr/local/bin actionlint
+            | tar -xz -C "${install_dir}" actionlint
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run actionlint
         run: actionlint
