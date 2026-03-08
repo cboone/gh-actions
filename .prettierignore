@@ -1,0 +1,8 @@
+# Dependencies
+node_modules/
+
+# Package manager lockfiles
+package-lock.json
+
+# Generated files
+coverage/
