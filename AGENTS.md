@@ -89,6 +89,17 @@ that exits with an error. Windows is not supported.
 1. Inline tool installation (do not reference local composite actions).
 1. Follow the same checksum verification pattern used by existing workflows.
 
+## Releasing
+
+This repository has no GoReleaser config or release workflow for itself. Releases
+are pure Git tags. Use the `/release` skill, which analyzes conventional commits,
+recommends a version bump, updates CHANGELOG.md, creates a release commit, and
+tags it locally. Then push the commit and both tags (exact + floating major).
+
+The floating major tag (e.g., `v1`) is force-updated on each release so that
+callers referencing `@v1` automatically pick up non-breaking changes. See the
+README Versioning section for full details.
+
 ## Testing
 
 The repository self-hosts its own workflows as integration tests. The `ci.yml`,

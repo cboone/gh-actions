@@ -435,14 +435,43 @@ jobs:
 
 ## Versioning
 
-This project uses [Semantic Versioning](https://semver.org/). Once v1.0.0 is
-tagged, a floating `v1` tag will track the latest v1.x.y release.
+This project uses [Semantic Versioning](https://semver.org/). Use `@main` until
+v1.0.0 is tagged. After that, use `@v1` for stability.
 
-Use `@main` until v1.0.0 is tagged. After that, use `@v1` for stability.
+### Version bumps
 
-A **breaking change** is any modification that requires callers to update their
-workflow files: renaming or removing an input, changing a default in a way that
-alters behavior, or removing an action or workflow.
+- **Patch** (e.g., v1.0.0 to v1.0.1): bug fixes, tool version bumps that do not
+  change behavior, documentation updates.
+- **Minor** (e.g., v1.0.0 to v1.1.0): new optional inputs, new actions or
+  workflows, additive changes that do not affect existing callers.
+- **Major** (e.g., v1 to v2): breaking changes. A **breaking change** is any
+  modification that requires callers to update their workflow files: renaming or
+  removing an input, changing a default in a way that alters behavior, or
+  removing an action or workflow.
+
+### Release process
+
+Releases are created with the `/release` skill, which analyzes conventional
+commits, recommends a version bump, updates CHANGELOG.md, creates a release
+commit, and tags it. The process produces two tags:
+
+1. **Exact version tag** (e.g., `v1.2.0`): a permanent, immutable tag pointing
+   to the release commit.
+1. **Floating major tag** (e.g., `v1`): force-updated to point to the same
+   commit as the latest exact tag in that major version. Callers who reference
+   `@v1` automatically pick up non-breaking updates.
+
+After tagging locally, push both tags:
+
+```bash
+git push origin main v1.2.0 v1
+```
+
+### Pinning options for callers
+
+- `@v1`: tracks the latest v1.x.y release (recommended for most users).
+- `@v1.2.0`: pinned to an exact release for stricter control.
+- `@main`: latest development (pre-v1.0.0 or for testing).
 
 ## License
 
