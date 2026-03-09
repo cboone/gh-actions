@@ -37,6 +37,14 @@ runs:
         # scrut upstream does not publish checksum files, so these are
         # computed from the release artifacts and must be updated when
         # VERSION changes.
+        supported_version="0.4.3"
+        if [ "${VERSION}" != "${supported_version}" ]; then
+          echo "Unsupported scrut version: ${VERSION}" >&2
+          echo "Checksums are only available for v${supported_version}." >&2
+          echo "To use a different version, update the checksums in this action." >&2
+          exit 1
+        fi
+
         case "${os}-${arch}" in
           linux-x86_64)  expected="6aefb0bff29b450fbd1b04083eefeae4388d6c9302e31d1a24b7aa9edd03bb35" ;;
           linux-aarch64) expected="a67117f4320d129c7d7073a5e667dbad25e7a83f31480a633108250fe4069dd5" ;;
