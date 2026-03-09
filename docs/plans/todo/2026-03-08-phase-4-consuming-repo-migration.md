@@ -355,6 +355,7 @@ jobs:
       go-version: "1.23"
       run-lint: false
       run-scrut: true
+      scrut-setup-cmd: "curl -LsSf https://astral.sh/uv/install.sh | sh && echo \"$HOME/.local/bin\" >> \"$GITHUB_PATH\""
       scrut-build-cmd: "go build -o ./bin/quod ./cmd/quod"
       scrut-env: "QUOD_BIN=./bin/quod"
       scrut-test-dir: "scrut/"
@@ -363,6 +364,7 @@ jobs:
 Notes:
 - Preserves macos-latest runner. Uses pinned Go 1.23 (repo currently pins this).
 - `run-lint: false`: The old workflow only ran `go vet`. The repo has pre-existing `errcheck` findings that would fail `golangci-lint`.
+- `scrut-setup-cmd`: Installs `uv` because scrut tests launch a Python mock server via `uv run` (replaces `astral-sh/setup-uv@v5`).
 - `scrut-env`: The `QUOD_BIN` env var is resolved to an absolute path by go-ci.yml's path resolution logic.
 
 ---
