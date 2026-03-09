@@ -66,6 +66,12 @@ Only Linux and macOS runners are supported. Each installer uses a `uname -s`
 case statement with `Linux)` and `Darwin)` branches, plus a `*)` catch-all
 that exits with an error. Windows is not supported.
 
+### Makefile Target Convention for go-ci.yml
+
+Consuming Go repos must provide Makefile targets for each enabled go-ci.yml
+job: `vet`, `test`, `lint`, `build`, `fmt`. The `fmt` target must be a format
+check (exit non-zero on unformatted code), not a write operation.
+
 ### Shell Conventions
 
 - Arguments from `args` inputs are split with `read -r -a` into arrays. This

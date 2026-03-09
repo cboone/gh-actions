@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- go-ci.yml now requires consuming repos to have a Makefile with targets:
+  `vet`, `test`, and optionally `lint`, `build`, `fmt` (matching enabled jobs)
+- go-ci.yml test job runs `make vet` and `make test` instead of direct Go
+  commands
+- go-ci.yml lint job runs `make lint` instead of `golangci-lint run ./...`
+- go-ci.yml build job runs `make build` instead of `go build`
+- go-ci.yml format-check job runs `make fmt` instead of inline gofmt/goimports
+- go-ci.yml `test-flags` input now only applies when `coverage` is enabled
+- Updated `actions/setup-go` from v5 to v6 across go-ci.yml and go-release.yml
+
+### Removed
+
+- go-ci.yml `use-makefile` input (Makefile is now the only execution mode)
+- go-ci.yml `build-flags` input (build flags belong in each repo's Makefile)
+
 ## [1.0.0] - 2026-03-08
 
 ### Added
