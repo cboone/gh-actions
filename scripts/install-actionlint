@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# install-actionlint -- Download and install the actionlint binary locally.
+# Author: Christopher Boone
+# Date: 2026-03-08
+
+set -euo pipefail
+
+readonly DEFAULT_VERSION="1.7.11"
+readonly DEFAULT_INSTALL_DIR=".local/bin"
+
+function detect_os() {
+  local os
+  case "$(uname -s)" in
+  Linux) os="linux" ;;
+  Darwin) os="darwin" ;;
+  *)
+    echo "Unsupported operating system: $(uname -s)" >&2
+    exit 1
+    ;;
+  esac
+  printf '%s' "${os}"
+}
+
+function detect_arch() {
+  local arch
+  case "$(uname -m)" in
+  x86_64) arch="amd64" ;;
+  arm64 | aarch64) arch="arm64" ;;
+  *)
+    echo "Unsupported architecture: $(uname -m)" >&2
+    exit 1
+    ;;
+  esac
+  printf '%s' "${arch}"
+}
+
+function compute_checksum() {
+  local file_path="${1}"
+  local checksum
+  if command -v sha256sum >/dev/null 2>&1; then
+    checksum="$(sha256sum "${file_path}" | awk '{print $1}')"
+  else
+    checksum="$(shasum -a 256 "${file_path}" | awk '{print $1}')"
+  fi
+  printf '%s' "${checksum}"
+}
+
+function verify_checksum() {
+  local archive_path="${1}"
+  local checksums_path="${2}"
+  local archive_name="${3}"
+
+  local expected
+  expected="$(grep -F "${archive_name}" "${checksums_path}" | head -1 | awk '{print $1}')"
+  if [[ -z "${expected}" ]]; then
+    echo "Checksum entry not found for ${archive_name}" >&2
+    exit 1
+  fi
+
+  local actual
+  actual="$(compute_checksum "${archive_path}")"
+  if [[ "${expected}" != "${actual}" ]]; then
+    echo "Checksum verification failed for ${archive_name}" >&2
+    echo "Expected: ${expected}" >&2
+    echo "Actual:   ${actual}" >&2
+    exit 1
+  fi
+}
+
+function installed_version() {
+  local binary_path="${1}"
+  if [[ -x "${binary_path}" ]]; then
+    "${binary_path}" -version 2>/dev/null | head -1 | awk '{print $1}' || true
+  fi
+}
+
+TMP_DIR=""
+
+function cleanup() {
+  if [[ -n "${TMP_DIR}" ]]; then
+    rm -rf "${TMP_DIR}"
+  fi
+}
+
+function main() {
+  local version="${VERSION:-${DEFAULT_VERSION}}"
+  local install_dir="${INSTALL_DIR:-${DEFAULT_INSTALL_DIR}}"
+  local binary_path="${install_dir}/actionlint"
+
+  local current_version
+  current_version="$(installed_version "${binary_path}")"
+  if [[ "${current_version}" == "${version}" ]]; then
+    echo "actionlint ${version} already installed at ${binary_path}" >&2
+    return 0
+  fi
+
+  local os
+  os="$(detect_os)"
+  local arch
+  arch="$(detect_arch)"
+
+  local archive="actionlint_${version}_${os}_${arch}.tar.gz"
+  local base_url="https://github.com/rhysd/actionlint/releases/download/v${version}"
+
+  TMP_DIR="$(mktemp -d)"
+  trap cleanup EXIT
+
+  local archive_path="${TMP_DIR}/${archive}"
+  local checksums_path="${TMP_DIR}/checksums.txt"
+
+  echo "Downloading actionlint ${version} (${os}/${arch})..." >&2
+  curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
+  curl -sSfL "${base_url}/actionlint_${version}_checksums.txt" -o "${checksums_path}"
+
+  verify_checksum "${archive_path}" "${checksums_path}" "${archive}"
+
+  mkdir -p "${install_dir}"
+  tar -xz -C "${install_dir}" -f "${archive_path}" actionlint
+
+  echo "Installed actionlint ${version} to ${binary_path}" >&2
+  "${binary_path}" -version
+}
+
+main "${@}"
