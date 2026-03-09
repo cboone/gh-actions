@@ -30,6 +30,22 @@ on:
         description: Run scrut CLI tests.
         type: boolean
         default: false
+      scrut-build-cmd:
+        description: >-
+          Command to build the binary for scrut tests. Override this
+          when scrut tests reference a binary by path or env var.
+        type: string
+        default: "go build ./..."
+      scrut-env:
+        description: >-
+          Newline-delimited KEY=VALUE environment variables to export
+          when running scrut tests (e.g. BOPCA_BIN=./bin/bopca).
+        type: string
+        default: ""
+      scrut-test-dir:
+        description: Directory containing scrut test files.
+        type: string
+        default: "tests/"
       run-format-check:
         description: Run gofmt/goimports format check.
         type: boolean
@@ -245,7 +261,7 @@ jobs:
           cache: true
 
       - name: Build binary for scrut tests
-        run: go build ./...
+        run: ${{ inputs.scrut-build-cmd }}
 
       - name: Install scrut
         shell: bash
@@ -306,7 +322,17 @@ jobs:
           printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run scrut tests
-        run: scrut test tests/
+        shell: bash
+        env:
+          SCRUT_ENV: ${{ inputs.scrut-env }}
+          SCRUT_TEST_DIR: ${{ inputs.scrut-test-dir }}
+        run: |
+          if [ -n "${SCRUT_ENV}" ]; then
+            while IFS= read -r line; do
+              [ -n "${line}" ] && export "${line?}"
+            done <<< "${SCRUT_ENV}"
+          fi
+          scrut test "${SCRUT_TEST_DIR}"
 
   format-check:
     name: Format check
