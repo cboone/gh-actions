@@ -7,9 +7,13 @@ inputs:
     required: false
     default: "3.93.7"
   args:
-    description: Arguments to pass to trufflehog
+    description: >-
+      Arguments to pass to trufflehog, one per line.
     required: false
-    default: "filesystem --directory ."
+    default: |-
+      filesystem
+      --directory
+      .
 
 runs:
   using: composite
@@ -70,5 +74,8 @@ runs:
       env:
         TRUFFLEHOG_ARGS: ${{ inputs.args }}
       run: |
-        read -r -a trufflehog_args <<< "${TRUFFLEHOG_ARGS}"
-        trufflehog "${trufflehog_args[@]}" --results=verified,unknown
+        args=()
+        while IFS= read -r line; do
+          [[ -n "${line}" ]] && args+=("${line}")
+        done <<< "${TRUFFLEHOG_ARGS}"
+        trufflehog "${args[@]}" --results=verified,unknown
