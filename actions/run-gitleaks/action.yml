@@ -7,9 +7,13 @@ inputs:
     required: false
     default: "8.30.0"
   args:
-    description: Arguments to pass to gitleaks
+    description: >-
+      Arguments to pass to gitleaks, one per line.
     required: false
-    default: "detect --source ."
+    default: |-
+      detect
+      --source
+      .
 
 runs:
   using: composite
@@ -70,5 +74,8 @@ runs:
       env:
         GITLEAKS_ARGS: ${{ inputs.args }}
       run: |
-        read -r -a gitleaks_args <<< "${GITLEAKS_ARGS}"
-        gitleaks "${gitleaks_args[@]}" --verbose
+        args=()
+        while IFS= read -r line; do
+          [[ -n "${line}" ]] && args+=("${line}")
+        done <<< "${GITLEAKS_ARGS}"
+        gitleaks "${args[@]}" --verbose
