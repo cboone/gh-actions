@@ -46,6 +46,13 @@ on:
         description: Directory containing scrut test files.
         type: string
         default: "tests/"
+      scrut-setup-cmd:
+        description: >-
+          Optional shell command to run before scrut tests (after Go setup).
+          Use this to install extra dependencies like uv or Python tools
+          needed by scrut test fixtures.
+        type: string
+        default: ""
       run-format-check:
         description: Run gofmt/goimports format check.
         type: boolean
@@ -259,6 +266,10 @@ jobs:
           go-version-file: >-
             ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
           cache: true
+
+      - name: Scrut test setup
+        if: inputs.scrut-setup-cmd != ''
+        run: ${{ inputs.scrut-setup-cmd }}
 
       - name: Build binary for scrut tests
         run: ${{ inputs.scrut-build-cmd }}
