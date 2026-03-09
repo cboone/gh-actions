@@ -11,12 +11,12 @@ readonly DEFAULT_INSTALL_DIR=".local/bin"
 function detect_os() {
   local os
   case "$(uname -s)" in
-    Linux) os="linux" ;;
-    Darwin) os="darwin" ;;
-    *)
-      echo "Unsupported operating system: $(uname -s)" >&2
-      exit 1
-      ;;
+  Linux) os="linux" ;;
+  Darwin) os="darwin" ;;
+  *)
+    echo "Unsupported operating system: $(uname -s)" >&2
+    exit 1
+    ;;
   esac
   printf '%s' "${os}"
 }
@@ -24,12 +24,12 @@ function detect_os() {
 function detect_arch() {
   local arch
   case "$(uname -m)" in
-    x86_64) arch="amd64" ;;
-    arm64 | aarch64) arch="arm64" ;;
-    *)
-      echo "Unsupported architecture: $(uname -m)" >&2
-      exit 1
-      ;;
+  x86_64) arch="amd64" ;;
+  arm64 | aarch64) arch="arm64" ;;
+  *)
+    echo "Unsupported architecture: $(uname -m)" >&2
+    exit 1
+    ;;
   esac
   printf '%s' "${arch}"
 }
