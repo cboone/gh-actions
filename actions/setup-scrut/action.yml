@@ -3,7 +3,10 @@ description: Install scrut CLI testing tool with a pinned version.
 
 inputs:
   version:
-    description: scrut version to install
+    description: >-
+      scrut version to install. Only the version with pinned checksums
+      is supported; update the checksums in this action to use a
+      different version.
     required: false
     default: "0.4.3"
 
