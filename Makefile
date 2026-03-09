@@ -2,14 +2,14 @@ ACTIONLINT_VERSION := 1.7.11
 YAMLLINT_VERSION := 1.37.1
 ACTIONLINT := .local/bin/actionlint
 
-.PHONY: lint lint-yaml lint-md format format-check spell setup help
+.PHONY: lint lint-yaml lint-md format format-check spell setup help install-actionlint
 
-$(ACTIONLINT):
-	@VERSION=$(ACTIONLINT_VERSION) INSTALL_DIR=.local/bin ./scripts/install-actionlint
+install-actionlint:
+	@VERSION=$(ACTIONLINT_VERSION) INSTALL_DIR=$(dir $(ACTIONLINT)) ./scripts/install-actionlint
 
-setup: $(ACTIONLINT) ## Install local tool dependencies
+setup: install-actionlint ## Install local tool dependencies
 
-lint: $(ACTIONLINT) ## Lint GitHub Actions workflows
+lint: install-actionlint ## Lint GitHub Actions workflows
 	$(ACTIONLINT)
 
 lint-yaml: ## Lint YAML files

@@ -35,9 +35,10 @@ make setup
 | `make spell`        | Check spelling                  |
 | `make help`         | Show available targets          |
 
-All targets auto-install their tools on first run. Node.js tools use `npx`,
-yamllint uses `uv tool run`, and actionlint downloads a pinned binary to
-`.local/bin/`.
+Node.js tools are expected to be installed as local devDependencies via
+`npm install` and are run with `npx` using those local versions. Non-Node
+tools are bootstrapped automatically on first run: yamllint uses
+`uv tool run`, and actionlint downloads a pinned binary to `.local/bin/`.
 
 ## License
 
