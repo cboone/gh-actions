@@ -16,6 +16,7 @@ Phases 1-3 built 7 composite actions and 8 reusable workflows in gh-actions (now
 - **Commit**: `chore: migrate CI workflows to gh-actions reusable workflows`
 - **Ref**: `@main` (update to `@v1` after tagging)
 - Preserve each repo's existing triggers, path filters, concurrency settings, and permissions
+- Add `workflow_dispatch:` to all CI workflows that call gh-actions reusable workflows (enables manual re-runs that re-resolve `@main`)
 - Preserve existing runner choices (macOS vs ubuntu); runner reduction is a separate effort
 
 ---
@@ -62,6 +63,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   gitleaks:
@@ -92,6 +94,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   ci:
@@ -150,6 +153,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   ci:
@@ -196,6 +200,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -246,6 +251,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   ci:
@@ -306,6 +312,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   ci:
@@ -336,6 +343,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -379,6 +387,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   ci:
@@ -447,6 +456,7 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE/**"
       - "LICENSE"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -538,6 +548,7 @@ on:
     branches: [main, "release/**"]
   pull_request:
     branches: [main, "release/**"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -669,6 +680,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -746,6 +758,7 @@ on:
       - ".claude/**"
       - "**/CLAUDE.md"
       - "**/AGENTS.md"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -774,6 +787,7 @@ Keep the single-job structure; swap only the two third-party action steps with c
 
 - Replace `uses: mfinelli/setup-shfmt@v4` with `uses: cboone/gh-actions/actions/setup-shfmt@main`
 - Replace `uses: raven-actions/actionlint@v2` with two steps: `uses: cboone/gh-actions/actions/setup-actionlint@main` then `run: actionlint`
+- Add `workflow_dispatch:` to the `on:` block
 - Keep yarn-based linting, shellcheck, JSON/plugin validation unchanged
 
 ---
@@ -808,6 +822,8 @@ Two targeted step replacements:
 - uses: cboone/gh-actions/actions/setup-scrut@main
 ```
 
+Also add `workflow_dispatch:` to the `on:` block.
+
 Keep everything else unchanged (Swift CI, markdownlint, prettier, release.yml).
 
 ### tmux-binding-help
@@ -823,6 +839,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   scrut:
