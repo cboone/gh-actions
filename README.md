@@ -1,19 +1,7 @@
-# Gh Actions
+# GitHub Actions
 
-A collection of reusable GitHub Actions for CI/CD workflows.
+There are many, these are mine.
 
-**Design goals:**
-
-- **Security** -- pinned tool versions with SHA-256 checksum verification on
-  every download.
-- **Simplicity** -- one workflow call replaces dozens of lines of duplicated
-  YAML.
-- **Consistency** -- the same tool versions and flags across all consuming
-  repositories.
-
-## Table of Contents
-
-- [Quick Start](#quick-start)
 - [Composite Actions](#composite-actions)
   - [setup-golangci-lint](#setup-golangci-lint)
   - [setup-goreleaser](#setup-goreleaser)
@@ -31,35 +19,8 @@ A collection of reusable GitHub Actions for CI/CD workflows.
   - [github-lint](#github-lint)
   - [pages-deploy](#pages-deploy)
   - [npm-publish](#npm-publish)
-- [Local Development](#local-development)
 - [Versioning](#versioning)
 - [License](#license)
-
-## Quick Start
-
-A typical Go project CI workflow shrinks from ~25 lines of setup to a single
-workflow call:
-
-```yaml
-# .github/workflows/ci.yml
-name: CI
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-jobs:
-  go:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@main
-    with:
-      run-lint: true
-      coverage: true
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-```
-
-> Use `@main` until v1.0.0 is tagged. After that, use `@v1`.
 
 ## Composite Actions
 
@@ -432,46 +393,6 @@ jobs:
     secrets:
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
-
-## Local Development
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) >= 20.18
-- [uv](https://docs.astral.sh/uv/) (for yamllint)
-- curl (for downloading actionlint)
-
-### Setup
-
-Install Node.js dev dependencies (prettier, markdownlint-cli2, cspell):
-
-```bash
-npm install
-```
-
-Install binary tools (actionlint):
-
-```bash
-make setup
-```
-
-### Makefile Targets
-
-| Target              | Description                     |
-| ------------------- | ------------------------------- |
-| `make setup`        | Install local tool dependencies |
-| `make lint`         | Lint GitHub Actions workflows   |
-| `make lint-yaml`    | Lint YAML files                 |
-| `make lint-md`      | Lint Markdown files             |
-| `make format`       | Format with Prettier            |
-| `make format-check` | Check formatting with Prettier  |
-| `make spell`        | Check spelling                  |
-| `make help`         | Show available targets          |
-
-Node.js tools are expected to be installed as local devDependencies via
-`npm install` and are run with `npx` using those local versions. Non-Node
-tools are bootstrapped automatically on first run: yamllint uses
-`uv tool run`, and actionlint downloads a pinned binary to `.local/bin/`.
 
 ## Versioning
 
