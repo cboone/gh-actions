@@ -2,5 +2,5 @@
   "version": "0.2",
   "language": "en",
   "ignorePaths": ["node_modules/", "dist/", "build/", "coverage/", "package-lock.json", ".git/"],
-  "words": ["actionlint", "bopca", "cboone", "charmbracelet", "codecov", "compbox", "dtolnay", "esac", "gitleaks", "gofmt", "goimports", "golangci", "GOPATH", "goreleaser", "markdownlint", "mfinelli", "problemas", "rhysd", "rustup", "scrut", "shellcheck", "shfmt", "stefanzweifel", "tokenless", "trufflehog", "yamllint"]
+  "words": ["actionlint", "bopca", "cboone", "charmbracelet", "codecov", "compbox", "dtolnay", "esac", "facebookincubator", "gitleaks", "gofmt", "goimports", "golangci", "GOPATH", "goreleaser", "markdownlint", "mfinelli", "problemas", "rhysd", "rustup", "scrut", "shellcheck", "shfmt", "stefanzweifel", "tokenless", "trufflehog", "yamllint"]
 }

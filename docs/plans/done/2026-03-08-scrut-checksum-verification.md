@@ -69,10 +69,10 @@ Replace the scrut bullet (line 11) to reflect the new hardcoded checksum approac
 
 ## Files to modify
 
-| File | Change |
-|------|--------|
-| `actions/setup-scrut/action.yml` | Add checksum case statement and verification block |
-| `.github/workflows/go-ci.yml` | Add identical checksum logic in scrut job |
+| File                              | Change                                             |
+| --------------------------------- | -------------------------------------------------- |
+| `actions/setup-scrut/action.yml`  | Add checksum case statement and verification block |
+| `.github/workflows/go-ci.yml`     | Add identical checksum logic in scrut job          |
 | `.github/copilot-instructions.md` | Update scrut bullet to document hardcoded approach |
 
 ## Reference files (patterns to follow)
