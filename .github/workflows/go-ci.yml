@@ -295,7 +295,7 @@ jobs:
             echo "Actual:   ${actual}" >&2
             exit 1
           fi
-          tar -xzf "${tarball_path}" -C "${install_dir}" scrut
+          tar -xz -C "${install_dir}" -f "${tarball_path}" scrut
           printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run scrut tests
