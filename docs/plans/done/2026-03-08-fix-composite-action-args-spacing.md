@@ -21,14 +21,14 @@ Use a `while IFS= read -r` loop instead of `mapfile` for bash 3.2+ compatibility
 **Input definition** (lines 9-12): Update description and change default to multiline `|-` block:
 
 ```yaml
-  args:
-    description: >-
-      Arguments to pass to gitleaks, one per line.
-    required: false
-    default: |-
-      detect
-      --source
-      .
+args:
+  description: >-
+    Arguments to pass to gitleaks, one per line.
+  required: false
+  default: |-
+    detect
+    --source
+    .
 ```
 
 **Run step** (lines 73-74): Replace `read -r -a` with while-read loop:
@@ -48,14 +48,14 @@ Same two changes, adapted for trufflehog:
 **Input definition** (lines 9-12):
 
 ```yaml
-  args:
-    description: >-
-      Arguments to pass to trufflehog, one per line.
-    required: false
-    default: |-
-      filesystem
-      --directory
-      .
+args:
+  description: >-
+    Arguments to pass to trufflehog, one per line.
+  required: false
+  default: |-
+    filesystem
+    --directory
+    .
 ```
 
 **Run step** (lines 73-74):

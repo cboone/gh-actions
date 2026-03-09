@@ -3,7 +3,10 @@ description: Install scrut CLI testing tool with a pinned version.
 
 inputs:
   version:
-    description: scrut version to install
+    description: >-
+      scrut version to install. Only the version with pinned checksums
+      is supported; update the checksums in this action to use a
+      different version.
     required: false
     default: "0.4.3"
 
@@ -33,14 +36,46 @@ runs:
             ;;
         esac
 
+        # Hardcoded SHA-256 checksums for scrut v0.4.3 release tarballs.
+        # scrut upstream does not publish checksum files, so these are
+        # computed from the release artifacts and must be updated when
+        # VERSION changes.
+        supported_version="0.4.3"
+        if [ "${VERSION}" != "${supported_version}" ]; then
+          echo "Unsupported scrut version: ${VERSION}" >&2
+          echo "Checksums are only available for v${supported_version}." >&2
+          echo "To use a different version, update the checksums in this action." >&2
+          exit 1
+        fi
+
+        case "${os}-${arch}" in
+          linux-x86_64)  expected="6aefb0bff29b450fbd1b04083eefeae4388d6c9302e31d1a24b7aa9edd03bb35" ;;
+          linux-aarch64) expected="a67117f4320d129c7d7073a5e667dbad25e7a83f31480a633108250fe4069dd5" ;;
+          macos-x86_64)  expected="2589730051127e114e2014916e51e7eaceb01f59ea7bfb2aa59bf36c8fa2cc9e" ;;
+          macos-aarch64) expected="3c0bc8d455fddb382e1e9099f5f4a4e0b8e925b19fa588c2176bc046383d9abc" ;;
+          *)
+            echo "No checksum available for ${os}-${arch}" >&2
+            exit 1
+            ;;
+        esac
+
         tarball="scrut-v${VERSION}-${os}-${arch}.tar.gz"
         base="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}"
         install_dir="${RUNNER_TEMP}/scrut-bin"
         mkdir -p "${install_dir}"
         tarball_path="${RUNNER_TEMP}/${tarball}"
         curl -sSfL -o "${tarball_path}" "${base}/${tarball}"
-        # scrut upstream does not publish checksum files; download to a file
-        # for consistency with other tool installers in this repo.
-        tar -xzf "${tarball_path}" -C "${install_dir}" --strip-components=1
+        if command -v sha256sum >/dev/null 2>&1; then
+          actual="$(sha256sum "${tarball_path}" | awk '{print $1}')"
+        else
+          actual="$(shasum -a 256 "${tarball_path}" | awk '{print $1}')"
+        fi
+        if [ "${expected}" != "${actual}" ]; then
+          echo "Checksum verification failed for ${tarball}" >&2
+          echo "Expected: ${expected}" >&2
+          echo "Actual:   ${actual}" >&2
+          exit 1
+        fi
+        tar -xz -C "${install_dir}" -f "${tarball_path}" scrut
         printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
         "${install_dir}/scrut" --version
