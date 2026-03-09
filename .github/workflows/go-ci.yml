@@ -53,6 +53,14 @@ on:
           needed by scrut test fixtures.
         type: string
         default: ""
+      use-makefile:
+        description: >-
+          Use Makefile targets instead of Go commands directly. When true,
+          test runs make test, vet runs make vet, lint runs make lint,
+          build runs make build, and format-check runs make fmt. The lint
+          job still installs golangci-lint (the Makefile calls it).
+        type: boolean
+        default: false
       run-format-check:
         description: Run gofmt/goimports format check.
         type: boolean
@@ -100,7 +108,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ inputs.go-version || null }}
           go-version-file: >-
@@ -108,11 +116,20 @@ jobs:
           cache: true
 
       - name: Run go vet
+        if: ${{ !inputs.use-makefile }}
         run: go vet ./...
 
+      - name: Run make vet
+        if: ${{ inputs.use-makefile }}
+        run: make vet
+
       - name: Run tests
-        if: ${{ !inputs.coverage }}
+        if: ${{ !inputs.coverage && !inputs.use-makefile }}
         run: go test -v ${{ inputs.test-flags }} ./...
+
+      - name: Run make test
+        if: ${{ !inputs.coverage && inputs.use-makefile }}
+        run: make test
 
       - name: Run tests with coverage
         if: ${{ inputs.coverage }}
@@ -171,7 +188,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ inputs.go-version || null }}
           go-version-file: >-
@@ -232,7 +249,12 @@ jobs:
           printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"
 
       - name: Run golangci-lint
+        if: ${{ !inputs.use-makefile }}
         run: golangci-lint run ./...
+
+      - name: Run make lint
+        if: ${{ inputs.use-makefile }}
+        run: make lint
 
   build:
     name: Build
@@ -242,7 +264,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ inputs.go-version || null }}
           go-version-file: >-
@@ -250,7 +272,12 @@ jobs:
           cache: true
 
       - name: Build
+        if: ${{ !inputs.use-makefile }}
         run: go build ${{ inputs.build-flags }} ./...
+
+      - name: Run make build
+        if: ${{ inputs.use-makefile }}
+        run: make build
 
   scrut:
     name: Scrut
@@ -260,7 +287,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ inputs.go-version || null }}
           go-version-file: >-
@@ -362,7 +389,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ inputs.go-version || null }}
           go-version-file: >-
@@ -370,6 +397,7 @@ jobs:
           cache: true
 
       - name: Check gofmt
+        if: ${{ !inputs.use-makefile }}
         run: |
           output="$(gofmt -l .)"
           if [ -n "${output}" ]; then
@@ -379,6 +407,7 @@ jobs:
           fi
 
       - name: Check goimports
+        if: ${{ !inputs.use-makefile }}
         run: |
           go install golang.org/x/tools/cmd/goimports@v0.42.0
           output="$(goimports -l .)"
@@ -387,3 +416,7 @@ jobs:
             echo "${output}"
             exit 1
           fi
+
+      - name: Run make fmt
+        if: ${{ inputs.use-makefile }}
+        run: make fmt
