@@ -1,0 +1,99 @@
+name: Text Lint
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version to install.
+        type: string
+        default: "22"
+      run-markdownlint:
+        description: Run markdownlint-cli2.
+        type: boolean
+        default: true
+      run-prettier:
+        description: Run Prettier format check.
+        type: boolean
+        default: true
+      run-cspell:
+        description: Run cspell spell checker.
+        type: boolean
+        default: false
+      run-yamllint:
+        description: Run yamllint.
+        type: boolean
+        default: false
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+env:
+  MARKDOWNLINT_CLI2_VERSION: 0.21.0
+  PRETTIER_VERSION: 3.8.1
+  CSPELL_VERSION: 9.7.0
+  UV_VERSION: 0.10.9
+  YAMLLINT_VERSION: 1.37.1
+
+jobs:
+  text-lint:
+    name: Text lint
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Install lint tools
+        run: |
+          npm install --global \
+            "markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION}" \
+            "prettier@${PRETTIER_VERSION}" \
+            "cspell@${CSPELL_VERSION}"
+
+      - name: Run markdownlint
+        if: inputs.run-markdownlint
+        run: markdownlint-cli2 "**/*.md"
+
+      - name: Run Prettier check
+        if: inputs.run-prettier
+        run: prettier --check .
+
+      - name: Run cspell
+        if: inputs.run-cspell
+        run: cspell .
+
+      - name: Install uv
+        if: inputs.run-yamllint
+        run: |
+          archive="uv-x86_64-unknown-linux-gnu.tar.gz"
+          base_url="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
+          curl -sSfL "${base_url}/${archive}.sha256" -o "${archive_path}.sha256"
+          expected="$(awk '{print $1}' "${archive_path}.sha256")"
+          actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          install_dir="${RUNNER_TEMP}/uv-bin"
+          mkdir -p "${install_dir}"
+          tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
+          install -m 0755 "${RUNNER_TEMP}/uv-x86_64-unknown-linux-gnu/uv" "${install_dir}/uv"
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run yamllint
+        if: inputs.run-yamllint
+        run: >-
+          uv tool run
+          --from "yamllint==${YAMLLINT_VERSION}"
+          yamllint .

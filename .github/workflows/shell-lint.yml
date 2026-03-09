@@ -1,0 +1,127 @@
+name: Shell Lint
+
+on:
+  workflow_call:
+    inputs:
+      run-shellcheck:
+        description: Run ShellCheck.
+        type: boolean
+        default: true
+      run-shfmt:
+        description: Run shfmt format check.
+        type: boolean
+        default: true
+      shfmt-version:
+        description: shfmt version to install.
+        type: string
+        default: "3.12.0"
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+jobs:
+  shell-lint:
+    name: Shell lint
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Find shell scripts
+        id: find-scripts
+        run: |
+          {
+            find . \( -name '*.sh' -o -name '*.bash' \) \
+              -not -path '*/node_modules/*' \
+              -not -path '*/.git/*' \
+              -print0 2>/dev/null \
+              | xargs -0 -r printf '%s\n' || true
+            find bin/ scripts/ script/ -type f -print0 2>/dev/null \
+              | xargs -0 -r file --mime-type 2>/dev/null \
+              | grep 'text/x-shellscript' \
+              | cut -d: -f1 || true
+          } | sort -u | grep -v '^$' > /tmp/shell-scripts.txt || true
+          {
+            echo "files<<DELIM"
+            cat /tmp/shell-scripts.txt
+            echo "DELIM"
+          } >> "${GITHUB_OUTPUT}"
+          if [ -s /tmp/shell-scripts.txt ]; then
+            echo "found=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "found=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Run ShellCheck
+        if: >-
+          inputs.run-shellcheck
+          && steps.find-scripts.outputs.found == 'true'
+        env:
+          SHELL_SCRIPTS: ${{ steps.find-scripts.outputs.files }}
+        run: |
+          echo "${SHELL_SCRIPTS}" | tr '\n' '\0' | xargs -0 shellcheck
+
+      - name: Install shfmt
+        if: >-
+          inputs.run-shfmt
+          && steps.find-scripts.outputs.found == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ inputs.shfmt-version }}
+        run: |
+          case "$(uname -s)" in
+            Linux) os="linux" ;;
+            Darwin) os="darwin" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64) arch="amd64" ;;
+            arm64|aarch64) arch="arm64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)" >&2
+              exit 1
+              ;;
+          esac
+
+          install_dir="${RUNNER_TEMP}/shfmt-bin"
+          mkdir -p "${install_dir}"
+          binary_name="shfmt_v${VERSION}_${os}_${arch}"
+          binary_path="${install_dir}/shfmt"
+          base="https://github.com/mvdan/sh/releases/download/v${VERSION}"
+          curl -sSfL "${base}/${binary_name}" -o "${binary_path}"
+          curl -sSfL "${base}/sha256sums.txt" -o "${install_dir}/checksums.txt"
+          expected="$(grep -F "${binary_name}" "${install_dir}/checksums.txt" | head -1 | awk '{print $1}')"
+          if [ -z "${expected}" ]; then
+            echo "Checksum entry not found for ${binary_name}" >&2
+            exit 1
+          fi
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${binary_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${binary_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${binary_name}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          chmod +x "${binary_path}"
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run shfmt check
+        if: >-
+          inputs.run-shfmt
+          && steps.find-scripts.outputs.found == 'true'
+        env:
+          SHELL_SCRIPTS: ${{ steps.find-scripts.outputs.files }}
+        run: |
+          echo "${SHELL_SCRIPTS}" | tr '\n' '\0' | xargs -0 shfmt -d

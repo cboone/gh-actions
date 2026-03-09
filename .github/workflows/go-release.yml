@@ -1,0 +1,106 @@
+name: Go Release
+
+on:
+  workflow_call:
+    inputs:
+      go-version-file:
+        description: File to read the Go version from.
+        type: string
+        default: go.mod
+      runs-on:
+        description: >-
+          Runner label (ubuntu-latest or macos-latest recommended;
+          Windows is not supported).
+        type: string
+        default: ubuntu-latest
+      goreleaser-version:
+        description: GoReleaser version to install.
+        type: string
+        default: "2.14.2"
+      goreleaser-args:
+        description: Arguments to pass to goreleaser.
+        type: string
+        default: release --clean
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 30
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+      HOMEBREW_TAP_TOKEN:
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
+
+      - name: Install GoReleaser
+        shell: bash
+        env:
+          VERSION: ${{ inputs.goreleaser-version }}
+        run: |
+          case "$(uname -s)" in
+            Linux) os="Linux" ;;
+            Darwin) os="Darwin" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64) arch="x86_64" ;;
+            arm64|aarch64) arch="arm64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)" >&2
+              exit 1
+              ;;
+          esac
+
+          install_dir="${RUNNER_TEMP}/goreleaser-bin"
+          mkdir -p "${install_dir}"
+          base="https://github.com/goreleaser/goreleaser/releases/download"
+          archive="goreleaser_${os}_${arch}.tar.gz"
+          archive_path="${install_dir}/${archive}"
+          curl -sSfL "${base}/v${VERSION}/${archive}" -o "${archive_path}"
+          curl -sSfL "${base}/v${VERSION}/checksums.txt" \
+            -o "${install_dir}/checksums.txt"
+          expected="$(grep -F "${archive}" "${install_dir}/checksums.txt" | head -1 | awk '{print $1}')"
+          if [ -z "${expected}" ]; then
+            echo "Checksum entry not found for ${archive}" >&2
+            exit 1
+          fi
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          tar -xz -C "${install_dir}" -f "${archive_path}" goreleaser
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run GoReleaser
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: goreleaser ${{ inputs.goreleaser-args }}

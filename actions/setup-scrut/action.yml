@@ -1,0 +1,46 @@
+name: Setup scrut
+description: Install scrut CLI testing tool with a pinned version.
+
+inputs:
+  version:
+    description: scrut version to install
+    required: false
+    default: "0.4.3"
+
+runs:
+  using: composite
+  steps:
+    - name: Install scrut
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        case "$(uname -s)" in
+          Linux) os="linux" ;;
+          Darwin) os="macos" ;;
+          *)
+            echo "Unsupported operating system: $(uname -s)" >&2
+            exit 1
+            ;;
+        esac
+
+        case "$(uname -m)" in
+          x86_64) arch="x86_64" ;;
+          arm64|aarch64) arch="aarch64" ;;
+          *)
+            echo "Unsupported architecture: $(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+
+        tarball="scrut-v${VERSION}-${os}-${arch}.tar.gz"
+        base="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}"
+        install_dir="${RUNNER_TEMP}/scrut-bin"
+        mkdir -p "${install_dir}"
+        tarball_path="${RUNNER_TEMP}/${tarball}"
+        curl -sSfL -o "${tarball_path}" "${base}/${tarball}"
+        # scrut upstream does not publish checksum files; download to a file
+        # for consistency with other tool installers in this repo.
+        tar -xzf "${tarball_path}" -C "${install_dir}" scrut
+        printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+        "${install_dir}/scrut" --version

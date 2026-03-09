@@ -1,0 +1,68 @@
+name: npm Publish
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version to install.
+        type: string
+        default: "22"
+      registry-url:
+        description: npm registry URL.
+        type: string
+        default: https://npm.pkg.github.com
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 10
+    secrets:
+      NODE_AUTH_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Detect npm cache lockfile
+        id: npm-cache
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "cache=npm" >> "${GITHUB_OUTPUT}"
+            echo "cache-dependency-path=package-lock.json" >> "${GITHUB_OUTPUT}"
+          elif [ -f npm-shrinkwrap.json ]; then
+            echo "cache=npm" >> "${GITHUB_OUTPUT}"
+            echo "cache-dependency-path=npm-shrinkwrap.json" >> "${GITHUB_OUTPUT}"
+          else
+            echo "cache=" >> "${GITHUB_OUTPUT}"
+            echo "cache-dependency-path=" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.registry-url }}
+          cache: ${{ steps.npm-cache.outputs.cache }}
+          cache-dependency-path: >-
+            ${{ steps.npm-cache.outputs.cache-dependency-path }}
+
+      - name: Install dependencies
+        run: >-
+          ${{
+            steps.npm-cache.outputs.cache-dependency-path != ''
+            && 'npm ci'
+            || 'npm install'
+          }}
+
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        run: npm publish

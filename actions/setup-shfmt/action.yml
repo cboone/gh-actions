@@ -1,0 +1,61 @@
+name: Setup shfmt
+description: Install shfmt binary with a pinned version.
+
+inputs:
+  version:
+    description: shfmt version to install
+    required: false
+    default: "3.12.0"
+
+runs:
+  using: composite
+  steps:
+    - name: Install shfmt
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        case "$(uname -s)" in
+          Linux) os="linux" ;;
+          Darwin) os="darwin" ;;
+          *)
+            echo "Unsupported operating system: $(uname -s)" >&2
+            exit 1
+            ;;
+        esac
+
+        case "$(uname -m)" in
+          x86_64) arch="amd64" ;;
+          arm64|aarch64) arch="arm64" ;;
+          *)
+            echo "Unsupported architecture: $(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+
+        install_dir="${RUNNER_TEMP}/shfmt-bin"
+        mkdir -p "${install_dir}"
+        binary_name="shfmt_v${VERSION}_${os}_${arch}"
+        binary_path="${install_dir}/shfmt"
+        base="https://github.com/mvdan/sh/releases/download/v${VERSION}"
+        curl -sSfL "${base}/${binary_name}" -o "${binary_path}"
+        curl -sSfL "${base}/sha256sums.txt" -o "${install_dir}/checksums.txt"
+        expected="$(grep -F "${binary_name}" "${install_dir}/checksums.txt" | head -1 | awk '{print $1}')"
+        if [ -z "${expected}" ]; then
+          echo "Checksum entry not found for ${binary_name}" >&2
+          exit 1
+        fi
+        if command -v sha256sum >/dev/null 2>&1; then
+          actual="$(sha256sum "${binary_path}" | awk '{print $1}')"
+        else
+          actual="$(shasum -a 256 "${binary_path}" | awk '{print $1}')"
+        fi
+        if [ "${expected}" != "${actual}" ]; then
+          echo "Checksum verification failed for ${binary_name}" >&2
+          echo "Expected: ${expected}" >&2
+          echo "Actual:   ${actual}" >&2
+          exit 1
+        fi
+        chmod +x "${binary_path}"
+        printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+        "${install_dir}/shfmt" --version

@@ -1,0 +1,109 @@
+name: Pages Deploy
+
+on:
+  workflow_call:
+    inputs:
+      build-command:
+        description: Command to build the site.
+        type: string
+        required: true
+      artifact-path:
+        description: Path to the built site directory.
+        type: string
+        default: ./_site
+      runs-on:
+        description: Runner label.
+        type: string
+        default: ubuntu-latest
+      setup-go:
+        description: Set up Go before building.
+        type: boolean
+        default: false
+      go-version-file:
+        description: File to read the Go version from.
+        type: string
+        default: go.mod
+      setup-node:
+        description: Set up Node.js before building.
+        type: boolean
+        default: false
+      node-version:
+        description: Node.js version to install.
+        type: string
+        default: "22"
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Detect npm cache lockfile
+        id: npm-cache
+        if: inputs.setup-node
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "cache=npm" >> "${GITHUB_OUTPUT}"
+            echo "cache-dependency-path=package-lock.json" >> "${GITHUB_OUTPUT}"
+          elif [ -f npm-shrinkwrap.json ]; then
+            echo "cache=npm" >> "${GITHUB_OUTPUT}"
+            echo "cache-dependency-path=npm-shrinkwrap.json" >> "${GITHUB_OUTPUT}"
+          else
+            echo "cache=" >> "${GITHUB_OUTPUT}"
+            echo "cache-dependency-path=" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - uses: actions/setup-go@v5
+        if: inputs.setup-go
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
+
+      - uses: actions/setup-node@v4
+        if: inputs.setup-node
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: ${{ steps.npm-cache.outputs.cache }}
+          cache-dependency-path: >-
+            ${{ steps.npm-cache.outputs.cache-dependency-path }}
+
+      - name: Install npm dependencies
+        if: inputs.setup-node
+        run: >-
+          ${{
+            steps.npm-cache.outputs.cache-dependency-path != ''
+            && 'npm ci'
+            || 'npm install'
+          }}
+
+      - uses: actions/configure-pages@v5
+
+      - name: Build site
+        run: ${{ inputs.build-command }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ inputs.artifact-path }}
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

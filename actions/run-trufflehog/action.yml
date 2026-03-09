@@ -1,0 +1,74 @@
+name: Run trufflehog
+description: Install trufflehog binary and run a scan.
+
+inputs:
+  version:
+    description: trufflehog version to install
+    required: false
+    default: "3.93.7"
+  args:
+    description: Arguments to pass to trufflehog
+    required: false
+    default: "filesystem --directory ."
+
+runs:
+  using: composite
+  steps:
+    - name: Install trufflehog
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        case "$(uname -s)" in
+          Linux) os="linux" ;;
+          Darwin) os="darwin" ;;
+          *)
+            echo "Unsupported operating system: $(uname -s)" >&2
+            exit 1
+            ;;
+        esac
+
+        case "$(uname -m)" in
+          x86_64) arch="amd64" ;;
+          arm64|aarch64) arch="arm64" ;;
+          *)
+            echo "Unsupported architecture: $(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+
+        install_dir="${RUNNER_TEMP}/trufflehog-bin"
+        mkdir -p "${install_dir}"
+        base="https://github.com/trufflesecurity/trufflehog/releases/download"
+        archive="trufflehog_${VERSION}_${os}_${arch}.tar.gz"
+        archive_path="${install_dir}/${archive}"
+        curl -sSfL "${base}/v${VERSION}/${archive}" -o "${archive_path}"
+        curl -sSfL "${base}/v${VERSION}/trufflehog_${VERSION}_checksums.txt" \
+          -o "${install_dir}/checksums.txt"
+        expected="$(grep -F "${archive}" "${install_dir}/checksums.txt" | head -1 | awk '{print $1}')"
+        if [ -z "${expected}" ]; then
+          echo "Checksum entry not found for ${archive}" >&2
+          exit 1
+        fi
+        if command -v sha256sum >/dev/null 2>&1; then
+          actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+        else
+          actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+        fi
+        if [ "${expected}" != "${actual}" ]; then
+          echo "Checksum verification failed for ${archive}" >&2
+          echo "Expected: ${expected}" >&2
+          echo "Actual:   ${actual}" >&2
+          exit 1
+        fi
+        tar -xz -C "${install_dir}" -f "${archive_path}" trufflehog
+        printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+        "${install_dir}/trufflehog" --version
+
+    - name: Run trufflehog
+      shell: bash
+      env:
+        TRUFFLEHOG_ARGS: ${{ inputs.args }}
+      run: |
+        read -r -a trufflehog_args <<< "${TRUFFLEHOG_ARGS}"
+        trufflehog "${trufflehog_args[@]}" --results=verified,unknown

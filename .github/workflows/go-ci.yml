@@ -1,0 +1,312 @@
+name: Go CI
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        description: >-
+          Go version to install. When set, overrides go-version-file.
+        type: string
+        default: ""
+      go-version-file:
+        description: File to read the Go version from.
+        type: string
+        default: go.mod
+      runs-on:
+        description: >-
+          Runner label (ubuntu-latest or macos-latest recommended;
+          Windows is not supported).
+        type: string
+        default: ubuntu-latest
+      run-lint:
+        description: Run golangci-lint.
+        type: boolean
+        default: true
+      golangci-lint-version:
+        description: golangci-lint version to install.
+        type: string
+        default: "2.11.2"
+      run-scrut:
+        description: Run scrut CLI tests.
+        type: boolean
+        default: false
+      run-format-check:
+        description: Run gofmt/goimports format check.
+        type: boolean
+        default: false
+      run-build:
+        description: Run go build.
+        type: boolean
+        default: false
+      build-flags:
+        description: Additional flags for go build.
+        type: string
+        default: ""
+      test-flags:
+        description: Flags for go test.
+        type: string
+        default: "-race"
+      coverage:
+        description: Generate coverage and upload to Codecov.
+        type: boolean
+        default: false
+      codecov-cli-version:
+        description: Codecov CLI version to install.
+        type: string
+        default: "10.4.0"
+      codecov-files:
+        description: Single coverage file path (used for -coverprofile and Codecov upload).
+        type: string
+        default: coverage.out
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 15
+    secrets:
+      CODECOV_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests
+        if: ${{ !inputs.coverage }}
+        run: go test -v ${{ inputs.test-flags }} ./...
+
+      - name: Run tests with coverage
+        if: ${{ inputs.coverage }}
+        run: >-
+          go test -v ${{ inputs.test-flags }}
+          -coverprofile=${{ inputs.codecov-files }} ./...
+
+      - name: Upload coverage to Codecov
+        if: inputs.coverage
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          CODECOV_CLI_VERSION: ${{ inputs.codecov-cli-version }}
+        run: |
+          case "${RUNNER_OS}" in
+            Linux) codecov_os="linux" ;;
+            macOS) codecov_os="macos" ;;
+            *)
+              echo "Unsupported runner operating system: ${RUNNER_OS}" >&2
+              exit 1
+              ;;
+          esac
+
+          codecov_bin="${RUNNER_TEMP}/codecov"
+          base_url="https://cli.codecov.io/v${CODECOV_CLI_VERSION}/${codecov_os}"
+          curl -sSfL "${base_url}/codecov" -o "${codecov_bin}"
+          curl -sSfL "${base_url}/codecov.SHA256SUM" -o "${codecov_bin}.sha256"
+          expected="$(awk '{print $1}' "${codecov_bin}.sha256")"
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${codecov_bin}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${codecov_bin}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for codecov" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          chmod +x "${codecov_bin}"
+          "${codecov_bin}" upload-process \
+            --file "${{ inputs.codecov-files }}" \
+            --disable-search
+
+  lint:
+    name: Lint
+    if: inputs.run-lint
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - name: Install golangci-lint
+        shell: bash
+        env:
+          VERSION: ${{ inputs.golangci-lint-version }}
+        run: |
+          case "$(uname -s)" in
+            Linux) os="linux" ;;
+            Darwin) os="darwin" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64) arch="amd64" ;;
+            arm64|aarch64) arch="arm64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)" >&2
+              exit 1
+              ;;
+          esac
+
+          archive="golangci-lint-${VERSION}-${os}-${arch}.tar.gz"
+          bin_dir="${RUNNER_TEMP}/golangci-lint-bin"
+          mkdir -p "${bin_dir}"
+          base_url="https://github.com/golangci/golangci-lint/releases/download/v${VERSION}"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
+          curl -sSfL "${base_url}/golangci-lint-${VERSION}-checksums.txt" \
+            -o "${RUNNER_TEMP}/golangci-lint-checksums.txt"
+          expected="$(grep -F "${archive}" "${RUNNER_TEMP}/golangci-lint-checksums.txt" | head -1 | awk '{print $1}')"
+          if [ -z "${expected}" ]; then
+            echo "Checksum entry not found for ${archive}" >&2
+            exit 1
+          fi
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
+          install -m 0755 \
+            "${RUNNER_TEMP}/golangci-lint-${VERSION}-${os}-${arch}/golangci-lint" \
+            "${bin_dir}/golangci-lint"
+          printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run golangci-lint
+        run: golangci-lint run ./...
+
+  build:
+    name: Build
+    if: inputs.run-build
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - name: Build
+        run: go build ${{ inputs.build-flags }} ./...
+
+  scrut:
+    name: Scrut
+    if: inputs.run-scrut
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - name: Build binary for scrut tests
+        run: go build ./...
+
+      - name: Install scrut
+        shell: bash
+        env:
+          VERSION: "0.4.3"
+        run: |
+          case "$(uname -s)" in
+            Linux) os="linux" ;;
+            Darwin) os="macos" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64) arch="x86_64" ;;
+            arm64|aarch64) arch="aarch64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)" >&2
+              exit 1
+              ;;
+          esac
+
+          tarball="scrut-v${VERSION}-${os}-${arch}.tar.gz"
+          base="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}"
+          install_dir="${RUNNER_TEMP}/scrut-bin"
+          mkdir -p "${install_dir}"
+          tarball_path="${RUNNER_TEMP}/${tarball}"
+          curl -sSfL -o "${tarball_path}" "${base}/${tarball}"
+          # scrut upstream does not publish checksum files; download to a file
+          # for consistency with other tool installers in this repo.
+          tar -xzf "${tarball_path}" -C "${install_dir}" scrut
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run scrut tests
+        run: scrut test tests/
+
+  format-check:
+    name: Format check
+    if: inputs.run-format-check
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - name: Check gofmt
+        run: |
+          output="$(gofmt -l .)"
+          if [ -n "${output}" ]; then
+            echo "Files not formatted with gofmt:"
+            echo "${output}"
+            exit 1
+          fi
+
+      - name: Check goimports
+        run: |
+          go install golang.org/x/tools/cmd/goimports@v0.42.0
+          output="$(goimports -l .)"
+          if [ -n "${output}" ]; then
+            echo "Files not formatted with goimports:"
+            echo "${output}"
+            exit 1
+          fi

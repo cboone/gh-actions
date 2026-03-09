@@ -1,0 +1,65 @@
+name: Setup golangci-lint
+description: Install golangci-lint binary with a pinned version.
+
+inputs:
+  version:
+    description: golangci-lint version to install
+    required: false
+    default: "2.11.2"
+
+runs:
+  using: composite
+  steps:
+    - name: Install golangci-lint
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        case "$(uname -s)" in
+          Linux) os="linux" ;;
+          Darwin) os="darwin" ;;
+          *)
+            echo "Unsupported operating system: $(uname -s)" >&2
+            exit 1
+            ;;
+        esac
+
+        case "$(uname -m)" in
+          x86_64) arch="amd64" ;;
+          arm64|aarch64) arch="arm64" ;;
+          *)
+            echo "Unsupported architecture: $(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+
+        archive="golangci-lint-${VERSION}-${os}-${arch}.tar.gz"
+        bin_dir="${RUNNER_TEMP}/golangci-lint-bin"
+        mkdir -p "${bin_dir}"
+        base_url="https://github.com/golangci/golangci-lint/releases/download/v${VERSION}"
+        archive_path="${RUNNER_TEMP}/${archive}"
+        curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
+        curl -sSfL "${base_url}/golangci-lint-${VERSION}-checksums.txt" \
+          -o "${RUNNER_TEMP}/golangci-lint-checksums.txt"
+        expected="$(grep -F "${archive}" "${RUNNER_TEMP}/golangci-lint-checksums.txt" | head -1 | awk '{print $1}')"
+        if [ -z "${expected}" ]; then
+          echo "Checksum entry not found for ${archive}" >&2
+          exit 1
+        fi
+        if command -v sha256sum >/dev/null 2>&1; then
+          actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+        else
+          actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+        fi
+        if [ "${expected}" != "${actual}" ]; then
+          echo "Checksum verification failed for ${archive}" >&2
+          echo "Expected: ${expected}" >&2
+          echo "Actual:   ${actual}" >&2
+          exit 1
+        fi
+        tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
+        install -m 0755 \
+          "${RUNNER_TEMP}/golangci-lint-${VERSION}-${os}-${arch}/golangci-lint" \
+          "${bin_dir}/golangci-lint"
+        printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"
+        "${bin_dir}/golangci-lint" version
