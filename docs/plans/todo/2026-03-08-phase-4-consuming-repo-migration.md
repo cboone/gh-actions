@@ -840,10 +840,14 @@ jobs:
 
 Replaces: `stefanzweifel/git-auto-commit-action@v7`
 
-Keep `charmbracelet/readme-scribe@master` (justified in plan). Replace the auto-commit action with git commands:
+Keep `charmbracelet/readme-scribe@master` (justified in plan). Replace the auto-commit action with git commands, and restrict the `push` trigger to `main` (the old action had `branch: main`, so an unrestricted `push` trigger would change behavior):
 
 ```yaml
 # OLD:
+on:
+  push:
+  schedule:
+
 - uses: stefanzweifel/git-auto-commit-action@v7
   with:
     commit_message: "docs: update generated README"
@@ -852,6 +856,11 @@ Keep `charmbracelet/readme-scribe@master` (justified in plan). Replace the auto-
     commit_user_email: cboone@users.noreply.github.com
     commit_author: Christopher Boone <cboone@users.noreply.github.com>
 # NEW:
+on:
+  push:
+    branches: [main]
+  schedule:
+
 - name: Commit and push
   run: |
     git config user.name "Christopher Boone"
