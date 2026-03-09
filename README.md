@@ -252,10 +252,9 @@ Run GoReleaser to build and publish a Go release.
 
 #### Secrets
 
-| Name                 | Required | Description                        |
-| -------------------- | -------- | ---------------------------------- |
-| `GITHUB_TOKEN`       | Yes      | Token for creating GitHub releases |
-| `HOMEBREW_TAP_TOKEN` | No       | Token for Homebrew tap updates     |
+| Name                 | Required | Description                    |
+| -------------------- | -------- | ------------------------------ |
+| `HOMEBREW_TAP_TOKEN` | No       | Token for Homebrew tap updates |
 
 #### Usage
 
@@ -266,7 +265,7 @@ jobs:
     with:
       goreleaser-version: "2.14.2"
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
 ### secret-scan
