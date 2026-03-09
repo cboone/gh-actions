@@ -99,10 +99,17 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: inputs.coverage
+        continue-on-error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           CODECOV_CLI_VERSION: ${{ inputs.codecov-cli-version }}
         run: |
+          # Unset empty token so the CLI uses tokenless mode for public repos
+          # instead of treating the empty string as an invalid token.
+          if [ -z "${CODECOV_TOKEN}" ]; then
+            unset CODECOV_TOKEN
+          fi
+
           case "${RUNNER_OS}" in
             Linux) codecov_os="linux" ;;
             macOS) codecov_os="macos" ;;
