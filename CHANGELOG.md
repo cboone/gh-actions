@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-03-08
+
 ### Added
 
 - Composite action `setup-golangci-lint` to install golangci-lint with a pinned version
@@ -28,6 +30,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform support for Linux and macOS runners
 - Codecov coverage upload support in go-ci workflow
 - gofmt and goimports format checking in go-ci workflow
+- Scrut inputs for custom build commands (`scrut-build-cmd`), environment variables (`scrut-env`), test directories (`scrut-test-dir`), and setup commands (`scrut-setup-cmd`)
 - Self-hosting workflows (`ci.yml`, `gitleaks.yml`, `trufflehog.yml`) as integration tests
 - Linter and formatter configuration (markdownlint, Prettier, cspell, editorconfig)
-- Copilot review instructions for repository-specific conventions
+
+### Fixed
+
+- Install tools to `RUNNER_TEMP` and add to `GITHUB_PATH` instead of writing to system paths
+- Extract scrut binary with `--strip-components=1` for correct tarball layout
+- Resolve relative paths in `scrut-env` values to absolute paths
+- Use `github.token` directly in go-release workflow instead of requiring callers to pass `GITHUB_TOKEN`
+- Split composite action args with `read -r -a` using newline-delimited inputs
+- Make reusable workflows self-contained (no references to local composite actions)
+- Pin all tool versions to exact patch releases with SHA-256 checksum verification
+- Avoid running tests twice when coverage is enabled
+- Install Codecov CLI for the correct runner OS
+
+[unreleased]: https://github.com/cboone/gh-actions/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/cboone/gh-actions/releases/tag/v1.0.0
