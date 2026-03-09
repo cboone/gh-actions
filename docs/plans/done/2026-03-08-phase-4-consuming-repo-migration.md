@@ -355,7 +355,7 @@ jobs:
       runs-on: macos-latest
       go-version: "1.23"
       run-scrut: true
-      scrut-setup-cmd: "curl -LsSf https://astral.sh/uv/install.sh | sh && echo \"$HOME/.local/bin\" >> \"$GITHUB_PATH\""
+      scrut-setup-cmd: 'curl -LsSf https://astral.sh/uv/install.sh | sh && echo "$HOME/.local/bin" >> "$GITHUB_PATH"'
       scrut-build-cmd: "go build -o ./bin/quod ./cmd/quod"
       scrut-env: "QUOD_BIN=./bin/quod"
       scrut-test-dir: "scrut/"
@@ -895,12 +895,12 @@ on:
 
 ## Repos to Skip
 
-| Repo | Reason |
-| --- | --- |
-| crawler | No third-party actions. CI requires tmux (go-ci.yml can't provide it). |
-| cboone.github.io | No third-party actions. Hugo + Dart Sass + submodules too custom for pages-deploy.yml. |
-| homebrew-tap | No third-party actions (uses only git commands). |
-| tmux-default-bindings | Out of scope per plan (complex project-specific automation). |
+| Repo                  | Reason                                                                                 |
+| --------------------- | -------------------------------------------------------------------------------------- |
+| crawler               | No third-party actions. CI requires tmux (go-ci.yml can't provide it).                 |
+| cboone.github.io      | No third-party actions. Hugo + Dart Sass + submodules too custom for pages-deploy.yml. |
+| homebrew-tap          | No third-party actions (uses only git commands).                                       |
+| tmux-default-bindings | Out of scope per plan (complex project-specific automation).                           |
 
 ---
 
@@ -956,15 +956,15 @@ Special attention:
 
 ## Summary
 
-| Group | Repos | Third-party actions replaced |
-| --- | --- | --- |
-| Secret scan | claude-dotfiles, dotfiles, pb-bug | gitleaks/gitleaks-action (3) |
-| Standard Go | right-round, gh-problemas, stipple | golangci-lint-action (3), goreleaser-action (3) |
-| Go + scrut | fm, tracker, quod | goreleaser-action (1), astral-sh/setup-uv (1), scrut installs (3) |
-| Complex Go | xylem, snappy, bopca | golangci-lint-action (3), raven-actions/actionlint (2), goreleaser-action (3), codecov-action (1), repository-dispatch (1), scrut installs (2) |
-| npm publish | cboone-alpine-plugins, cboone-tailwind-plugins | (none, but standardizes pattern) |
-| Pages deploy | snappy-sh-site, bopca-sh-site | (none, but standardizes pattern) |
-| Text/GitHub lint | compbox, cboone-cc-plugins | cspell-action (1), raven-actions/actionlint (2), mfinelli/setup-shfmt (1) |
-| One-off | pbcopy2, tmux-binding-help, cboone | raven-actions/actionlint (1), dtolnay/rust-toolchain (1), git-auto-commit-action (1), scrut install (1) |
+| Group            | Repos                                          | Third-party actions replaced                                                                                                                   |
+| ---------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Secret scan      | claude-dotfiles, dotfiles, pb-bug              | gitleaks/gitleaks-action (3)                                                                                                                   |
+| Standard Go      | right-round, gh-problemas, stipple             | golangci-lint-action (3), goreleaser-action (3)                                                                                                |
+| Go + scrut       | fm, tracker, quod                              | goreleaser-action (1), astral-sh/setup-uv (1), scrut installs (3)                                                                              |
+| Complex Go       | xylem, snappy, bopca                           | golangci-lint-action (3), raven-actions/actionlint (2), goreleaser-action (3), codecov-action (1), repository-dispatch (1), scrut installs (2) |
+| npm publish      | cboone-alpine-plugins, cboone-tailwind-plugins | (none, but standardizes pattern)                                                                                                               |
+| Pages deploy     | snappy-sh-site, bopca-sh-site                  | (none, but standardizes pattern)                                                                                                               |
+| Text/GitHub lint | compbox, cboone-cc-plugins                     | cspell-action (1), raven-actions/actionlint (2), mfinelli/setup-shfmt (1)                                                                      |
+| One-off          | pbcopy2, tmux-binding-help, cboone             | raven-actions/actionlint (1), dtolnay/rust-toolchain (1), git-auto-commit-action (1), scrut install (1)                                        |
 
 Total: 21 repos, ~30 third-party action usages eliminated.
