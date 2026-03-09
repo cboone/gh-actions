@@ -329,7 +329,16 @@ jobs:
         run: |
           if [ -n "${SCRUT_ENV}" ]; then
             while IFS= read -r line; do
-              [ -n "${line}" ] && export "${line?}"
+              if [ -n "${line}" ]; then
+                key="${line%%=*}"
+                value="${line#*=}"
+                # Resolve ./relative paths to absolute so scrut
+                # subprocesses find binaries from any working directory.
+                case "${value}" in
+                  ./*) value="${PWD}/${value#./}" ;;
+                esac
+                export "${key}=${value}"
+              fi
             done <<< "${SCRUT_ENV}"
           fi
           scrut test "${SCRUT_TEST_DIR}"
