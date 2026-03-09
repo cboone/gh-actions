@@ -317,11 +317,17 @@ jobs:
   ci:
     uses: cboone/gh-actions/.github/workflows/go-ci.yml@main
     with:
+      run-lint: false
       run-scrut: true
+      scrut-build-cmd: "go build -o tracker ./cmd/tracker"
+      scrut-test-dir: "tests/e2e/"
       run-build: true
 ```
 
-Note: go-ci.yml's scrut job runs `scrut test tests/` by default. Tracker's current test runs `scrut test tests/e2e/`. The scrut job in go-ci.yml discovers test files automatically (runs `scrut test tests/` if a `tests/` dir exists). Need to verify this finds tracker's `tests/e2e/` subdirectory.
+Notes:
+- `scrut-build-cmd`: The binary must be named `tracker` at the project root (test-shell adds project root to PATH).
+- `scrut-test-dir`: Tests live in `tests/e2e/`, not the default `tests/`.
+- `run-lint: false`: The old workflow only ran `go vet`. The repo has pre-existing `errcheck` and `unused` findings that would fail `golangci-lint`.
 
 ### quod
 
@@ -924,7 +930,7 @@ For each PR:
 
 Special attention:
 
-- **tracker**: Verify scrut discovers `tests/e2e/` subdirectory
+- **tracker**: Scrut needs `scrut-test-dir: "tests/e2e/"` and `scrut-build-cmd: "go build -o tracker ./cmd/tracker"`. Lint disabled (pre-existing errcheck/unused findings).
 - **bopca**: Verify codecov upload works via CLI (previously used codecov-action)
 - **bopca**: Verify `golangci-lint --timeout=5m` is in `.golangci.yml`
 - **snappy**: Verify shell-lint.yml discovers shell files in expected locations
