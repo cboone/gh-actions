@@ -4,6 +4,9 @@
 # Dependencies
 node_modules/
 
+# Local tool binaries
+.local/
+
 # Agent config
 .claude/settings.local.json
 
