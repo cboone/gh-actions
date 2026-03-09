@@ -130,8 +130,6 @@ permissions:
 jobs:
   release:
     uses: cboone/gh-actions/.github/workflows/go-release.yml@main
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 Replaces: `goreleaser/goreleaser-action@v6` with `version: latest`
@@ -177,7 +175,6 @@ jobs:
   release:
     uses: cboone/gh-actions/.github/workflows/go-release.yml@main
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
@@ -227,8 +224,6 @@ permissions:
 jobs:
   release:
     uses: cboone/gh-actions/.github/workflows/go-release.yml@main
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
@@ -275,7 +270,6 @@ jobs:
   release:
     uses: cboone/gh-actions/.github/workflows/go-release.yml@main
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
@@ -317,7 +311,6 @@ jobs:
   ci:
     uses: cboone/gh-actions/.github/workflows/go-ci.yml@main
     with:
-      run-lint: false
       run-scrut: true
       scrut-build-cmd: "go build -o tracker ./cmd/tracker"
       scrut-test-dir: "tests/e2e/"
@@ -325,9 +318,9 @@ jobs:
 ```
 
 Notes:
+
 - `scrut-build-cmd`: The binary must be named `tracker` at the project root (test-shell adds project root to PATH).
 - `scrut-test-dir`: Tests live in `tests/e2e/`, not the default `tests/`.
-- `run-lint: false`: The old workflow only ran `go vet`. The repo has pre-existing `errcheck` and `unused` findings that would fail `golangci-lint`.
 
 ### quod
 
@@ -353,7 +346,6 @@ jobs:
     with:
       runs-on: macos-latest
       go-version: "1.23"
-      run-lint: false
       run-scrut: true
       scrut-setup-cmd: "curl -LsSf https://astral.sh/uv/install.sh | sh && echo \"$HOME/.local/bin\" >> \"$GITHUB_PATH\""
       scrut-build-cmd: "go build -o ./bin/quod ./cmd/quod"
@@ -362,8 +354,8 @@ jobs:
 ```
 
 Notes:
+
 - Preserves macos-latest runner. Uses pinned Go 1.23 (repo currently pins this).
-- `run-lint: false`: The old workflow only ran `go vet`. The repo has pre-existing `errcheck` findings that would fail `golangci-lint`.
 - `scrut-setup-cmd`: Installs `uv` because scrut tests launch a Python mock server via `uv run` (replaces `astral-sh/setup-uv@v5`).
 - `scrut-env`: The `QUOD_BIN` env var is resolved to an absolute path by go-ci.yml's path resolution logic.
 
@@ -418,7 +410,6 @@ jobs:
   release:
     uses: cboone/gh-actions/.github/workflows/go-release.yml@main
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
@@ -483,8 +474,8 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
       - uses: cboone/gh-actions/actions/setup-scrut@main
@@ -499,7 +490,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Run install.sh against a real release
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -528,7 +519,6 @@ jobs:
     with:
       runs-on: macos-latest
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
@@ -591,7 +581,6 @@ jobs:
     with:
       runs-on: macos-latest
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
 
@@ -811,7 +800,7 @@ Two targeted step replacements:
   run: actionlint
 ```
 
-2. Replace scrut download (lines 32-40):
+1. Replace scrut download (lines 32-40):
 
 ```yaml
 # OLD: (gh release download + tar + cp block)
@@ -939,7 +928,7 @@ For each PR:
 
 Special attention:
 
-- **tracker**: Scrut needs `scrut-test-dir: "tests/e2e/"` and `scrut-build-cmd: "go build -o tracker ./cmd/tracker"`. Lint disabled (pre-existing errcheck/unused findings).
+- **tracker**: Scrut needs `scrut-test-dir: "tests/e2e/"` and `scrut-build-cmd: "go build -o tracker ./cmd/tracker"`.
 - **bopca**: Verify codecov upload works via CLI (previously used codecov-action)
 - **bopca**: Verify `golangci-lint --timeout=5m` is in `.golangci.yml`
 - **snappy**: Verify shell-lint.yml discovers shell files in expected locations
@@ -961,4 +950,4 @@ Special attention:
 | Text/GitHub lint | compbox, cboone-cc-plugins | cspell-action (1), raven-actions/actionlint (2), mfinelli/setup-shfmt (1) |
 | One-off | pbcopy2, tmux-binding-help, cboone | raven-actions/actionlint (1), dtolnay/rust-toolchain (1), git-auto-commit-action (1), scrut install (1) |
 
-**Total: 21 repos, ~30 third-party action usages eliminated**
+Total: 21 repos, ~30 third-party action usages eliminated.
