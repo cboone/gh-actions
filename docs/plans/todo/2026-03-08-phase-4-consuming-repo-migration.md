@@ -353,10 +353,17 @@ jobs:
     with:
       runs-on: macos-latest
       go-version: "1.23"
+      run-lint: false
       run-scrut: true
+      scrut-build-cmd: "go build -o ./bin/quod ./cmd/quod"
+      scrut-env: "QUOD_BIN=./bin/quod"
+      scrut-test-dir: "scrut/"
 ```
 
-Note: Preserves macos-latest runner. Uses pinned Go 1.23 (repo currently pins this).
+Notes:
+- Preserves macos-latest runner. Uses pinned Go 1.23 (repo currently pins this).
+- `run-lint: false`: The old workflow only ran `go vet`. The repo has pre-existing `errcheck` findings that would fail `golangci-lint`.
+- `scrut-env`: The `QUOD_BIN` env var is resolved to an absolute path by go-ci.yml's path resolution logic.
 
 ---
 
