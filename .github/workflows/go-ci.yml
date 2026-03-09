@@ -302,7 +302,7 @@ jobs:
             echo "Actual:   ${actual}" >&2
             exit 1
           fi
-          tar -xz -C "${install_dir}" -f "${tarball_path}" scrut
+          tar -xz -C "${install_dir}" -f "${tarball_path}" --strip-components=1
           printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run scrut tests
