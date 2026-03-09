@@ -53,28 +53,16 @@ on:
           needed by scrut test fixtures.
         type: string
         default: ""
-      use-makefile:
-        description: >-
-          Use Makefile targets instead of Go commands directly. When true,
-          test runs make test, vet runs make vet, lint runs make lint,
-          build runs make build, and format-check runs make fmt. The lint
-          job still installs golangci-lint (the Makefile calls it).
-        type: boolean
-        default: false
       run-format-check:
-        description: Run gofmt/goimports format check.
+        description: Run make fmt format check.
         type: boolean
         default: false
       run-build:
         description: Run go build.
         type: boolean
         default: false
-      build-flags:
-        description: Additional flags for go build.
-        type: string
-        default: ""
       test-flags:
-        description: Flags for go test.
+        description: Flags for go test (only used when coverage is enabled).
         type: string
         default: "-race"
       coverage:
@@ -115,20 +103,11 @@ jobs:
             ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
           cache: true
 
-      - name: Run go vet
-        if: ${{ !inputs.use-makefile }}
-        run: go vet ./...
-
-      - name: Run make vet
-        if: ${{ inputs.use-makefile }}
+      - name: Run vet
         run: make vet
 
       - name: Run tests
-        if: ${{ !inputs.coverage && !inputs.use-makefile }}
-        run: go test -v ${{ inputs.test-flags }} ./...
-
-      - name: Run make test
-        if: ${{ !inputs.coverage && inputs.use-makefile }}
+        if: ${{ !inputs.coverage }}
         run: make test
 
       - name: Run tests with coverage
@@ -248,12 +227,7 @@ jobs:
             "${bin_dir}/golangci-lint"
           printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"
 
-      - name: Run golangci-lint
-        if: ${{ !inputs.use-makefile }}
-        run: golangci-lint run ./...
-
-      - name: Run make lint
-        if: ${{ inputs.use-makefile }}
+      - name: Run lint
         run: make lint
 
   build:
@@ -272,11 +246,6 @@ jobs:
           cache: true
 
       - name: Build
-        if: ${{ !inputs.use-makefile }}
-        run: go build ${{ inputs.build-flags }} ./...
-
-      - name: Run make build
-        if: ${{ inputs.use-makefile }}
         run: make build
 
   scrut:
@@ -396,27 +365,5 @@ jobs:
             ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
           cache: true
 
-      - name: Check gofmt
-        if: ${{ !inputs.use-makefile }}
-        run: |
-          output="$(gofmt -l .)"
-          if [ -n "${output}" ]; then
-            echo "Files not formatted with gofmt:"
-            echo "${output}"
-            exit 1
-          fi
-
-      - name: Check goimports
-        if: ${{ !inputs.use-makefile }}
-        run: |
-          go install golang.org/x/tools/cmd/goimports@v0.42.0
-          output="$(goimports -l .)"
-          if [ -n "${output}" ]; then
-            echo "Files not formatted with goimports:"
-            echo "${output}"
-            exit 1
-          fi
-
-      - name: Run make fmt
-        if: ${{ inputs.use-makefile }}
+      - name: Check formatting
         run: make fmt
