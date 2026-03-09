@@ -26,8 +26,6 @@ on:
         type: number
         default: 30
     secrets:
-      GITHUB_TOKEN:
-        required: true
       HOMEBREW_TAP_TOKEN:
         required: false
 
@@ -101,6 +99,6 @@ jobs:
 
       - name: Run GoReleaser
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: goreleaser ${{ inputs.goreleaser-args }}
