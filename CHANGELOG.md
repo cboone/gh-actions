@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-03-09
+
 ### Changed
 
 - go-ci.yml now requires consuming repos to have a Makefile with targets:
@@ -63,5 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/cboone/gh-actions/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/cboone/gh-actions/releases/tag/v1.0.0
