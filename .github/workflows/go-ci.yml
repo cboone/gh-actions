@@ -25,7 +25,7 @@ on:
       golangci-lint-version:
         description: golangci-lint version to install.
         type: string
-        default: "2.11.2"
+        default: "2.11.3"
       run-scrut:
         description: Run scrut CLI tests.
         type: boolean
