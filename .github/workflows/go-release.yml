@@ -16,7 +16,7 @@ on:
       goreleaser-version:
         description: GoReleaser version to install.
         type: string
-        default: "2.14.2"
+        default: "2.14.3"
       goreleaser-args:
         description: Arguments to pass to goreleaser.
         type: string

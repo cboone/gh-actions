@@ -14,7 +14,7 @@ on:
       shfmt-version:
         description: shfmt version to install.
         type: string
-        default: "3.12.0"
+        default: "3.13.0"
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
