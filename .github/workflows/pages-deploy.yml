@@ -65,13 +65,13 @@ jobs:
             echo "cache-dependency-path=" >> "${GITHUB_OUTPUT}"
           fi
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         if: inputs.setup-go
         with:
           go-version-file: ${{ inputs.go-version-file }}
           cache: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         if: inputs.setup-node
         with:
           node-version: ${{ inputs.node-version }}
@@ -93,7 +93,7 @@ jobs:
       - name: Build site
         run: ${{ inputs.build-command }}
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: ${{ inputs.artifact-path }}
 
