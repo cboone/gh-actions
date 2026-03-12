@@ -21,6 +21,7 @@ actions/
   workflows/
     go-ci.yml            # Reusable: Go test, lint, build, scrut, format check
     go-release.yml       # Reusable: GoReleaser release
+    scrut.yml            # Reusable: scrut CLI snapshot tests
     secret-scan.yml      # Reusable: gitleaks and/or trufflehog scanning
     text-lint.yml        # Reusable: markdownlint, Prettier, cspell, yamllint
     shell-lint.yml       # Reusable: ShellCheck and shfmt
