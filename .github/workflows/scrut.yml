@@ -1,0 +1,155 @@
+name: Scrut
+
+on:
+  workflow_call:
+    inputs:
+      scrut-version:
+        description: >-
+          scrut version to install. Only the version with pinned checksums
+          is supported; update the checksums in this workflow to use a
+          different version.
+        type: string
+        default: "0.4.3"
+      scrut-shell:
+        description: >-
+          Shell to use for scrut tests (e.g. "zsh", "bash"). When set,
+          passes --shell to scrut.
+        type: string
+        default: ""
+      scrut-test-dir:
+        description: Directory containing scrut test files.
+        type: string
+        default: "tests/"
+      scrut-env:
+        description: >-
+          Newline-delimited KEY=VALUE environment variables to export
+          when running scrut tests (e.g. MY_BIN=./bin/my-tool).
+        type: string
+        default: ""
+      scrut-setup-cmd:
+        description: >-
+          Optional shell command to run before scrut tests. Use this to
+          install dependencies or prepare fixtures needed by scrut test
+          files.
+        type: string
+        default: ""
+      runs-on:
+        description: Runner label (Windows is not supported).
+        type: string
+        default: ubuntu-latest
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+
+jobs:
+  scrut:
+    name: Scrut
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Scrut test setup
+        if: inputs.scrut-setup-cmd != ''
+        run: ${{ inputs.scrut-setup-cmd }}
+
+      - name: Install scrut
+        shell: bash
+        env:
+          VERSION: ${{ inputs.scrut-version }}
+        run: |
+          case "$(uname -s)" in
+            Linux) os="linux" ;;
+            Darwin) os="macos" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64) arch="x86_64" ;;
+            arm64|aarch64) arch="aarch64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)" >&2
+              exit 1
+              ;;
+          esac
+
+          # Hardcoded SHA-256 checksums for scrut v0.4.3 release tarballs.
+          # scrut upstream does not publish checksum files, so these are
+          # computed from the release artifacts and must be updated when
+          # VERSION changes.
+          supported_version="0.4.3"
+          if [ "${VERSION}" != "${supported_version}" ]; then
+            echo "Unsupported scrut version: ${VERSION}" >&2
+            echo "Checksums are only available for v${supported_version}." >&2
+            echo "To use a different version, update the checksums in this workflow." >&2
+            exit 1
+          fi
+
+          case "${os}-${arch}" in
+            linux-x86_64)  expected="6aefb0bff29b450fbd1b04083eefeae4388d6c9302e31d1a24b7aa9edd03bb35" ;;
+            linux-aarch64) expected="a67117f4320d129c7d7073a5e667dbad25e7a83f31480a633108250fe4069dd5" ;;
+            macos-x86_64)  expected="2589730051127e114e2014916e51e7eaceb01f59ea7bfb2aa59bf36c8fa2cc9e" ;;
+            macos-aarch64) expected="3c0bc8d455fddb382e1e9099f5f4a4e0b8e925b19fa588c2176bc046383d9abc" ;;
+            *)
+              echo "No checksum available for ${os}-${arch}" >&2
+              exit 1
+              ;;
+          esac
+
+          tarball="scrut-v${VERSION}-${os}-${arch}.tar.gz"
+          base="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}"
+          install_dir="${RUNNER_TEMP}/scrut-bin"
+          mkdir -p "${install_dir}"
+          tarball_path="${RUNNER_TEMP}/${tarball}"
+          curl -sSfL -o "${tarball_path}" "${base}/${tarball}"
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${tarball_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${tarball_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${tarball}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          tar -xz -C "${install_dir}" -f "${tarball_path}" --strip-components=1
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+          "${install_dir}/scrut" --version
+
+      - name: Run scrut tests
+        shell: bash
+        env:
+          SCRUT_ENV: ${{ inputs.scrut-env }}
+          SCRUT_SHELL: ${{ inputs.scrut-shell }}
+          SCRUT_TEST_DIR: ${{ inputs.scrut-test-dir }}
+        run: |
+          if [ -n "${SCRUT_ENV}" ]; then
+            while IFS= read -r line; do
+              if [ -n "${line}" ]; then
+                key="${line%%=*}"
+                value="${line#*=}"
+                # Resolve ./relative paths to absolute so scrut
+                # subprocesses find binaries from any working directory.
+                case "${value}" in
+                  ./*) value="${PWD}/${value#./}" ;;
+                esac
+                export "${key}=${value}"
+              fi
+            done <<< "${SCRUT_ENV}"
+          fi
+
+          args=("test")
+          if [ -n "${SCRUT_SHELL}" ]; then
+            args+=("--shell" "${SCRUT_SHELL}")
+          fi
+          args+=("${SCRUT_TEST_DIR}")
+
+          scrut "${args[@]}"
