@@ -6,3 +6,6 @@ package-lock.json
 
 # Generated files
 coverage/
+
+# Markdown (formatted by markdownlint-cli2, not Prettier)
+*.md
