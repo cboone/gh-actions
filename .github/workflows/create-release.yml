@@ -64,8 +64,17 @@ jobs:
             found { print }
           ' "${CHANGELOG_FILE}")"
 
-          # Trim leading and trailing blank lines.
-          notes="$(printf '%s\n' "${notes}" | sed -e '/./,$!d' -e :a -e '/^\n*$/{$d;N;ba;}')"
+          # Trim leading and trailing blank lines (portable across GNU/BSD).
+          notes="$(printf '%s\n' "${notes}" | awk '
+            NF { found = 1 }
+            found {
+              lines[++n] = $0
+              if (NF) last = n
+            }
+            END {
+              for (i = 1; i <= last; i++) print lines[i]
+            }
+          ')"
 
           if [ -z "${notes}" ]; then
             echo "No release notes found for version ${version} in ${CHANGELOG_FILE}." >&2
