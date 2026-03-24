@@ -10,6 +10,8 @@ There are many, these are mine.
   - [setup-shfmt](#setup-shfmt)
   - [run-gitleaks](#run-gitleaks)
   - [run-trufflehog](#run-trufflehog)
+  - [run-markscribe](#run-markscribe)
+  - [create-pull-request](#create-pull-request)
 - [Reusable Workflows](#reusable-workflows)
   - [go-ci](#go-ci)
   - [go-release](#go-release)
@@ -18,6 +20,7 @@ There are many, these are mine.
   - [shell-lint](#shell-lint)
   - [github-lint](#github-lint)
   - [pages-deploy](#pages-deploy)
+  - [codeql](#codeql)
   - [scrut](#scrut)
   - [npm-publish](#npm-publish)
 - [Versioning](#versioning)
@@ -146,6 +149,79 @@ Install trufflehog binary and run a scan.
 
 ```yaml
 - uses: cboone/gh-actions/actions/run-trufflehog@main
+```
+
+### run-markscribe
+
+Install markscribe binary and generate a file from a Go template. Replaces
+`charmbracelet/readme-scribe` with a direct binary download and SHA-256
+checksum verification.
+
+Callers must set `GITHUB_TOKEN` in the step's `env:` for GitHub API access in
+templates.
+
+#### Inputs
+
+| Name       | Description                           | Required | Default         |
+| ---------- | ------------------------------------- | -------- | --------------- |
+| `version`  | markscribe version to install         | No       | `0.8.1`         |
+| `template` | Path to the Go template file          | No       | `README.md.tpl` |
+| `write-to` | Output file path (empty for stdout)   | No       | `README.md`     |
+
+#### Usage
+
+```yaml
+- uses: cboone/gh-actions/actions/run-markscribe@main
+  env:
+    GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+  with:
+    template: "templates/README.md.tpl"
+    write-to: "README.md"
+```
+
+### create-pull-request
+
+SHA-pinned wrapper around
+[peter-evans/create-pull-request](https://github.com/peter-evans/create-pull-request).
+Centralizes version management so downstream repos do not pin the upstream action
+individually.
+
+#### Inputs
+
+| Name             | Description                                        | Required | Default                                |
+| ---------------- | -------------------------------------------------- | -------- | -------------------------------------- |
+| `token`          | GITHUB_TOKEN or a personal access token            | No       | `${{ github.token }}`                  |
+| `branch`         | The pull request branch name                       | No       | `create-pull-request/patch`            |
+| `delete-branch`  | Delete the branch when the PR is merged or closed  | No       | `false`                                |
+| `base`           | Pull request base branch                           | No       | Branch checked out in the workflow     |
+| `commit-message` | The commit message for the changes                 | No       | `[create-pull-request] automated ...`  |
+| `title`          | The title of the pull request                      | No       | `Changes by create-pull-request ...`   |
+| `body`           | The body of the pull request                       | No       | `""`                                   |
+| `labels`         | Comma or newline-separated labels                  | No       | `""`                                   |
+| `assignees`      | Comma or newline-separated assignees               | No       | `""`                                   |
+| `draft`          | Create the pull request as a draft                 | No       | `false`                                |
+
+#### Outputs
+
+| Name                      | Description                                          |
+| ------------------------- | ---------------------------------------------------- |
+| `pull-request-number`     | The pull request number                              |
+| `pull-request-url`        | The URL of the pull request                          |
+| `pull-request-operation`  | Operation performed: created, updated, closed, none  |
+| `pull-request-head-sha`   | The commit SHA of the pull request branch            |
+| `pull-request-branch`     | The branch name of the pull request                  |
+
+#### Usage
+
+```yaml
+- uses: cboone/gh-actions/actions/create-pull-request@main
+  with:
+    branch: chore/update-data
+    commit-message: "chore: update generated data"
+    title: "chore: update generated data"
+    body: "Automated update."
+    labels: automation
+    delete-branch: true
 ```
 
 ## Reusable Workflows
@@ -369,6 +445,40 @@ jobs:
       build-command: "npm run build"
       artifact-path: ./dist
       setup-node: true
+```
+
+### codeql
+
+Run GitHub CodeQL security analysis. SHA-pins all `github/codeql-action`
+sub-actions internally and conditionally sets up Go when the language list
+includes it.
+
+**Permissions:** `contents: read`, `security-events: write`
+
+#### Inputs
+
+| Name              | Type   | Default                  | Description                                                |
+| ----------------- | ------ | ------------------------ | ---------------------------------------------------------- |
+| `languages`       | string | `go`                     | Comma-separated CodeQL languages to analyze                |
+| `queries`         | string | `security-and-quality`   | CodeQL query suite to run                                  |
+| `go-version`      | string | `""`                     | Go version to install. When set, overrides go-version-file |
+| `go-version-file` | string | `go.mod`                 | File to read the Go version from                           |
+| `category-prefix` | string | `/language:`             | Prefix for the CodeQL analysis category                    |
+| `runs-on`         | string | `macos-latest`           | Runner label                                               |
+| `timeout-minutes` | number | `30`                     | Job timeout in minutes                                     |
+
+#### Usage
+
+```yaml
+jobs:
+  codeql:
+    uses: cboone/gh-actions/.github/workflows/codeql.yml@main
+    with:
+      languages: go
+      go-version: "1.25"
+    permissions:
+      contents: read
+      security-events: write
 ```
 
 ### scrut

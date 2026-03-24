@@ -10,7 +10,9 @@ verification. The repository is consumed by 26+ downstream repos.
 
 ```text
 actions/
+  create-pull-request/   # Wrapper: peter-evans/create-pull-request (SHA-pinned)
   run-gitleaks/          # Install and run gitleaks secret scanner
+  run-markscribe/        # Install and run markscribe README template generator
   run-trufflehog/        # Install and run trufflehog secret scanner
   setup-actionlint/      # Install actionlint
   setup-golangci-lint/   # Install golangci-lint
@@ -21,6 +23,7 @@ actions/
   workflows/
     go-ci.yml            # Reusable: Go test, lint, build, scrut, format check
     go-release.yml       # Reusable: GoReleaser release
+    codeql.yml           # Reusable: GitHub CodeQL security analysis
     scrut.yml            # Reusable: scrut CLI snapshot tests
     secret-scan.yml      # Reusable: gitleaks and/or trufflehog scanning
     text-lint.yml        # Reusable: markdownlint, Prettier, cspell, yamllint

@@ -9,8 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Composite action `run-markscribe` to install and run the markscribe README
+  template generator with SHA-256 checksum verification
+- Composite action `create-pull-request` as a SHA-pinned wrapper around
+  peter-evans/create-pull-request for centralized version management
+- Reusable workflow `codeql.yml` for GitHub CodeQL security analysis with
+  conditional Go setup and SHA-pinned action references
 - Reusable workflow `scrut.yml` for standalone scrut CLI snapshot testing
   without Go dependencies
+
+### Changed
+
+- SHA-pin all external action references (`actions/checkout`,
+  `actions/setup-go`, `actions/setup-node`, `actions/configure-pages`,
+  `actions/upload-pages-artifact`, `actions/deploy-pages`) across all
+  reusable workflows
 
 ## [2.0.0] - 2026-03-09
 
