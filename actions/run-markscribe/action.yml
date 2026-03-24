@@ -50,7 +50,7 @@ runs:
         curl -sSfL "${base}/v${VERSION}/${archive}" -o "${archive_path}"
         curl -sSfL "${base}/v${VERSION}/checksums.txt" \
           -o "${install_dir}/checksums.txt"
-        expected="$(grep -F "${archive}" "${install_dir}/checksums.txt" | head -1 | awk '{print $1}')"
+        expected="$(awk -v file="${archive}" '$2 == file { print $1; exit }' "${install_dir}/checksums.txt")"
         if [ -z "${expected}" ]; then
           echo "Checksum entry not found for ${archive}" >&2
           exit 1
