@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Reusable workflow `create-release.yml` for creating GitHub Releases from
+  changelog files in Keep a Changelog format
+- Self-hosting workflow `release.yml` to create releases on version tag pushes
 - Reusable workflow `scrut.yml` for standalone scrut CLI snapshot testing
   without Go dependencies
 
