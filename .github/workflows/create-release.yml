@@ -1,0 +1,110 @@
+name: Create Release
+
+on:
+  workflow_call:
+    inputs:
+      changelog-file:
+        description: Path to the changelog file.
+        type: string
+        default: CHANGELOG.md
+      draft:
+        description: Create the release as a draft.
+        type: boolean
+        default: false
+      prerelease:
+        description: Mark the release as a prerelease.
+        type: boolean
+        default: false
+      runs-on:
+        description: >-
+          Runner label (ubuntu-latest or macos-latest recommended;
+          Windows is not supported).
+        type: string
+        default: ubuntu-latest
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 10
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Extract release notes
+        id: notes
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+          CHANGELOG_FILE: ${{ inputs.changelog-file }}
+        run: |
+          version="${TAG#v}"
+
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag '${TAG}' does not look like a semver version tag." >&2
+            exit 1
+          fi
+
+          if [ ! -f "${CHANGELOG_FILE}" ]; then
+            echo "Changelog file not found: ${CHANGELOG_FILE}" >&2
+            exit 1
+          fi
+
+          notes="$(awk -v ver="${version}" '
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "## [" ver "]")) { found = 1; next }
+            }
+            found { print }
+          ' "${CHANGELOG_FILE}")"
+
+          # Trim leading and trailing blank lines (portable across GNU/BSD).
+          notes="$(printf '%s\n' "${notes}" | awk '
+            NF { found = 1 }
+            found {
+              lines[++n] = $0
+              if (NF) last = n
+            }
+            END {
+              for (i = 1; i <= last; i++) print lines[i]
+            }
+          ')"
+
+          if [ -z "${notes}" ]; then
+            echo "No release notes found for version ${version} in ${CHANGELOG_FILE}." >&2
+            exit 1
+          fi
+
+          notes_file="${RUNNER_TEMP}/release-notes.md"
+          printf '%s\n' "${notes}" > "${notes_file}"
+          echo "notes-file=${notes_file}" >> "${GITHUB_OUTPUT}"
+
+          echo "Extracted release notes for ${version}:"
+          cat "${notes_file}"
+
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          NOTES_FILE: ${{ steps.notes.outputs.notes-file }}
+          DRAFT: ${{ inputs.draft }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          args=(gh release create "${TAG}" --notes-file "${NOTES_FILE}")
+
+          if [ "${DRAFT}" = "true" ]; then
+            args+=(--draft)
+          fi
+
+          if [ "${PRERELEASE}" = "true" ]; then
+            args+=(--prerelease)
+          fi
+
+          "${args[@]}"

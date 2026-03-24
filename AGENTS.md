@@ -21,6 +21,7 @@ actions/
   setup-shfmt/           # Install shfmt
 .github/
   workflows/
+    create-release.yml   # Reusable: create GitHub Release from changelog
     go-ci.yml            # Reusable: Go test, lint, build, scrut, format check
     go-release.yml       # Reusable: GoReleaser release
     codeql.yml           # Reusable: GitHub CodeQL security analysis
@@ -31,6 +32,7 @@ actions/
     github-lint.yml      # Reusable: actionlint
     pages-deploy.yml     # Reusable: GitHub Pages build and deploy
     npm-publish.yml      # Reusable: npm publish to registry
+    release.yml          # Self-hosting: runs create-release on version tags
     ci.yml               # Self-hosting: runs github-lint on this repo
     gitleaks.yml         # Self-hosting: runs secret-scan with gitleaks
     trufflehog.yml       # Self-hosting: runs secret-scan with trufflehog
