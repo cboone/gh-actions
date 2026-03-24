@@ -1,0 +1,78 @@
+name: CodeQL
+
+on:
+  workflow_call:
+    inputs:
+      languages:
+        description: >-
+          Comma-separated list of CodeQL languages to analyze (e.g. "go",
+          "javascript", "python").
+        type: string
+        default: go
+      queries:
+        description: >-
+          CodeQL query suite to run (e.g. security-extended,
+          security-and-quality).
+        type: string
+        default: security-and-quality
+      go-version:
+        description: >-
+          Go version to install. When set, overrides go-version-file.
+        type: string
+        default: ""
+      go-version-file:
+        description: File to read the Go version from.
+        type: string
+        default: go.mod
+      category-prefix:
+        description: >-
+          Prefix for the CodeQL analysis category. The full languages string
+          is appended as "<prefix><languages>" (e.g. "/language:go"). When
+          analyzing multiple languages, call this workflow once per language
+          so each gets its own category.
+        type: string
+        default: "/language:"
+      runs-on:
+        description: Runner label.
+        type: string
+        default: macos-latest
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Go
+        if: contains(inputs.languages, 'go')
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version: ${{ inputs.go-version || null }}
+          go-version-file: >-
+            ${{ inputs.go-version == '' && inputs.go-version-file || '' }}
+          cache: true
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@38697555549f1db7851b81482ff19f1fa5c4fedc # v4
+        with:
+          languages: ${{ inputs.languages }}
+          queries: ${{ inputs.queries }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@38697555549f1db7851b81482ff19f1fa5c4fedc # v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@38697555549f1db7851b81482ff19f1fa5c4fedc # v4
+        with:
+          category: "${{ inputs.category-prefix }}${{ inputs.languages }}"

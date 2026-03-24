@@ -1,0 +1,87 @@
+name: Create Pull Request
+description: >-
+  Wrapper around peter-evans/create-pull-request with a SHA-pinned upstream
+  reference. Centralizes version management so downstream repos do not pin
+  the upstream action individually.
+
+inputs:
+  token:
+    description: >-
+      GITHUB_TOKEN or a personal access token. Defaults to GITHUB_TOKEN.
+    required: false
+    default: ${{ github.token }}
+  branch:
+    description: The pull request branch name.
+    required: false
+    default: create-pull-request/patch
+  delete-branch:
+    description: Delete the branch when the pull request is merged or closed.
+    required: false
+    default: "false"
+  base:
+    description: >-
+      Sets the pull request base branch. Defaults to the branch checked out
+      in the workflow.
+    required: false
+  commit-message:
+    description: The commit message for the changes.
+    required: false
+    default: "[create-pull-request] automated change"
+  title:
+    description: The title of the pull request.
+    required: false
+    default: Changes by create-pull-request action
+  body:
+    description: The body of the pull request.
+    required: false
+    default: ""
+  labels:
+    description: >-
+      A comma or newline-separated list of labels to apply to the pull request.
+    required: false
+    default: ""
+  assignees:
+    description: >-
+      A comma or newline-separated list of assignees (GitHub usernames).
+    required: false
+    default: ""
+  draft:
+    description: Create the pull request as a draft.
+    required: false
+    default: "false"
+
+outputs:
+  pull-request-number:
+    description: The pull request number.
+    value: ${{ steps.create-pr.outputs.pull-request-number }}
+  pull-request-url:
+    description: The URL of the pull request.
+    value: ${{ steps.create-pr.outputs.pull-request-url }}
+  pull-request-operation:
+    description: >-
+      The pull request operation performed by the action: created, updated,
+      closed, or none.
+    value: ${{ steps.create-pr.outputs.pull-request-operation }}
+  pull-request-head-sha:
+    description: The commit SHA of the pull request branch.
+    value: ${{ steps.create-pr.outputs.pull-request-head-sha }}
+  pull-request-branch:
+    description: The branch name of the pull request.
+    value: ${{ steps.create-pr.outputs.pull-request-branch }}
+
+runs:
+  using: composite
+  steps:
+    - id: create-pr
+      uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
+      with:
+        token: ${{ inputs.token }}
+        branch: ${{ inputs.branch }}
+        delete-branch: ${{ inputs.delete-branch }}
+        base: ${{ inputs.base }}
+        commit-message: ${{ inputs.commit-message }}
+        title: ${{ inputs.title }}
+        body: ${{ inputs.body }}
+        labels: ${{ inputs.labels }}
+        assignees: ${{ inputs.assignees }}
+        draft: ${{ inputs.draft }}

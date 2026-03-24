@@ -183,7 +183,7 @@ new Go repos to include the required Makefile targets and use `go-ci.yml@v2`:
 
 ## Execution Order
 
-```
+```text
 1. Steps 1-6: All changes in this repo on this branch
    - Commit go-ci.yml simplification
    - Commit doc updates (README, CHANGELOG, CLAUDE.md, copilot-instructions)
