@@ -26,8 +26,10 @@ on:
         default: go.mod
       category-prefix:
         description: >-
-          Prefix for the CodeQL analysis category. Each language is appended
-          as "prefix<language>".
+          Prefix for the CodeQL analysis category. The full languages string
+          is appended as "<prefix><languages>" (e.g. "/language:go"). When
+          analyzing multiple languages, call this workflow once per language
+          so each gets its own category.
         type: string
         default: "/language:"
       runs-on:
