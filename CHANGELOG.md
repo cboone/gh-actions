@@ -7,10 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-03-27
+
+### Fixed
+
+- Use exact version in major bump example and soften release wording
+
 ### Changed
 
 - Versioning strategy now uses only exact version tags (e.g., `v2.2.0`);
   floating major tags (`v1`, `v2`) are discontinued
+- Add single instructions file rule to Copilot instructions
 
 ## [2.1.0] - 2026-03-27
 
@@ -115,7 +122,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v2.1.0...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/cboone/gh-actions/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/cboone/gh-actions/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/cboone/gh-actions/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/cboone/gh-actions/releases/tag/v1.0.0

@@ -808,13 +808,13 @@ jobs:
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/) with exact version
-tags. Pin to a specific version (e.g., `@v2.1.0`) for production use.
+tags. Pin to a specific version (e.g., `@v2.1.1`) for production use.
 
 ### Version bumps
 
-- **Patch** (e.g., v2.1.0 to v2.1.1): bug fixes, tool version bumps that do not
+- **Patch** (e.g., v2.1.1 to v2.1.2): bug fixes, tool version bumps that do not
   change behavior, documentation updates.
-- **Minor** (e.g., v2.1.0 to v2.2.0): new optional inputs, new actions or
+- **Minor** (e.g., v2.1.1 to v2.2.0): new optional inputs, new actions or
   workflows, additive changes that do not affect existing callers.
 - **Major** (e.g., v2.2.0 to v3.0.0): breaking changes. A **breaking change** is any
   modification that requires callers to update their workflow files: renaming or
@@ -836,7 +836,7 @@ git push origin main v2.2.0
 
 ### Pinning options for callers
 
-- `@v2.1.0`: pinned to an exact release (recommended).
+- `@v2.1.1`: pinned to an exact release (recommended).
 - `@main`: latest development (for testing).
 
 ## License
