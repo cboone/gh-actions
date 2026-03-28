@@ -32,6 +32,8 @@ actions/
     github-lint.yml      # Reusable: actionlint
     pages-deploy.yml     # Reusable: GitHub Pages build and deploy
     npm-publish.yml      # Reusable: npm publish to registry
+    zig-ci.yml           # Reusable: Zig test, format, build, cross-compile, scrut
+    zig-release.yml      # Reusable: Zig cross-compile release
     release.yml          # Self-hosting: runs create-release on version tags
     ci.yml               # Self-hosting: runs github-lint on this repo
     gitleaks.yml         # Self-hosting: runs secret-scan with gitleaks

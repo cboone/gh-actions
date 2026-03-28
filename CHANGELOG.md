@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Reusable workflow `zig-ci.yml` for Zig test, format, build, cross-compile,
+  and scrut testing (#22)
+- Reusable workflow `zig-release.yml` for Zig cross-compile releases with
+  GitHub Release artifact uploads (#22)
 - Reusable workflow `create-release.yml` for creating GitHub Releases from
   changelog files in Keep a Changelog format
 - Self-hosting workflow `release.yml` to create releases on version tag pushes
