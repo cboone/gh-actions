@@ -1,0 +1,240 @@
+name: Zig CI
+
+on:
+  workflow_call:
+    inputs:
+      zig-version:
+        description: Zig version to install (e.g., "0.15.2").
+        type: string
+        required: true
+      runs-on:
+        description: >-
+          Runner label (ubuntu-latest or macos-latest recommended;
+          Windows is not supported).
+        type: string
+        default: ubuntu-latest
+      run-test:
+        description: Run zig build test.
+        type: boolean
+        default: true
+      run-fmt:
+        description: Run zig fmt --check.
+        type: boolean
+        default: true
+      run-build:
+        description: Run zig build.
+        type: boolean
+        default: true
+      run-cross-compile:
+        description: Build all cross-compilation targets.
+        type: boolean
+        default: false
+      cross-targets:
+        description: >-
+          Space-separated Zig target triples for cross-compilation.
+        type: string
+        default: >-
+          x86_64-linux-gnu aarch64-linux-gnu x86_64-macos
+          aarch64-macos x86_64-windows-gnu
+      run-scrut:
+        description: Run scrut CLI tests.
+        type: boolean
+        default: false
+      scrut-build-cmd:
+        description: >-
+          Command to build the binary for scrut tests. Override this
+          when scrut tests reference a binary by path or env var.
+        type: string
+        default: "zig build"
+      scrut-env:
+        description: >-
+          Newline-delimited KEY=VALUE environment variables to export
+          when running scrut tests (e.g. MY_BIN=./zig-out/bin/my-tool).
+        type: string
+        default: ""
+      scrut-test-dir:
+        description: Directory containing scrut test files.
+        type: string
+        default: "tests/"
+      scrut-setup-cmd:
+        description: >-
+          Optional shell command to run before scrut tests (after Zig
+          setup). Use this to install extra dependencies needed by
+          scrut test fixtures.
+        type: string
+        default: ""
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 20
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    if: inputs.run-test
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: ${{ inputs.zig-version }}
+
+      - name: Run tests
+        run: zig build test
+
+  format:
+    name: Format
+    if: inputs.run-fmt
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: ${{ inputs.zig-version }}
+
+      - name: Check formatting
+        run: zig fmt --check src/ build.zig
+
+  build:
+    name: Build
+    if: inputs.run-build
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: ${{ inputs.zig-version }}
+
+      - name: Build
+        run: zig build
+
+  cross-compile:
+    name: Cross compile
+    if: inputs.run-cross-compile
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: ${{ inputs.zig-version }}
+
+      - name: Cross compile
+        shell: bash
+        env:
+          TARGETS: ${{ inputs.cross-targets }}
+        run: |
+          for target in ${TARGETS}; do
+            echo "::group::Building for ${target}"
+            zig build -Dtarget="${target}" -Doptimize=ReleaseSafe
+            echo "::endgroup::"
+          done
+
+  scrut:
+    name: Scrut
+    if: inputs.run-scrut
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: ${{ inputs.zig-version }}
+
+      - name: Scrut test setup
+        if: inputs.scrut-setup-cmd != ''
+        run: ${{ inputs.scrut-setup-cmd }}
+
+      - name: Build binary for scrut tests
+        run: ${{ inputs.scrut-build-cmd }}
+
+      - name: Install scrut
+        shell: bash
+        env:
+          VERSION: "0.4.3"
+        run: |
+          case "$(uname -s)" in
+            Linux) os="linux" ;;
+            Darwin) os="macos" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$(uname -m)" in
+            x86_64) arch="x86_64" ;;
+            arm64|aarch64) arch="aarch64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)" >&2
+              exit 1
+              ;;
+          esac
+
+          # Hardcoded SHA-256 checksums for scrut v0.4.3 release tarballs.
+          # scrut upstream does not publish checksum files, so these are
+          # computed from the release artifacts and must be updated when
+          # VERSION changes.
+          case "${os}-${arch}" in
+            linux-x86_64)  expected="6aefb0bff29b450fbd1b04083eefeae4388d6c9302e31d1a24b7aa9edd03bb35" ;;
+            linux-aarch64) expected="a67117f4320d129c7d7073a5e667dbad25e7a83f31480a633108250fe4069dd5" ;;
+            macos-x86_64)  expected="2589730051127e114e2014916e51e7eaceb01f59ea7bfb2aa59bf36c8fa2cc9e" ;;
+            macos-aarch64) expected="3c0bc8d455fddb382e1e9099f5f4a4e0b8e925b19fa588c2176bc046383d9abc" ;;
+            *)
+              echo "No checksum available for ${os}-${arch}" >&2
+              exit 1
+              ;;
+          esac
+
+          tarball="scrut-v${VERSION}-${os}-${arch}.tar.gz"
+          base="https://github.com/facebookincubator/scrut/releases/download/v${VERSION}"
+          install_dir="${RUNNER_TEMP}/scrut-bin"
+          mkdir -p "${install_dir}"
+          tarball_path="${RUNNER_TEMP}/${tarball}"
+          curl -sSfL -o "${tarball_path}" "${base}/${tarball}"
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${tarball_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${tarball_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${tarball}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          tar -xz -C "${install_dir}" -f "${tarball_path}" --strip-components=1
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run scrut tests
+        shell: bash
+        env:
+          SCRUT_ENV: ${{ inputs.scrut-env }}
+          SCRUT_TEST_DIR: ${{ inputs.scrut-test-dir }}
+        run: |
+          if [ -n "${SCRUT_ENV}" ]; then
+            while IFS= read -r line; do
+              if [ -n "${line}" ]; then
+                key="${line%%=*}"
+                value="${line#*=}"
+                # Resolve ./relative paths to absolute so scrut
+                # subprocesses find binaries from any working directory.
+                case "${value}" in
+                  ./*) value="${PWD}/${value#./}" ;;
+                esac
+                export "${key}=${value}"
+              fi
+            done <<< "${SCRUT_ENV}"
+          fi
+          scrut test "${SCRUT_TEST_DIR}"
