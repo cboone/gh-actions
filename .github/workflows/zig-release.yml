@@ -1,0 +1,116 @@
+name: Zig Release
+
+on:
+  workflow_call:
+    inputs:
+      zig-version:
+        description: Zig version to install (e.g., "0.15.2").
+        type: string
+        required: true
+      binary-name:
+        description: Name of the binary to build and package (e.g., "seine").
+        type: string
+        required: true
+      targets:
+        description: >-
+          Space-separated Zig target triples to build.
+        type: string
+        default: >-
+          x86_64-linux-gnu aarch64-linux-gnu x86_64-macos
+          aarch64-macos x86_64-windows-gnu
+      optimize:
+        description: Zig optimization level.
+        type: string
+        default: ReleaseSafe
+      runs-on:
+        description: >-
+          Runner label (ubuntu-latest or macos-latest recommended;
+          Windows is not supported).
+        type: string
+        default: ubuntu-latest
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 30
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: ${{ inputs.zig-version }}
+
+      - name: Build and package
+        shell: bash
+        env:
+          BINARY_NAME: ${{ inputs.binary-name }}
+          TARGETS: ${{ inputs.targets }}
+          OPTIMIZE: ${{ inputs.optimize }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          dist_dir="${RUNNER_TEMP}/dist"
+          mkdir -p "${dist_dir}"
+
+          for target in ${TARGETS}; do
+            echo "::group::Building for ${target}"
+            zig build -Dtarget="${target}" -Doptimize="${OPTIMIZE}"
+
+            # Map Zig target triple to user-friendly OS and architecture labels.
+            case "${target}" in
+              x86_64-linux-*)    os="linux";   arch="amd64" ;;
+              aarch64-linux-*)   os="linux";   arch="arm64" ;;
+              x86_64-macos*)     os="darwin";  arch="amd64" ;;
+              aarch64-macos*)    os="darwin";  arch="arm64" ;;
+              x86_64-windows-*)  os="windows"; arch="amd64" ;;
+              aarch64-windows-*) os="windows"; arch="arm64" ;;
+              *)
+                echo "Unsupported target: ${target}" >&2
+                exit 1
+                ;;
+            esac
+
+            artifact_name="${BINARY_NAME}-${version}-${os}-${arch}"
+            staging_dir="${RUNNER_TEMP}/staging/${artifact_name}"
+            mkdir -p "${staging_dir}"
+
+            if [ "${os}" = "windows" ]; then
+              cp "zig-out/bin/${BINARY_NAME}.exe" "${staging_dir}/"
+            else
+              cp "zig-out/bin/${BINARY_NAME}" "${staging_dir}/"
+            fi
+
+            if [ "${os}" = "windows" ]; then
+              (cd "${RUNNER_TEMP}/staging" && zip -r "${dist_dir}/${artifact_name}.zip" "${artifact_name}")
+            else
+              tar -cz -C "${RUNNER_TEMP}/staging" -f "${dist_dir}/${artifact_name}.tar.gz" "${artifact_name}"
+            fi
+
+            rm -rf "${RUNNER_TEMP}/staging/${artifact_name}"
+            echo "::endgroup::"
+          done
+
+          cd "${dist_dir}"
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum -- * > checksums.txt
+          else
+            shasum -a 256 -- * > checksums.txt
+          fi
+          echo "Checksums:"
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
+        with:
+          files: ${{ runner.temp }}/dist/*
+          generate_release_notes: true
