@@ -808,7 +808,7 @@ jobs:
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/) with exact version
-tags. Pin to a specific version (e.g., `@v2.1.1`) for production use.
+tags. Pin to a specific version (e.g., `@v2.1.2`) for production use.
 
 ### Version bumps
 
@@ -836,7 +836,7 @@ git push origin main v2.2.0
 
 ### Pinning options for callers
 
-- `@v2.1.1`: pinned to an exact release (recommended).
+- `@v2.1.2`: pinned to an exact release (recommended).
 - `@main`: latest development (for testing).
 
 ## License

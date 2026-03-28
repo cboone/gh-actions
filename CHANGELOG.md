@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-03-28
+
+### Fixed
+
+- Extract only markscribe binary from archive instead of entire tarball contents
+- Use `--strip-components=1` for markscribe tar extraction to match expected
+  install layout
+
 ## [2.1.1] - 2026-03-27
 
 ### Fixed
@@ -122,7 +130,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v2.1.1...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v2.1.2...HEAD
+[2.1.2]: https://github.com/cboone/gh-actions/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/cboone/gh-actions/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/cboone/gh-actions/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/cboone/gh-actions/compare/v1.0.0...v2.0.0
