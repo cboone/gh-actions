@@ -112,11 +112,8 @@ check (exit non-zero on unformatted code), not a write operation.
 This repository has no GoReleaser config or release workflow for itself. Releases
 are pure Git tags. Use the `/release` skill, which analyzes conventional commits,
 recommends a version bump, updates CHANGELOG.md, creates a release commit, and
-tags it locally. Then push the commit and both tags (exact + floating major).
-
-The floating major tag (e.g., `v1`) is force-updated on each release so that
-callers referencing `@v1` automatically pick up non-breaking changes. See the
-README Versioning section for full details.
+tags it locally. Then push the commit and tag. See the README Versioning section
+for full details.
 
 ## Testing
 

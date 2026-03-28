@@ -807,16 +807,16 @@ jobs:
 
 ## Versioning
 
-This project uses [Semantic Versioning](https://semver.org/). Use `@v2` for
-stability (or `@v1` if your repo has not yet migrated to Makefile targets).
+This project uses [Semantic Versioning](https://semver.org/) with exact version
+tags. Pin to a specific version (e.g., `@v2.1.0`) for production use.
 
 ### Version bumps
 
-- **Patch** (e.g., v1.0.0 to v1.0.1): bug fixes, tool version bumps that do not
+- **Patch** (e.g., v2.1.0 to v2.1.1): bug fixes, tool version bumps that do not
   change behavior, documentation updates.
-- **Minor** (e.g., v1.0.0 to v1.1.0): new optional inputs, new actions or
+- **Minor** (e.g., v2.1.0 to v2.2.0): new optional inputs, new actions or
   workflows, additive changes that do not affect existing callers.
-- **Major** (e.g., v1 to v2): breaking changes. A **breaking change** is any
+- **Major** (e.g., v2.2.0 to v3.0.0): breaking changes. A **breaking change** is any
   modification that requires callers to update their workflow files: renaming or
   removing an input, changing a default in a way that alters behavior, or
   removing an action or workflow.
@@ -825,25 +825,18 @@ stability (or `@v1` if your repo has not yet migrated to Makefile targets).
 
 Releases are created with the `/release` skill, which analyzes conventional
 commits, recommends a version bump, updates CHANGELOG.md, creates a release
-commit, and tags it. The process produces two tags:
+commit, and tags it. The recommended outcome for each release is a single
+exact version tag (e.g., `v2.2.0`) pointing to the release commit.
 
-1. **Exact version tag** (e.g., `v1.2.0`): a permanent, immutable tag pointing
-   to the release commit.
-1. **Floating major tag** (e.g., `v1`): force-updated to point to the same
-   commit as the latest exact tag in that major version. Callers who reference
-   `@v1` automatically pick up non-breaking updates.
-
-After tagging locally, push both tags:
+After tagging locally, push:
 
 ```bash
-git push origin main v1.2.0 v1
+git push origin main v2.2.0
 ```
 
 ### Pinning options for callers
 
-- `@v2`: tracks the latest v2.x.y release (recommended, requires Makefile targets).
-- `@v1`: tracks the latest v1.x.y release (for repos not yet migrated to Makefile targets).
-- `@v2.1.0`: pinned to an exact release for stricter control.
+- `@v2.1.0`: pinned to an exact release (recommended).
 - `@main`: latest development (for testing).
 
 ## License
