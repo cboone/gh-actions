@@ -24,6 +24,8 @@ actions/
     create-release.yml   # Reusable: create GitHub Release from changelog
     go-ci.yml            # Reusable: Go test, lint, build, scrut, format check
     go-release.yml       # Reusable: GoReleaser release
+    rust-ci.yml          # Reusable: Rust test, clippy, fmt, deny, audit, typos
+    rust-release.yml     # Reusable: Rust binary release with matrix builds
     codeql.yml           # Reusable: GitHub CodeQL security analysis
     scrut.yml            # Reusable: scrut CLI snapshot tests
     secret-scan.yml      # Reusable: gitleaks and/or trufflehog scanning
@@ -60,8 +62,10 @@ repositories cannot reference local composite actions.
 ### SHA-256 Checksum Verification
 
 Every tool download verifies its SHA-256 checksum against upstream-published
-checksum files. The one exception is scrut, whose upstream does not publish
-checksums.
+checksum files. The exceptions are scrut and cargo-audit, whose upstreams do
+not publish checksums; their checksums are hardcoded in the workflow files.
+cargo-llvm-cov is installed via `cargo install` from crates.io, which provides
+its own integrity verification through the registry index.
 
 ### Version Pinning
 

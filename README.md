@@ -16,6 +16,8 @@ There are many, these are mine.
   - [create-release](#create-release)
   - [go-ci](#go-ci)
   - [go-release](#go-release)
+  - [rust-ci](#rust-ci)
+  - [rust-release](#rust-release)
   - [secret-scan](#secret-scan)
   - [text-lint](#text-lint)
   - [shell-lint](#shell-lint)
@@ -337,6 +339,132 @@ jobs:
     uses: cboone/gh-actions/.github/workflows/go-release.yml@main
     with:
       goreleaser-version: "2.14.2"
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+```
+
+### rust-ci
+
+Run Rust tests, clippy linting, format checking, dependency auditing, and spell
+checking. Each check runs as a separate job that can be toggled on or off.
+
+**Permissions:** `contents: read`
+
+#### Inputs
+
+| Name                 | Type    | Default          | Description                                              |
+| -------------------- | ------- | ---------------- | -------------------------------------------------------- |
+| `rust-version`       | string  | `"stable"`       | Rust toolchain version to install                        |
+| `runs-on`            | string  | `ubuntu-latest`  | Runner label (Windows is not supported)                  |
+| `run-test`           | boolean | `true`           | Run cargo test                                           |
+| `use-nextest`        | boolean | `false`          | Use cargo-nextest instead of cargo test                  |
+| `nextest-version`    | string  | `"0.9.132"`      | cargo-nextest version to install                         |
+| `test-args`          | string  | `""`             | Additional arguments for cargo test or nextest           |
+| `run-lint`           | boolean | `true`           | Run cargo clippy                                         |
+| `clippy-args`        | string  | `"-D warnings"`  | Arguments passed to clippy after `--`                    |
+| `run-format-check`   | boolean | `true`           | Run cargo fmt --check                                    |
+| `run-deny`           | boolean | `false`          | Run cargo deny check (requires deny.toml)                |
+| `deny-version`       | string  | `"0.19.0"`       | cargo-deny version to install                            |
+| `run-audit`          | boolean | `false`          | Run cargo audit                                          |
+| `audit-version`      | string  | `"0.22.1"`       | cargo-audit version to install                           |
+| `run-typos`          | boolean | `false`          | Run typos spell checking                                 |
+| `cargo-features`     | string  | `""`             | Cargo features passed via --features                     |
+| `extra-components`   | string  | `""`             | Extra rustup components to install                       |
+| `coverage`           | boolean | `false`          | Generate coverage and upload to Codecov                  |
+| `codecov-cli-version`| string  | `"10.4.0"`       | Codecov CLI version to install                           |
+| `codecov-files`      | string  | `lcov.info`      | Coverage file path                                       |
+| `timeout-minutes`    | number  | `15`             | Job timeout in minutes                                   |
+
+#### Secrets
+
+| Name            | Required | Description          |
+| --------------- | -------- | -------------------- |
+| `CODECOV_TOKEN` | No       | Codecov upload token |
+
+#### Usage
+
+```yaml
+jobs:
+  ci:
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@main
+    with:
+      run-deny: true
+      run-audit: true
+      run-typos: true
+```
+
+With cargo-nextest and coverage:
+
+```yaml
+jobs:
+  ci:
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@main
+    with:
+      use-nextest: true
+      coverage: true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+```
+
+### rust-release
+
+Build Rust binaries for multiple targets and publish them as a GitHub Release.
+Supports matrix builds across different runners and optional Homebrew formula
+updates.
+
+**Permissions:** `contents: write`
+
+#### Inputs
+
+| Name                    | Type    | Default    | Description                                                       |
+| ----------------------- | ------- | ---------- | ----------------------------------------------------------------- |
+| `targets`               | string  |            | JSON array of `{"target","runner"}` objects (required)            |
+| `binary-name`           | string  | `""`       | Binary name (extracted from Cargo.toml if empty)                  |
+| `rust-version`          | string  | `"stable"` | Rust toolchain version to install                                 |
+| `build-args`            | string  | `""`       | Additional arguments for cargo build                              |
+| `archive-prefix`        | string  | `""`       | Override archive prefix (default: {binary}-{version})             |
+| `update-homebrew`       | boolean | `false`    | Update a Homebrew formula after releasing                         |
+| `homebrew-tap`          | string  | `""`       | Homebrew tap repository (e.g. user/homebrew-tap)                  |
+| `homebrew-formula-path` | string  | `""`       | Path to the formula in the tap repo (e.g. Formula/mytool.rb)      |
+| `homebrew-license`      | string  | `"MIT"`    | SPDX license identifier for the Homebrew formula                  |
+| `timeout-minutes`       | number  | `30`       | Job timeout in minutes                                            |
+
+#### Secrets
+
+| Name                 | Required | Description                    |
+| -------------------- | -------- | ------------------------------ |
+| `HOMEBREW_TAP_TOKEN` | No       | Token for Homebrew tap updates |
+
+#### Usage
+
+```yaml
+jobs:
+  release:
+    uses: cboone/gh-actions/.github/workflows/rust-release.yml@main
+    with:
+      targets: >-
+        [
+          {"target": "aarch64-apple-darwin", "runner": "macos-latest"},
+          {"target": "x86_64-apple-darwin", "runner": "macos-latest"},
+          {"target": "x86_64-unknown-linux-gnu", "runner": "ubuntu-latest"}
+        ]
+```
+
+With Homebrew formula updates:
+
+```yaml
+jobs:
+  release:
+    uses: cboone/gh-actions/.github/workflows/rust-release.yml@main
+    with:
+      targets: >-
+        [
+          {"target": "aarch64-apple-darwin", "runner": "macos-latest"},
+          {"target": "x86_64-unknown-linux-gnu", "runner": "ubuntu-latest"}
+        ]
+      update-homebrew: true
+      homebrew-tap: myuser/homebrew-tap
+      homebrew-formula-path: Formula/mytool.rb
     secrets:
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```

@@ -1,0 +1,356 @@
+name: Rust Release
+
+on:
+  workflow_call:
+    inputs:
+      targets:
+        description: >-
+          JSON array of objects with "target" (Rust target triple) and
+          "runner" (GitHub runner label) keys. Example:
+          [{"target":"aarch64-apple-darwin","runner":"macos-latest"}]
+        type: string
+        required: true
+      binary-name:
+        description: >-
+          Binary name to package. When empty, the package name is
+          extracted from Cargo.toml via cargo metadata.
+        type: string
+        default: ""
+      rust-version:
+        description: Rust toolchain version to install.
+        type: string
+        default: "stable"
+      build-args:
+        description: Additional arguments passed to cargo build.
+        type: string
+        default: ""
+      archive-prefix:
+        description: >-
+          Override the archive name prefix. When empty, the default
+          prefix is {binary}-{version}. The full archive name is
+          {prefix}-{target}.tar.gz.
+        type: string
+        default: ""
+      update-homebrew:
+        description: Update a Homebrew formula after releasing.
+        type: boolean
+        default: false
+      homebrew-tap:
+        description: >-
+          Homebrew tap repository (e.g. user/homebrew-tap). Required
+          when update-homebrew is true.
+        type: string
+        default: ""
+      homebrew-formula-path:
+        description: >-
+          Path to the formula file within the tap repository
+          (e.g. Formula/mytool.rb). Required when update-homebrew
+          is true.
+        type: string
+        default: ""
+      homebrew-license:
+        description: >-
+          SPDX license identifier for the Homebrew formula
+          (e.g. MIT, Apache-2.0). Defaults to MIT.
+        type: string
+        default: "MIT"
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 30
+    secrets:
+      HOMEBREW_TAP_TOKEN:
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    strategy:
+      matrix:
+        include: ${{ fromJSON(inputs.targets) }}
+      fail-fast: true
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+        with:
+          toolchain: ${{ inputs.rust-version }}
+          targets: ${{ matrix.target }}
+
+      - name: Detect binary name
+        id: meta
+        shell: bash
+        env:
+          BINARY_NAME: ${{ inputs.binary-name }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ -z "${BINARY_NAME}" ]; then
+            metadata="$(cargo metadata --format-version 1 --no-deps)"
+            pkg_count="$(printf '%s\n' "${metadata}" | jq '.packages | length')"
+            if [ "${pkg_count}" -ne 1 ]; then
+              echo "Error: Found ${pkg_count} packages. Set 'binary-name' input explicitly." >&2
+              exit 1
+            fi
+            BINARY_NAME="$(printf '%s\n' "${metadata}" | jq -r \
+              '[.packages[0].targets[] | select(.kind[] == "bin") | .name] | first // empty')"
+            if [ -z "${BINARY_NAME}" ]; then
+              echo "Error: No binary target found. Set 'binary-name' input explicitly." >&2
+              exit 1
+            fi
+          fi
+          version="${TAG#v}"
+          echo "binary=${BINARY_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          BUILD_ARGS: ${{ inputs.build-args }}
+        run: |
+          args=(cargo build --release --target "${TARGET}")
+          if [ -n "${BUILD_ARGS}" ]; then
+            read -r -a extra <<< "${BUILD_ARGS}"
+            args+=("${extra[@]}")
+          fi
+          "${args[@]}"
+
+      - name: Package
+        id: package
+        shell: bash
+        env:
+          BINARY: ${{ steps.meta.outputs.binary }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          TARGET: ${{ matrix.target }}
+          ARCHIVE_PREFIX: ${{ inputs.archive-prefix }}
+        run: |
+          if [ -n "${ARCHIVE_PREFIX}" ]; then
+            prefix="${ARCHIVE_PREFIX}"
+          else
+            prefix="${BINARY}-${VERSION}"
+          fi
+          archive="${prefix}-${TARGET}.tar.gz"
+          tar -czf "${archive}" \
+            -C "target/${TARGET}/release" "${BINARY}"
+          echo "archive=${archive}" >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: release-${{ matrix.target }}
+          path: ${{ steps.package.outputs.archive }}
+          retention-days: 1
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: artifacts
+
+      - name: Generate checksums
+        working-directory: artifacts
+        run: |
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum ./*.tar.gz > checksums.txt
+          else
+            shasum -a 256 ./*.tar.gz > checksums.txt
+          fi
+          echo "Generated checksums:"
+          cat checksums.txt
+
+      - name: Create or update GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" artifacts/*.tar.gz artifacts/checksums.txt --clobber
+          else
+            gh release create "${TAG}" artifacts/*.tar.gz artifacts/checksums.txt \
+              --generate-notes
+          fi
+
+  homebrew:
+    name: Homebrew
+    if: inputs.update-homebrew
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - name: Validate inputs
+        shell: bash
+        env:
+          HOMEBREW_TAP: ${{ inputs.homebrew-tap }}
+          FORMULA_PATH: ${{ inputs.homebrew-formula-path }}
+        run: |
+          if [ -z "${HOMEBREW_TAP}" ]; then
+            echo "Error: homebrew-tap is required when update-homebrew is true" >&2
+            exit 1
+          fi
+          if [ -z "${FORMULA_PATH}" ]; then
+            echo "Error: homebrew-formula-path is required when update-homebrew is true" >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: ${{ inputs.homebrew-tap }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Detect binary name
+        id: meta
+        shell: bash
+        env:
+          BINARY_NAME: ${{ inputs.binary-name }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ -z "${BINARY_NAME}" ]; then
+            echo "binary-name input is required for Homebrew updates" >&2
+            exit 1
+          fi
+          version="${TAG#v}"
+          echo "binary=${BINARY_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Download checksums from release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release download "${TAG}" \
+            --pattern checksums.txt \
+            --dir "${RUNNER_TEMP}"
+
+      - name: Update formula
+        shell: bash
+        env:
+          BINARY: ${{ steps.meta.outputs.binary }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          TAG: ${{ github.ref_name }}
+          ARCHIVE_PREFIX: ${{ inputs.archive-prefix }}
+          FORMULA_PATH: ${{ inputs.homebrew-formula-path }}
+          REPO: ${{ github.repository }}
+          LICENSE: ${{ inputs.homebrew-license }}
+        run: |
+          if [ -n "${ARCHIVE_PREFIX}" ]; then
+            prefix="${ARCHIVE_PREFIX}"
+          else
+            prefix="${BINARY}-${VERSION}"
+          fi
+          base_url="https://github.com/${REPO}/releases/download/${TAG}"
+
+          # Build a mapping of target -> sha256 from checksums.txt
+          declare -A checksums
+          while IFS=' ' read -r hash filename; do
+            filename="${filename#./}"
+            checksums["${filename}"]="${hash}"
+          done < "${RUNNER_TEMP}/checksums.txt"
+
+          get_sha() {
+            local archive="${prefix}-$1.tar.gz"
+            local sha="${checksums[${archive}]}"
+            if [ -z "${sha}" ]; then
+              return 1
+            fi
+            echo "${sha}"
+          }
+
+          # Generate the formula class name
+          class_name="$(echo "${BINARY}" \
+            | sed 's/[-_]/ /g' \
+            | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1' \
+            | tr -d ' ')"
+
+          # Write formula file using a command group
+          {
+            echo "class ${class_name} < Formula"
+            echo "  desc \"${BINARY}\""
+            echo "  homepage \"https://github.com/${REPO}\""
+            echo "  version \"${VERSION}\""
+            echo "  license \"${LICENSE}\""
+            echo ""
+
+            has_macos=false
+            if sha="$(get_sha "aarch64-apple-darwin")"; then
+              has_macos=true
+              echo "  on_macos do"
+              echo "    on_arm do"
+              echo "      url \"${base_url}/${prefix}-aarch64-apple-darwin.tar.gz\""
+              echo "      sha256 \"${sha}\""
+              echo "    end"
+            fi
+            if sha="$(get_sha "x86_64-apple-darwin")"; then
+              if [ "${has_macos}" != "true" ]; then
+                echo "  on_macos do"
+              fi
+              echo "    on_intel do"
+              echo "      url \"${base_url}/${prefix}-x86_64-apple-darwin.tar.gz\""
+              echo "      sha256 \"${sha}\""
+              echo "    end"
+              echo "  end"
+            elif [ "${has_macos}" = "true" ]; then
+              echo "  end"
+            fi
+
+            has_linux=false
+            if sha="$(get_sha "x86_64-unknown-linux-gnu")"; then
+              has_linux=true
+              echo "  on_linux do"
+              echo "    on_intel do"
+              echo "      url \"${base_url}/${prefix}-x86_64-unknown-linux-gnu.tar.gz\""
+              echo "      sha256 \"${sha}\""
+              echo "    end"
+            fi
+            if sha="$(get_sha "aarch64-unknown-linux-gnu")"; then
+              if [ "${has_linux}" != "true" ]; then
+                echo "  on_linux do"
+              fi
+              echo "    on_arm do"
+              echo "      url \"${base_url}/${prefix}-aarch64-unknown-linux-gnu.tar.gz\""
+              echo "      sha256 \"${sha}\""
+              echo "    end"
+              echo "  end"
+            elif [ "${has_linux}" = "true" ]; then
+              echo "  end"
+            fi
+
+            echo ""
+            echo "  def install"
+            echo "    bin.install \"${BINARY}\""
+            echo "  end"
+            echo ""
+            echo "  test do"
+            echo "    system bin/\"${BINARY}\", \"--version\""
+            echo "  end"
+            echo "end"
+          } > "homebrew-tap/${FORMULA_PATH}"
+
+      - name: Commit and push formula
+        working-directory: homebrew-tap
+        env:
+          BINARY: ${{ steps.meta.outputs.binary }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: update ${BINARY} to ${VERSION}"
+          git push
