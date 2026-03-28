@@ -1,0 +1,481 @@
+name: Rust CI
+
+on:
+  workflow_call:
+    inputs:
+      rust-version:
+        description: Rust toolchain version to install.
+        type: string
+        default: "stable"
+      runs-on:
+        description: >-
+          Runner label (ubuntu-latest or macos-latest recommended;
+          Windows is not supported).
+        type: string
+        default: ubuntu-latest
+      run-test:
+        description: Run cargo test.
+        type: boolean
+        default: true
+      use-nextest:
+        description: >-
+          Use cargo-nextest instead of cargo test. When enabled,
+          cargo-nextest is installed from a checksum-verified binary.
+        type: boolean
+        default: false
+      nextest-version:
+        description: cargo-nextest version to install.
+        type: string
+        default: "0.9.132"
+      test-args:
+        description: >-
+          Additional arguments passed to cargo test or cargo nextest run.
+        type: string
+        default: ""
+      run-lint:
+        description: Run cargo clippy.
+        type: boolean
+        default: true
+      clippy-args:
+        description: >-
+          Arguments passed to cargo clippy after the -- separator.
+        type: string
+        default: "-D warnings"
+      run-format-check:
+        description: Run cargo fmt --check.
+        type: boolean
+        default: true
+      run-deny:
+        description: >-
+          Run cargo deny check. Requires a deny.toml configuration file
+          in the repository root.
+        type: boolean
+        default: false
+      deny-version:
+        description: cargo-deny version to install.
+        type: string
+        default: "0.19.0"
+      run-audit:
+        description: Run cargo audit.
+        type: boolean
+        default: false
+      audit-version:
+        description: cargo-audit version to install.
+        type: string
+        default: "0.22.1"
+      run-typos:
+        description: Run typos spell checking.
+        type: boolean
+        default: false
+      cargo-features:
+        description: >-
+          Cargo features passed to test and clippy commands via --features.
+        type: string
+        default: ""
+      extra-components:
+        description: >-
+          Space-separated list of additional rustup components to install
+          (e.g. "llvm-tools-preview").
+        type: string
+        default: ""
+      coverage:
+        description: Generate coverage and upload to Codecov.
+        type: boolean
+        default: false
+      codecov-cli-version:
+        description: Codecov CLI version to install.
+        type: string
+        default: "10.4.0"
+      codecov-files:
+        description: Coverage file path (used for llvm-cov output and Codecov upload).
+        type: string
+        default: lcov.info
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 15
+    secrets:
+      CODECOV_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    if: inputs.run-test
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+        with:
+          toolchain: ${{ inputs.rust-version }}
+          components: ${{ inputs.coverage && 'llvm-tools-preview' || '' }}
+
+      - name: Install extra components
+        if: inputs.extra-components != ''
+        shell: bash
+        env:
+          COMPONENTS: ${{ inputs.extra-components }}
+        run: |
+          read -r -a components <<< "${COMPONENTS}"
+          rustup component add "${components[@]}"
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      - name: Install cargo-nextest
+        if: inputs.use-nextest
+        shell: bash
+        env:
+          VERSION: ${{ inputs.nextest-version }}
+        run: |
+          case "$(uname -s)" in
+            Linux)
+              case "$(uname -m)" in
+                x86_64)      target="x86_64-unknown-linux-gnu" ;;
+                arm64|aarch64) target="aarch64-unknown-linux-gnu" ;;
+                *)
+                  echo "Unsupported architecture: $(uname -m)" >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            Darwin) target="universal-apple-darwin" ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          archive="cargo-nextest-${VERSION}-${target}.tar.gz"
+          base="https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-${VERSION}"
+          install_dir="${RUNNER_TEMP}/nextest-bin"
+          mkdir -p "${install_dir}"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          curl -sSfL "${base}/${archive}" -o "${archive_path}"
+          curl -sSfL "${base}/cargo-nextest-${VERSION}-${target}.sha256" \
+            -o "${RUNNER_TEMP}/nextest-checksum.txt"
+          expected="$(awk '{print $1}' "${RUNNER_TEMP}/nextest-checksum.txt")"
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          tar -xz -C "${install_dir}" -f "${archive_path}"
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+
+      - name: Install cargo-llvm-cov
+        if: inputs.coverage
+        run: cargo install cargo-llvm-cov@0.8.5 --locked
+
+      - name: Run tests
+        if: ${{ !inputs.coverage }}
+        shell: bash
+        env:
+          USE_NEXTEST: ${{ inputs.use-nextest }}
+          TEST_ARGS: ${{ inputs.test-args }}
+          CARGO_FEATURES: ${{ inputs.cargo-features }}
+        run: |
+          if [ "${USE_NEXTEST}" = "true" ]; then
+            args=(cargo nextest run)
+          else
+            args=(cargo test)
+          fi
+          if [ -n "${CARGO_FEATURES}" ]; then
+            args+=(--features "${CARGO_FEATURES}")
+          fi
+          if [ -n "${TEST_ARGS}" ]; then
+            read -r -a extra <<< "${TEST_ARGS}"
+            args+=("${extra[@]}")
+          fi
+          "${args[@]}"
+
+      - name: Run tests with coverage
+        if: inputs.coverage
+        shell: bash
+        env:
+          USE_NEXTEST: ${{ inputs.use-nextest }}
+          CARGO_FEATURES: ${{ inputs.cargo-features }}
+          CODECOV_FILE: ${{ inputs.codecov-files }}
+        run: |
+          if [ "${USE_NEXTEST}" = "true" ]; then
+            args=(cargo llvm-cov nextest --lcov --output-path "${CODECOV_FILE}")
+          else
+            args=(cargo llvm-cov --lcov --output-path "${CODECOV_FILE}")
+          fi
+          if [ -n "${CARGO_FEATURES}" ]; then
+            args+=(--features "${CARGO_FEATURES}")
+          fi
+          "${args[@]}"
+
+      - name: Upload coverage to Codecov
+        if: inputs.coverage
+        continue-on-error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          CODECOV_CLI_VERSION: ${{ inputs.codecov-cli-version }}
+        run: |
+          # Unset empty token so the CLI uses tokenless mode for public repos
+          # instead of treating the empty string as an invalid token.
+          if [ -z "${CODECOV_TOKEN}" ]; then
+            unset CODECOV_TOKEN
+          fi
+
+          case "${RUNNER_OS}" in
+            Linux) codecov_os="linux" ;;
+            macOS) codecov_os="macos" ;;
+            *)
+              echo "Unsupported runner operating system: ${RUNNER_OS}" >&2
+              exit 1
+              ;;
+          esac
+
+          codecov_bin="${RUNNER_TEMP}/codecov"
+          base_url="https://cli.codecov.io/v${CODECOV_CLI_VERSION}/${codecov_os}"
+          curl -sSfL "${base_url}/codecov" -o "${codecov_bin}"
+          curl -sSfL "${base_url}/codecov.SHA256SUM" -o "${codecov_bin}.sha256"
+          expected="$(awk '{print $1}' "${codecov_bin}.sha256")"
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${codecov_bin}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${codecov_bin}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for codecov" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          chmod +x "${codecov_bin}"
+          "${codecov_bin}" upload-process \
+            --file "${{ inputs.codecov-files }}" \
+            --disable-search
+
+  lint:
+    name: Lint
+    if: inputs.run-lint
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+        with:
+          toolchain: ${{ inputs.rust-version }}
+          components: clippy
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+
+      - name: Run clippy
+        shell: bash
+        env:
+          CLIPPY_ARGS: ${{ inputs.clippy-args }}
+          CARGO_FEATURES: ${{ inputs.cargo-features }}
+        run: |
+          args=(cargo clippy --all-targets)
+          if [ -n "${CARGO_FEATURES}" ]; then
+            args+=(--features "${CARGO_FEATURES}")
+          fi
+          args+=(--)
+          if [ -n "${CLIPPY_ARGS}" ]; then
+            read -r -a extra <<< "${CLIPPY_ARGS}"
+            args+=("${extra[@]}")
+          fi
+          "${args[@]}"
+
+  format-check:
+    name: Format check
+    if: inputs.run-format-check
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+        with:
+          toolchain: ${{ inputs.rust-version }}
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+  deny:
+    name: Deny
+    if: inputs.run-deny
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install cargo-deny
+        shell: bash
+        env:
+          VERSION: ${{ inputs.deny-version }}
+        run: |
+          case "$(uname -s)" in
+            Linux)
+              case "$(uname -m)" in
+                x86_64)        target="x86_64-unknown-linux-musl" ;;
+                arm64|aarch64) target="aarch64-unknown-linux-musl" ;;
+                *)
+                  echo "Unsupported architecture: $(uname -m)" >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            Darwin)
+              case "$(uname -m)" in
+                x86_64)        target="x86_64-apple-darwin" ;;
+                arm64|aarch64) target="aarch64-apple-darwin" ;;
+                *)
+                  echo "Unsupported architecture: $(uname -m)" >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          archive="cargo-deny-${VERSION}-${target}.tar.gz"
+          bin_dir="${RUNNER_TEMP}/cargo-deny-bin"
+          mkdir -p "${bin_dir}"
+          base="https://github.com/EmbarkStudios/cargo-deny/releases/download/${VERSION}"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          curl -sSfL "${base}/${archive}" -o "${archive_path}"
+          curl -sSfL "${base}/${archive}.sha256" \
+            -o "${RUNNER_TEMP}/deny-checksum.txt"
+          expected="$(tr -d '[:space:]' < "${RUNNER_TEMP}/deny-checksum.txt")"
+          if [ -z "${expected}" ]; then
+            echo "Checksum file is empty for ${archive}" >&2
+            exit 1
+          fi
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
+          install -m 0755 \
+            "${RUNNER_TEMP}/cargo-deny-${VERSION}-${target}/cargo-deny" \
+            "${bin_dir}/cargo-deny"
+          printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run deny
+        run: cargo deny check
+
+  audit:
+    name: Audit
+    if: inputs.run-audit
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install cargo-audit
+        shell: bash
+        env:
+          VERSION: ${{ inputs.audit-version }}
+        run: |
+          case "$(uname -s)" in
+            Linux)
+              case "$(uname -m)" in
+                x86_64)        target="x86_64-unknown-linux-gnu" ;;
+                arm64|aarch64) target="aarch64-unknown-linux-gnu" ;;
+                *)
+                  echo "Unsupported architecture: $(uname -m)" >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            Darwin)
+              case "$(uname -m)" in
+                x86_64)        target="x86_64-apple-darwin" ;;
+                arm64|aarch64) target="aarch64-apple-darwin" ;;
+                *)
+                  echo "Unsupported architecture: $(uname -m)" >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          # Hardcoded SHA-256 checksums for cargo-audit v0.22.1 release
+          # archives. cargo-audit upstream does not publish checksum files,
+          # so these are computed from the release artifacts and must be
+          # updated when VERSION changes.
+          supported_version="0.22.1"
+          if [ "${VERSION}" != "${supported_version}" ]; then
+            echo "Unsupported cargo-audit version: ${VERSION}" >&2
+            echo "Checksums are only available for v${supported_version}." >&2
+            echo "To use a different version, update the checksums in this workflow." >&2
+            exit 1
+          fi
+
+          case "${target}" in
+            x86_64-unknown-linux-gnu)  expected="1890badd5f15831a9af4b074399fcd21e6f7c0fe42c84e9254cdffc9f813765c" ;;
+            aarch64-unknown-linux-gnu) expected="4c8df835ee484441bd2c8c6bcac28c4ce4b4058ba9e7477cb9e0012fe7769f66" ;;
+            x86_64-apple-darwin)       expected="582d104a2a4bdb127c6bf6d056d89eede40686d11f52e4bc1765132ec99d2fca" ;;
+            aarch64-apple-darwin)      expected="04e76e1da25f597bea4814c44faf8aac215838b9f3646e3b6a873d87acd31b73" ;;
+            *)
+              echo "No checksum available for ${target}" >&2
+              exit 1
+              ;;
+          esac
+
+          archive="cargo-audit-${target}-v${VERSION}.tgz"
+          bin_dir="${RUNNER_TEMP}/cargo-audit-bin"
+          mkdir -p "${bin_dir}"
+          base="https://github.com/rustsec/rustsec/releases/download/cargo-audit%2Fv${VERSION}"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          curl -sSfL "${base}/${archive}" -o "${archive_path}"
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
+          install -m 0755 \
+            "${RUNNER_TEMP}/cargo-audit-${target}-v${VERSION}/cargo-audit" \
+            "${bin_dir}/cargo-audit"
+          printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run audit
+        run: cargo audit
+
+  typos:
+    name: Typos
+    if: inputs.run-typos
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0
