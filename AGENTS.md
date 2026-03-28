@@ -64,6 +64,8 @@ repositories cannot reference local composite actions.
 Every tool download verifies its SHA-256 checksum against upstream-published
 checksum files. The exceptions are scrut and cargo-audit, whose upstreams do
 not publish checksums; their checksums are hardcoded in the workflow files.
+cargo-llvm-cov is installed via `cargo install` from crates.io, which provides
+its own integrity verification through the registry index.
 
 ### Version Pinning
 
