@@ -226,6 +226,10 @@ jobs:
           if [ -n "${SCRUT_ENV}" ]; then
             while IFS= read -r line; do
               if [ -n "${line}" ]; then
+                case "${line}" in
+                  *=*) ;;
+                  *) echo "::error::Invalid SCRUT_ENV line (missing '='): ${line}" && exit 1 ;;
+                esac
                 key="${line%%=*}"
                 value="${line#*=}"
                 # Resolve ./relative paths to absolute so scrut
