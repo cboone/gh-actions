@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Versioning strategy now uses only exact version tags (e.g., `v2.2.0`);
+  floating major tags (`v1`, `v2`) are discontinued
+
 ## [2.1.0] - 2026-03-27
 
 ### Added

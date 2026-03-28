@@ -52,14 +52,13 @@ Reusable workflows centralize job internals, but consuming repos still own repo-
 
 ### Versioning Strategy for This Repo
 
-Consuming repos reference reusable workflows and composite actions by Git ref (e.g., `cboone/gh-actions/.github/workflows/go-ci.yml@v1`). This repo uses semantic versioning with major-version floating tags:
+Consuming repos reference reusable workflows and composite actions by Git ref (e.g., `cboone/gh-actions/.github/workflows/go-ci.yml@v2.1.0`). This repo uses semantic versioning with exact version tags:
 
-- Tag each release as `v1.0.0`, `v1.1.0`, `v1.2.0`, etc.
-- Maintain a floating `v1` tag that always points to the latest `v1.x.x` release
+- Tag each release as `v2.1.0`, `v2.2.0`, `v2.3.0`, etc.
 - A **breaking change** is any modification that would cause an existing caller to fail without changing their `with:` inputs: removing an input, changing an input's type, changing default behavior, or renaming a workflow file
-- Breaking changes require a new major version (`v2`)
+- Breaking changes require a new major version (`v3`)
 - Additive changes (new optional inputs, new workflows) are minor version bumps
-- Callers pin to the major version tag (`@v1`) for automatic non-breaking updates, or pin to an exact tag (`@v1.2.0`) or SHA for stricter control
+- Callers pin to an exact version tag (e.g., `@v2.1.0`) or `@main`
 
 ### Tool Version Pinning Policy
 
