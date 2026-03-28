@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-03-27
+
 ### Added
 
+- Reusable workflows `rust-ci.yml` for Rust test, clippy, fmt, deny, audit,
+  and typos checking, and `rust-release.yml` for Rust binary releases with
+  matrix builds (#21)
 - Reusable workflow `zig-ci.yml` for Zig test, format, build, cross-compile,
   and scrut testing (#22)
 - Reusable workflow `zig-release.yml` for Zig cross-compile releases with
@@ -24,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   conditional Go setup and SHA-pinned action references
 - Reusable workflow `scrut.yml` for standalone scrut CLI snapshot testing
   without Go dependencies
+- Exclude `.md` files from Prettier formatting, rely on markdownlint-cli2
+  instead
 
 ### Changed
 
@@ -31,6 +38,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `actions/setup-go`, `actions/setup-node`, `actions/configure-pages`,
   `actions/upload-pages-artifact`, `actions/deploy-pages`) across all
   reusable workflows
+- Bump pinned tool versions across all actions and workflows
+- Update GitHub Actions (`actions/checkout`, `actions/setup-go`, etc.) to
+  latest major versions
+- Bump `picomatch` and `flatted` dev dependencies
+
+### Fixed
+
+- Validate `scrut-env` KEY=VALUE format in `zig-ci.yml`
+- SHA-pin `actions/checkout` in `create-release.yml`
+- Match markscribe checksum by exact filename to avoid false matches
+- Validate `SCRUT_ENV` format in reusable workflows
+- Clarify `category-prefix` input description for single-language use
+- Address Copilot PR review feedback for Rust workflows and other workflows
 
 ## [2.0.0] - 2026-03-09
 
@@ -90,6 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v2.0.0...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/cboone/gh-actions/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/cboone/gh-actions/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/cboone/gh-actions/releases/tag/v1.0.0

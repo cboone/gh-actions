@@ -843,7 +843,7 @@ git push origin main v1.2.0 v1
 
 - `@v2`: tracks the latest v2.x.y release (recommended, requires Makefile targets).
 - `@v1`: tracks the latest v1.x.y release (for repos not yet migrated to Makefile targets).
-- `@v2.0.0`: pinned to an exact release for stricter control.
+- `@v2.1.0`: pinned to an exact release for stricter control.
 - `@main`: latest development (for testing).
 
 ## License
