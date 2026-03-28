@@ -426,6 +426,7 @@ updates.
 | `update-homebrew`       | boolean | `false`    | Update a Homebrew formula after releasing                         |
 | `homebrew-tap`          | string  | `""`       | Homebrew tap repository (e.g. user/homebrew-tap)                  |
 | `homebrew-formula-path` | string  | `""`       | Path to the formula in the tap repo (e.g. Formula/mytool.rb)      |
+| `homebrew-license`      | string  | `"MIT"`    | SPDX license identifier for the Homebrew formula                  |
 | `timeout-minutes`       | number  | `30`       | Job timeout in minutes                                            |
 
 #### Secrets

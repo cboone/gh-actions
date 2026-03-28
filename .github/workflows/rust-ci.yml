@@ -206,6 +206,7 @@ jobs:
           USE_NEXTEST: ${{ inputs.use-nextest }}
           CARGO_FEATURES: ${{ inputs.cargo-features }}
           CODECOV_FILE: ${{ inputs.codecov-files }}
+          TEST_ARGS: ${{ inputs.test-args }}
         run: |
           if [ "${USE_NEXTEST}" = "true" ]; then
             args=(cargo llvm-cov nextest --lcov --output-path "${CODECOV_FILE}")
@@ -214,6 +215,10 @@ jobs:
           fi
           if [ -n "${CARGO_FEATURES}" ]; then
             args+=(--features "${CARGO_FEATURES}")
+          fi
+          if [ -n "${TEST_ARGS}" ]; then
+            read -r -a extra <<< "${TEST_ARGS}"
+            args+=("${extra[@]}")
           fi
           "${args[@]}"
 

@@ -48,6 +48,12 @@ on:
           is true.
         type: string
         default: ""
+      homebrew-license:
+        description: >-
+          SPDX license identifier for the Homebrew formula
+          (e.g. MIT, Apache-2.0). Defaults to MIT.
+        type: string
+        default: "MIT"
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -238,6 +244,7 @@ jobs:
           ARCHIVE_PREFIX: ${{ inputs.archive-prefix }}
           FORMULA_PATH: ${{ inputs.homebrew-formula-path }}
           REPO: ${{ github.repository }}
+          LICENSE: ${{ inputs.homebrew-license }}
         run: |
           if [ -n "${ARCHIVE_PREFIX}" ]; then
             prefix="${ARCHIVE_PREFIX}"
@@ -274,7 +281,7 @@ jobs:
             echo "  desc \"${BINARY}\""
             echo "  homepage \"https://github.com/${REPO}\""
             echo "  version \"${VERSION}\""
-            echo "  license \"MIT\""
+            echo "  license \"${LICENSE}\""
             echo ""
 
             has_macos=false
