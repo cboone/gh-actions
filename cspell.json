@@ -2,5 +2,5 @@
   "version": "0.2",
   "language": "en",
   "ignorePaths": ["node_modules/", "dist/", "build/", "coverage/", "package-lock.json", ".git/"],
-  "words": ["actionlint", "autobuild", "bopca", "cboone", "charmbracelet", "codecov", "compbox", "coverprofile", "dtolnay", "esac", "facebookincubator", "gitleaks", "gofmt", "goimports", "golangci", "GOPATH", "goreleaser", "ldflags", "Makefiles", "mapfile", "markdownlint", "markscribe", "mfinelli", "mktemp", "oneline", "pipefail", "prerelease", "problemas", "rhysd", "rustup", "scrut", "shellcheck", "shfmt", "stefanzweifel", "tokenless", "trufflehog", "yamllint"]
+  "words": ["actionlint", "autobuild", "bopca", "cboone", "charmbracelet", "clippy", "codecov", "compbox", "coverprofile", "dtolnay", "esac", "facebookincubator", "gitleaks", "gofmt", "goimports", "golangci", "GOPATH", "goreleaser", "ldflags", "Makefiles", "mapfile", "markdownlint", "markscribe", "mfinelli", "mktemp", "myuser", "mytool", "nextest", "oneline", "pipefail", "prerelease", "problemas", "rhysd", "rustfmt", "rustup", "rustsec", "scrut", "shellcheck", "shfmt", "stefanzweifel", "Swatinem", "toggleable", "tokenless", "trufflehog", "yamllint"]
 }
