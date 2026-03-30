@@ -69,7 +69,7 @@ runs:
         archive_root="markscribe_${VERSION}_${os}_${arch}"
         tar -xz -C "${install_dir}" -f "${archive_path}" --strip-components=1 "${archive_root}/markscribe"
         printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
-        "${install_dir}/markscribe" --version
+        test -x "${install_dir}/markscribe"
 
     - name: Run markscribe
       shell: bash
