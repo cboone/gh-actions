@@ -1,5 +1,5 @@
 panes:
-  - command: claude --dangerously-skip-permissions --enable-auto-mode
+  - command: claude
     focus: true
   - split: vertical
     percentage: 50
