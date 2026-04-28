@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Hardcode SHA-256 checksums for shfmt v3.13.0 in `setup-shfmt` action and
+  `shell-lint.yml` workflow. shfmt upstream stopped publishing
+  `sha256sums.txt` starting with v3.13.0 (mvdan/sh#1283, mvdan/sh#1309),
+  which broke installation with `curl: (22) ... 404` for every consumer
+  pinned to the default version (#38)
+
+### Changed
+
+- Update README defaults for `setup-shfmt` and `shell-lint.yml` from
+  `3.12.0` to `3.13.0` to match the actual action and workflow defaults
+- Add Copilot instruction documenting shfmt's hardcoded checksum approach
+  and version-bump procedure
+
 ## [2.1.3] - 2026-03-30
 
 ### Fixed

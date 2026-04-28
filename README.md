@@ -113,7 +113,7 @@ Install shfmt binary with a pinned version.
 
 | Name      | Description              | Required | Default  |
 | --------- | ------------------------ | -------- | -------- |
-| `version` | shfmt version to install | No       | `3.12.0` |
+| `version` | shfmt version to install | No       | `3.13.0` |
 
 #### Usage
 
@@ -539,7 +539,7 @@ by file extension and MIME type.
 | ----------------- | ------- | ---------- | ------------------------ |
 | `run-shellcheck`  | boolean | `true`     | Run ShellCheck           |
 | `run-shfmt`       | boolean | `true`     | Run shfmt format check   |
-| `shfmt-version`   | string  | `"3.12.0"` | shfmt version to install |
+| `shfmt-version`   | string  | `"3.13.0"` | shfmt version to install |
 | `timeout-minutes` | number  | `10`       | Job timeout in minutes   |
 
 #### Usage
