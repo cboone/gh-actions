@@ -91,18 +91,35 @@ jobs:
               ;;
           esac
 
+          # Hardcoded SHA-256 checksums for shfmt v3.13.0 release binaries.
+          # shfmt upstream stopped publishing sha256sums.txt starting with
+          # v3.13.0 (mvdan/sh#1283, mvdan/sh#1309), so checksums are
+          # embedded here and must be updated when VERSION changes.
+          supported_version="3.13.0"
+          if [ "${VERSION}" != "${supported_version}" ]; then
+            echo "Unsupported shfmt version: ${VERSION}" >&2
+            echo "Checksums are only available for v${supported_version}." >&2
+            echo "To use a different version, update the checksums in this workflow." >&2
+            exit 1
+          fi
+
+          case "${os}-${arch}" in
+            linux-amd64)  expected="70aa99784703a8d6569bbf0b1e43e1a91906a4166bf1a79de42050a6d0de7551" ;;
+            linux-arm64)  expected="2091a31afd47742051a77bf7cfd175533ab07e924c20ef3151cd108fa1cab5b0" ;;
+            darwin-amd64) expected="b6890a0009abf71d36d7c536ad56e3132c547ceb77cd5d5ee62b3469ab4e9417" ;;
+            darwin-arm64) expected="650970603b5946dc6041836ddcfa7a19d99b5da885e4687f64575508e99cf718" ;;
+            *)
+              echo "No checksum available for ${os}-${arch}" >&2
+              exit 1
+              ;;
+          esac
+
           install_dir="${RUNNER_TEMP}/shfmt-bin"
           mkdir -p "${install_dir}"
           binary_name="shfmt_v${VERSION}_${os}_${arch}"
           binary_path="${install_dir}/shfmt"
           base="https://github.com/mvdan/sh/releases/download/v${VERSION}"
           curl -sSfL "${base}/${binary_name}" -o "${binary_path}"
-          curl -sSfL "${base}/sha256sums.txt" -o "${install_dir}/checksums.txt"
-          expected="$(grep -F "${binary_name}" "${install_dir}/checksums.txt" | head -1 | awk '{print $1}')"
-          if [ -z "${expected}" ]; then
-            echo "Checksum entry not found for ${binary_name}" >&2
-            exit 1
-          fi
           if command -v sha256sum >/dev/null 2>&1; then
             actual="$(sha256sum "${binary_path}" | awk '{print $1}')"
           else
