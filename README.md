@@ -115,6 +115,9 @@ Install shfmt binary with a pinned version.
 | --------- | ------------------------ | -------- | -------- |
 | `version` | shfmt version to install | No       | `3.13.0` |
 
+Only the pinned version is supported; overriding `version` requires updating
+the hardcoded SHA-256 checksums in `actions/setup-shfmt/action.yml` first.
+
 #### Usage
 
 ```yaml
@@ -541,6 +544,9 @@ by file extension and MIME type.
 | `run-shfmt`       | boolean | `true`     | Run shfmt format check   |
 | `shfmt-version`   | string  | `"3.13.0"` | shfmt version to install |
 | `timeout-minutes` | number  | `10`       | Job timeout in minutes   |
+
+Only the pinned `shfmt-version` is supported; overriding it requires updating
+the hardcoded SHA-256 checksums in `.github/workflows/shell-lint.yml` first.
 
 #### Usage
 
