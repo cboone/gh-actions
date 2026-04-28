@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.4] - 2026-04-27
+
 ### Fixed
 
 - Hardcode SHA-256 checksums for shfmt v3.13.0 in `setup-shfmt` action and
@@ -19,8 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update README defaults for `setup-shfmt` and `shell-lint.yml` from
   `3.12.0` to `3.13.0` to match the actual action and workflow defaults
-- Add Copilot instruction documenting shfmt's hardcoded checksum approach
-  and version-bump procedure
+- Document in README that only the pinned `shfmt` version is supported by
+  `setup-shfmt` and `shell-lint.yml`, and that overriding it requires
+  updating the hardcoded SHA-256 checksums first (#39)
+- Add Copilot instruction documenting shfmt's hardcoded checksum approach,
+  version-bump procedure, and asset name + digest cross-check command
 
 ## [2.1.3] - 2026-03-30
 
@@ -156,7 +161,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v2.1.3...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v2.1.4...HEAD
+[2.1.4]: https://github.com/cboone/gh-actions/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/cboone/gh-actions/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/cboone/gh-actions/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/cboone/gh-actions/compare/v2.1.0...v2.1.1
