@@ -11,6 +11,10 @@
 
     // Allow bare URLs without angle brackets
     "MD034": false,
+
+    // Don't enforce table column alignment (new in markdownlint v0.40;
+    // we don't enforce table-pipe alignment)
+    "MD060": false,
   },
 
   // Files to ignore

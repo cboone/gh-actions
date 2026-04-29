@@ -5,7 +5,7 @@ inputs:
   version:
     description: gitleaks version to install
     required: false
-    default: "8.30.0"
+    default: "8.30.1"
   args:
     description: >-
       Arguments to pass to gitleaks, one per line.

@@ -81,7 +81,7 @@ because Zig does not use GoReleaser. A single runner cross-compiles all targets.
 
 **Permissions:** `contents: write`
 
-**Single job: Release**
+#### Single job: Release
 
 Steps:
 

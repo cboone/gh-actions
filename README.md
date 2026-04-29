@@ -41,14 +41,14 @@ Install golangci-lint binary with a pinned version.
 
 | Name      | Description                      | Required | Default  |
 | --------- | -------------------------------- | -------- | -------- |
-| `version` | golangci-lint version to install | No       | `2.11.2` |
+| `version` | golangci-lint version to install | No       | `2.11.4` |
 
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/setup-golangci-lint@main
+- uses: cboone/gh-actions/actions/setup-golangci-lint@v2.1.4
   with:
-    version: "2.11.2"
+    version: "2.11.4"
 - run: golangci-lint run ./...
 ```
 
@@ -60,14 +60,14 @@ Install GoReleaser binary with a pinned version.
 
 | Name      | Description                   | Required | Default  |
 | --------- | ----------------------------- | -------- | -------- |
-| `version` | GoReleaser version to install | No       | `2.14.2` |
+| `version` | GoReleaser version to install | No       | `2.15.4` |
 
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/setup-goreleaser@main
+- uses: cboone/gh-actions/actions/setup-goreleaser@v2.1.4
   with:
-    version: "2.14.2"
+    version: "2.15.4"
 - run: goreleaser release --clean
 ```
 
@@ -84,7 +84,7 @@ Install scrut CLI testing tool with a pinned version.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/setup-scrut@main
+- uses: cboone/gh-actions/actions/setup-scrut@v2.1.4
 - run: scrut test tests/
 ```
 
@@ -96,12 +96,12 @@ Install actionlint binary with a pinned version.
 
 | Name      | Description                   | Required | Default  |
 | --------- | ----------------------------- | -------- | -------- |
-| `version` | actionlint version to install | No       | `1.7.11` |
+| `version` | actionlint version to install | No       | `1.7.12` |
 
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/setup-actionlint@main
+- uses: cboone/gh-actions/actions/setup-actionlint@v2.1.4
 - run: actionlint
 ```
 
@@ -113,7 +113,7 @@ Install shfmt binary with a pinned version.
 
 | Name      | Description              | Required | Default  |
 | --------- | ------------------------ | -------- | -------- |
-| `version` | shfmt version to install | No       | `3.13.0` |
+| `version` | shfmt version to install | No       | `3.13.1` |
 
 Only the pinned version is supported; overriding `version` requires updating
 the hardcoded SHA-256 checksums in `actions/setup-shfmt/action.yml` first.
@@ -121,7 +121,7 @@ the hardcoded SHA-256 checksums in `actions/setup-shfmt/action.yml` first.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/setup-shfmt@main
+- uses: cboone/gh-actions/actions/setup-shfmt@v2.1.4
 - run: shfmt -d .
 ```
 
@@ -133,13 +133,13 @@ Install gitleaks binary and run a scan.
 
 | Name      | Description                   | Required | Default             |
 | --------- | ----------------------------- | -------- | ------------------- |
-| `version` | gitleaks version to install   | No       | `8.30.0`            |
+| `version` | gitleaks version to install   | No       | `8.30.1`            |
 | `args`    | Arguments to pass to gitleaks | No       | `detect --source .` |
 
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-gitleaks@main
+- uses: cboone/gh-actions/actions/run-gitleaks@v2.1.4
 ```
 
 ### run-trufflehog
@@ -150,13 +150,13 @@ Install trufflehog binary and run a scan.
 
 | Name      | Description                     | Required | Default                    |
 | --------- | ------------------------------- | -------- | -------------------------- |
-| `version` | trufflehog version to install   | No       | `3.93.7`                   |
+| `version` | trufflehog version to install   | No       | `3.95.2`                   |
 | `args`    | Arguments to pass to trufflehog | No       | `filesystem --directory .` |
 
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-trufflehog@main
+- uses: cboone/gh-actions/actions/run-trufflehog@v2.1.4
 ```
 
 ### run-markscribe
@@ -179,7 +179,7 @@ templates.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-markscribe@main
+- uses: cboone/gh-actions/actions/run-markscribe@v2.1.4
   env:
     GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
   with:
@@ -222,7 +222,7 @@ individually.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/create-pull-request@main
+- uses: cboone/gh-actions/actions/create-pull-request@v2.1.4
   with:
     branch: chore/update-data
     commit-message: "chore: update generated data"
@@ -256,7 +256,7 @@ changelog file in Keep a Changelog format.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/create-release.yml@main
+    uses: cboone/gh-actions/.github/workflows/create-release.yml@v2.1.4
 ```
 
 ### go-ci
@@ -278,7 +278,7 @@ Consuming repos must provide a Makefile with targets matching each enabled job:
 | `go-version-file`       | string  | `go.mod`         | File to read the Go version from                           |
 | `runs-on`               | string  | `ubuntu-latest`  | Runner label (Windows is not supported)                    |
 | `run-lint`              | boolean | `true`           | Run `make lint`                                            |
-| `golangci-lint-version` | string  | `"2.11.2"`       | golangci-lint version to install                           |
+| `golangci-lint-version` | string  | `"2.11.4"`       | golangci-lint version to install                           |
 | `run-scrut`             | boolean | `false`          | Run scrut CLI tests                                        |
 | `scrut-build-cmd`       | string  | `go build ./...` | Command to build the binary for scrut tests                |
 | `scrut-env`             | string  | `""`             | Newline-delimited KEY=VALUE env vars for scrut tests       |
@@ -288,7 +288,7 @@ Consuming repos must provide a Makefile with targets matching each enabled job:
 | `run-build`             | boolean | `false`          | Run `make build`                                           |
 | `test-flags`            | string  | `"-race"`        | Flags for go test (only used when coverage is enabled)     |
 | `coverage`              | boolean | `false`          | Generate coverage and upload to Codecov                    |
-| `codecov-cli-version`   | string  | `"10.4.0"`       | Codecov CLI version to install                             |
+| `codecov-cli-version`   | string  | `"11.2.8"`       | Codecov CLI version to install                             |
 | `codecov-files`         | string  | `coverage.out`   | Coverage file path for Codecov upload                      |
 | `timeout-minutes`       | number  | `15`             | Job timeout in minutes                                     |
 
@@ -303,7 +303,7 @@ Consuming repos must provide a Makefile with targets matching each enabled job:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/go-ci.yml@main
+    uses: cboone/gh-actions/.github/workflows/go-ci.yml@v2.1.4
     with:
       run-lint: true
       run-format-check: true
@@ -324,7 +324,7 @@ Run GoReleaser to build and publish a Go release.
 | -------------------- | ------ | ----------------- | ------------------------------------ |
 | `go-version-file`    | string | `go.mod`          | File to read the Go version from     |
 | `runs-on`            | string | `ubuntu-latest`   | Runner label (Windows not supported) |
-| `goreleaser-version` | string | `"2.14.2"`        | GoReleaser version to install        |
+| `goreleaser-version` | string | `"2.15.4"`        | GoReleaser version to install        |
 | `goreleaser-args`    | string | `release --clean` | Arguments to pass to goreleaser      |
 | `timeout-minutes`    | number | `30`              | Job timeout in minutes               |
 
@@ -339,9 +339,9 @@ Run GoReleaser to build and publish a Go release.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/go-release.yml@main
+    uses: cboone/gh-actions/.github/workflows/go-release.yml@v2.1.4
     with:
-      goreleaser-version: "2.14.2"
+      goreleaser-version: "2.15.4"
     secrets:
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
@@ -361,20 +361,20 @@ checking. Each check runs as a separate job that can be toggled on or off.
 | `runs-on`            | string  | `ubuntu-latest`  | Runner label (Windows is not supported)                  |
 | `run-test`           | boolean | `true`           | Run cargo test                                           |
 | `use-nextest`        | boolean | `false`          | Use cargo-nextest instead of cargo test                  |
-| `nextest-version`    | string  | `"0.9.132"`      | cargo-nextest version to install                         |
+| `nextest-version`    | string  | `"0.9.133"`      | cargo-nextest version to install                         |
 | `test-args`          | string  | `""`             | Additional arguments for cargo test or nextest           |
 | `run-lint`           | boolean | `true`           | Run cargo clippy                                         |
 | `clippy-args`        | string  | `"-D warnings"`  | Arguments passed to clippy after `--`                    |
 | `run-format-check`   | boolean | `true`           | Run cargo fmt --check                                    |
 | `run-deny`           | boolean | `false`          | Run cargo deny check (requires deny.toml)                |
-| `deny-version`       | string  | `"0.19.0"`       | cargo-deny version to install                            |
+| `deny-version`       | string  | `"0.19.4"`       | cargo-deny version to install                            |
 | `run-audit`          | boolean | `false`          | Run cargo audit                                          |
 | `audit-version`      | string  | `"0.22.1"`       | cargo-audit version to install                           |
 | `run-typos`          | boolean | `false`          | Run typos spell checking                                 |
 | `cargo-features`     | string  | `""`             | Cargo features passed via --features                     |
 | `extra-components`   | string  | `""`             | Extra rustup components to install                       |
 | `coverage`           | boolean | `false`          | Generate coverage and upload to Codecov                  |
-| `codecov-cli-version`| string  | `"10.4.0"`       | Codecov CLI version to install                           |
+| `codecov-cli-version`| string  | `"11.2.8"`       | Codecov CLI version to install                           |
 | `codecov-files`      | string  | `lcov.info`      | Coverage file path                                       |
 | `timeout-minutes`    | number  | `15`             | Job timeout in minutes                                   |
 
@@ -389,7 +389,7 @@ checking. Each check runs as a separate job that can be toggled on or off.
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@main
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2.1.4
     with:
       run-deny: true
       run-audit: true
@@ -401,7 +401,7 @@ With cargo-nextest and coverage:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@main
+    uses: cboone/gh-actions/.github/workflows/rust-ci.yml@v2.1.4
     with:
       use-nextest: true
       coverage: true
@@ -443,7 +443,7 @@ updates.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/rust-release.yml@main
+    uses: cboone/gh-actions/.github/workflows/rust-release.yml@v2.1.4
     with:
       targets: >-
         [
@@ -458,7 +458,7 @@ With Homebrew formula updates:
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/rust-release.yml@main
+    uses: cboone/gh-actions/.github/workflows/rust-release.yml@v2.1.4
     with:
       targets: >-
         [
@@ -485,8 +485,8 @@ full-history and working-tree scan scopes.
 | -------------------- | ------ | -------------- | ------------------------------------------------ |
 | `tool`               | string | `gitleaks`     | Which tool to run: gitleaks, trufflehog, or both |
 | `scan-scope`         | string | `full-history` | Scan scope: full-history or working-tree         |
-| `gitleaks-version`   | string | `"8.30.0"`     | gitleaks version to install                      |
-| `trufflehog-version` | string | `"3.93.7"`     | trufflehog version to install                    |
+| `gitleaks-version`   | string | `"8.30.1"`     | gitleaks version to install                      |
+| `trufflehog-version` | string | `"3.95.2"`     | trufflehog version to install                    |
 | `fetch-depth`        | number | `0`            | Git fetch depth (0 for full history)             |
 | `allowlist-config`   | string | `""`           | Path to a gitleaks allowlist config file         |
 | `timeout-minutes`    | number | `15`           | Job timeout in minutes                           |
@@ -496,7 +496,7 @@ full-history and working-tree scan scopes.
 ```yaml
 jobs:
   scan:
-    uses: cboone/gh-actions/.github/workflows/secret-scan.yml@main
+    uses: cboone/gh-actions/.github/workflows/secret-scan.yml@v2.1.4
     with:
       tool: both
 ```
@@ -512,7 +512,7 @@ and yamllint YAML validation. Each tool can be toggled independently.
 
 | Name               | Type    | Default | Description                |
 | ------------------ | ------- | ------- | -------------------------- |
-| `node-version`     | string  | `"22"`  | Node.js version to install |
+| `node-version`     | string  | `"24.15.0"`  | Node.js version to install |
 | `run-markdownlint` | boolean | `true`  | Run markdownlint-cli2      |
 | `run-prettier`     | boolean | `true`  | Run Prettier format check  |
 | `run-cspell`       | boolean | `false` | Run cspell spell checker   |
@@ -524,7 +524,7 @@ and yamllint YAML validation. Each tool can be toggled independently.
 ```yaml
 jobs:
   text:
-    uses: cboone/gh-actions/.github/workflows/text-lint.yml@main
+    uses: cboone/gh-actions/.github/workflows/text-lint.yml@v2.1.4
     with:
       run-cspell: true
 ```
@@ -542,7 +542,7 @@ by file extension and MIME type.
 | ----------------- | ------- | ---------- | ------------------------ |
 | `run-shellcheck`  | boolean | `true`     | Run ShellCheck           |
 | `run-shfmt`       | boolean | `true`     | Run shfmt format check   |
-| `shfmt-version`   | string  | `"3.13.0"` | shfmt version to install |
+| `shfmt-version`   | string  | `"3.13.1"` | shfmt version to install |
 | `timeout-minutes` | number  | `10`       | Job timeout in minutes   |
 
 Only the pinned `shfmt-version` is supported; overriding it requires updating
@@ -553,7 +553,7 @@ the hardcoded SHA-256 checksums in `.github/workflows/shell-lint.yml` first.
 ```yaml
 jobs:
   shell:
-    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@main
+    uses: cboone/gh-actions/.github/workflows/shell-lint.yml@v2.1.4
 ```
 
 ### github-lint
@@ -566,7 +566,7 @@ Run actionlint to validate GitHub Actions workflow files.
 
 | Name                 | Type   | Default    | Description                   |
 | -------------------- | ------ | ---------- | ----------------------------- |
-| `actionlint-version` | string | `"1.7.11"` | actionlint version to install |
+| `actionlint-version` | string | `"1.7.12"` | actionlint version to install |
 | `timeout-minutes`    | number | `10`       | Job timeout in minutes        |
 
 #### Usage
@@ -574,7 +574,7 @@ Run actionlint to validate GitHub Actions workflow files.
 ```yaml
 jobs:
   github:
-    uses: cboone/gh-actions/.github/workflows/github-lint.yml@main
+    uses: cboone/gh-actions/.github/workflows/github-lint.yml@v2.1.4
 ```
 
 ### pages-deploy
@@ -594,7 +594,7 @@ and/or Node.js before running the build command.
 | `setup-go`        | boolean | `false`         | Set up Go before building            |
 | `go-version-file` | string  | `go.mod`        | File to read the Go version from     |
 | `setup-node`      | boolean | `false`         | Set up Node.js before building       |
-| `node-version`    | string  | `"22"`          | Node.js version to install           |
+| `node-version`    | string  | `"24.15.0"`          | Node.js version to install           |
 | `timeout-minutes` | number  | `15`            | Job timeout in minutes               |
 
 #### Usage
@@ -602,7 +602,7 @@ and/or Node.js before running the build command.
 ```yaml
 jobs:
   pages:
-    uses: cboone/gh-actions/.github/workflows/pages-deploy.yml@main
+    uses: cboone/gh-actions/.github/workflows/pages-deploy.yml@v2.1.4
     with:
       build-command: "npm run build"
       artifact-path: ./dist
@@ -634,7 +634,7 @@ includes it.
 ```yaml
 jobs:
   codeql:
-    uses: cboone/gh-actions/.github/workflows/codeql.yml@main
+    uses: cboone/gh-actions/.github/workflows/codeql.yml@v2.1.4
     with:
       languages: go
       go-version: "1.25"
@@ -668,7 +668,7 @@ SHA-256 checksum verification and runs tests against the specified directory.
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/scrut.yml@main
+    uses: cboone/gh-actions/.github/workflows/scrut.yml@v2.1.4
 ```
 
 With a custom shell and environment variables:
@@ -676,7 +676,7 @@ With a custom shell and environment variables:
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/scrut.yml@main
+    uses: cboone/gh-actions/.github/workflows/scrut.yml@v2.1.4
     with:
       scrut-shell: zsh
       scrut-env: |
@@ -695,7 +695,7 @@ between `npm ci` and `npm install`.
 
 | Name              | Type   | Default                      | Description                |
 | ----------------- | ------ | ---------------------------- | -------------------------- |
-| `node-version`    | string | `"22"`                       | Node.js version to install |
+| `node-version`    | string | `"24.15.0"`                       | Node.js version to install |
 | `registry-url`    | string | `https://npm.pkg.github.com` | npm registry URL           |
 | `timeout-minutes` | number | `10`                         | Job timeout in minutes     |
 
@@ -710,7 +710,7 @@ between `npm ci` and `npm install`.
 ```yaml
 jobs:
   publish:
-    uses: cboone/gh-actions/.github/workflows/npm-publish.yml@main
+    uses: cboone/gh-actions/.github/workflows/npm-publish.yml@v2.1.4
     secrets:
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -755,7 +755,7 @@ x86_64-linux-gnu aarch64-linux-gnu x86_64-macos aarch64-macos x86_64-windows-gnu
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/zig-ci.yml@main
+    uses: cboone/gh-actions/.github/workflows/zig-ci.yml@v2.1.4
     with:
       zig-version: "0.14.1"
       run-cross-compile: true
@@ -766,7 +766,7 @@ With scrut CLI tests:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/zig-ci.yml@main
+    uses: cboone/gh-actions/.github/workflows/zig-ci.yml@v2.1.4
     with:
       zig-version: "0.14.1"
       run-scrut: true
@@ -805,7 +805,7 @@ x86_64-linux-gnu aarch64-linux-gnu x86_64-macos aarch64-macos x86_64-windows-gnu
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/zig-release.yml@main
+    uses: cboone/gh-actions/.github/workflows/zig-release.yml@v2.1.4
     with:
       zig-version: "0.14.1"
       binary-name: "my-tool"
@@ -840,10 +840,12 @@ After tagging locally, push:
 git push origin main v2.2.0
 ```
 
-### Pinning options for callers
+### Pinning for callers
 
-- `@v2.1.4`: pinned to an exact release (recommended).
-- `@main`: latest development (for testing).
+Always pin to an exact release tag (e.g. `@v2.1.4`). Branch refs like
+`@main` are not supported: they float, they bypass our SHA-pin and
+checksum contract, and the supply-chain risk is not worth the
+convenience.
 
 ## License
 
