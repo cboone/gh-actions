@@ -1,7 +1,6 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["httpx>=0.27"]
 # ///
 """Check pinned tool versions against upstream latest stable releases.
 
@@ -13,19 +12,25 @@ cargo-llvm-cov.
 Exit status is 0 when everything is current, 1 when at least one tool
 has a newer upstream release, 2 on lookup errors. Outputs a Markdown
 report to stdout suitable for piping into a GitHub issue body.
+
+Uses only the Python standard library so the script has no third-party
+dependencies and cannot be compromised by a tampered package registry.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
-from typing import Callable
-
-import httpx
+from typing import Any, Callable
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+HTTP_TIMEOUT = 30
 
 
 @dataclass(frozen=True)
@@ -43,28 +48,33 @@ def _gh_headers() -> dict[str, str]:
     return headers
 
 
+def _get_json(url: str, headers: dict[str, str] | None = None) -> Any:
+    """GET a URL and return parsed JSON. Raises RuntimeError with the HTTP status on non-2xx responses."""
+    req = urllib.request.Request(url, headers=headers or {})
+    try:
+        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"HTTP {exc.code} for {url}") from exc
+
+
 def github_latest_release(repo: str) -> str:
     """Latest non-prerelease release tag with leading 'v' stripped."""
-    r = httpx.get(
+    data = _get_json(
         f"https://api.github.com/repos/{repo}/releases/latest",
         headers=_gh_headers(),
-        timeout=30,
     )
-    r.raise_for_status()
-    return r.json()["tag_name"].lstrip("v")
+    return data["tag_name"].lstrip("v")
 
 
 def github_latest_matching(repo: str, pattern: str) -> str:
     """Latest non-prerelease release tag matching pattern; returns capture group 1."""
-    r = httpx.get(
-        f"https://api.github.com/repos/{repo}/releases",
+    data = _get_json(
+        f"https://api.github.com/repos/{repo}/releases?per_page=50",
         headers=_gh_headers(),
-        params={"per_page": 50},
-        timeout=30,
     )
-    r.raise_for_status()
     rx = re.compile(pattern)
-    for release in r.json():
+    for release in data:
         if release.get("prerelease") or release.get("draft"):
             continue
         m = rx.fullmatch(release["tag_name"])
@@ -74,15 +84,13 @@ def github_latest_matching(repo: str, pattern: str) -> str:
 
 
 def pypi_latest(package: str) -> str:
-    r = httpx.get(f"https://pypi.org/pypi/{package}/json", timeout=30)
-    r.raise_for_status()
-    return r.json()["info"]["version"]
+    data = _get_json(f"https://pypi.org/pypi/{package}/json")
+    return data["info"]["version"]
 
 
 def nodejs_lts_latest(major: int) -> str:
-    r = httpx.get("https://nodejs.org/dist/index.json", timeout=30)
-    r.raise_for_status()
-    for entry in r.json():
+    data = _get_json("https://nodejs.org/dist/index.json")
+    for entry in data:
         version = entry["version"].lstrip("v")
         if int(version.split(".", 1)[0]) == major and entry.get("lts"):
             return version
