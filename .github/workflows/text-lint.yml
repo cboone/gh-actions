@@ -55,9 +55,16 @@ jobs:
         env:
           # Pin package.json + package-lock.json to the same SHA as this
           # workflow so a tampered registry response cannot slip past npm
-          # ci's per-package integrity check.
-          REQ_SHA: ${{ github.job_workflow_sha || github.sha }}
+          # ci's per-package integrity check. job_workflow_sha is always
+          # set when a job comes from a reusable workflow; we fail fast
+          # rather than falling back to github.sha (the caller repo's
+          # commit, which would 404 on raw.githubusercontent.com).
+          REQ_SHA: ${{ github.job_workflow_sha }}
         run: |
+          if [ -z "${REQ_SHA}" ]; then
+            echo "::error::github.job_workflow_sha is empty; this workflow must be called via workflow_call." >&2
+            exit 1
+          fi
           install_dir="${RUNNER_TEMP}/text-lint-tools"
           mkdir -p "${install_dir}"
           base="https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}"
@@ -104,9 +111,14 @@ jobs:
         if: inputs.run-yamllint
         env:
           # Pin the requirements file to the same SHA as this workflow,
-          # so callers cannot pick up a tampered hash list.
-          REQ_SHA: ${{ github.job_workflow_sha || github.sha }}
+          # so callers cannot pick up a tampered hash list. See the npm
+          # install step above for why we do not fall back to github.sha.
+          REQ_SHA: ${{ github.job_workflow_sha }}
         run: |
+          if [ -z "${REQ_SHA}" ]; then
+            echo "::error::github.job_workflow_sha is empty; this workflow must be called via workflow_call." >&2
+            exit 1
+          fi
           curl -sSfL \
             -o "${RUNNER_TEMP}/yamllint-requirements.txt" \
             "https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}/requirements/yamllint.txt"
