@@ -63,9 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@v2.1.4` (the current released tag) and remove `@main` from the
   Pinning section. Branch refs are no longer suggested as a "for
   testing" option; consumers must pin to a release tag.
-
-### Changed
-
 - Pin `package.json` devDependencies to exact versions (no `^`/`~`) so a
   fresh `npm install` cannot float
 - Annotate `dtolnay/rust-toolchain` SHA pins with the upstream commit
