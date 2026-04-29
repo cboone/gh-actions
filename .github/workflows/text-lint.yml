@@ -6,7 +6,7 @@ on:
       node-version:
         description: Node.js version to install.
         type: string
-        default: "22"
+        default: "24.15.0"
       run-markdownlint:
         description: Run markdownlint-cli2.
         type: boolean
@@ -32,11 +32,12 @@ permissions:
   contents: read
 
 env:
-  MARKDOWNLINT_CLI2_VERSION: 0.21.0
-  PRETTIER_VERSION: 3.8.1
-  CSPELL_VERSION: 9.7.0
-  UV_VERSION: 0.10.9
-  YAMLLINT_VERSION: 1.37.1
+  UV_VERSION: 0.11.8
+  # markdownlint-cli2, prettier, cspell are pinned in this repo's
+  # package-lock.json with per-package sha512 integrity hashes; bump
+  # them by editing package.json and running `npm install`.
+  # yamllint is pinned in requirements/yamllint.txt with hashes; bump
+  # both together.
 
 jobs:
   text-lint:
@@ -46,16 +47,24 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: ${{ inputs.node-version }}
 
-      - name: Install lint tools
+      - name: Install lint tools (sha512-verified via gh-actions lockfile)
+        env:
+          # Pin package.json + package-lock.json to the same SHA as this
+          # workflow so a tampered registry response cannot slip past npm
+          # ci's per-package integrity check.
+          REQ_SHA: ${{ github.job_workflow_sha || github.sha }}
         run: |
-          npm install --global \
-            "markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION}" \
-            "prettier@${PRETTIER_VERSION}" \
-            "cspell@${CSPELL_VERSION}"
+          install_dir="${RUNNER_TEMP}/text-lint-tools"
+          mkdir -p "${install_dir}"
+          base="https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}"
+          curl -sSfL "${base}/package.json"      -o "${install_dir}/package.json"
+          curl -sSfL "${base}/package-lock.json" -o "${install_dir}/package-lock.json"
+          (cd "${install_dir}" && npm ci --ignore-scripts --no-audit --no-fund)
+          printf '%s\n' "${install_dir}/node_modules/.bin" >> "${GITHUB_PATH}"
 
       - name: Run markdownlint
         if: inputs.run-markdownlint
@@ -91,9 +100,24 @@ jobs:
           install -m 0755 "${RUNNER_TEMP}/uv-x86_64-unknown-linux-gnu/uv" "${install_dir}/uv"
           printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
+      - name: Install yamllint with hash-pinned requirements
+        if: inputs.run-yamllint
+        env:
+          # Pin the requirements file to the same SHA as this workflow,
+          # so callers cannot pick up a tampered hash list.
+          REQ_SHA: ${{ github.job_workflow_sha || github.sha }}
+        run: |
+          curl -sSfL \
+            -o "${RUNNER_TEMP}/yamllint-requirements.txt" \
+            "https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}/requirements/yamllint.txt"
+          uv venv "${RUNNER_TEMP}/yamllint-venv" --quiet
+          uv pip install \
+            --python "${RUNNER_TEMP}/yamllint-venv/bin/python" \
+            --require-hashes \
+            -r "${RUNNER_TEMP}/yamllint-requirements.txt" \
+            --quiet
+          printf '%s\n' "${RUNNER_TEMP}/yamllint-venv/bin" >> "${GITHUB_PATH}"
+
       - name: Run yamllint
         if: inputs.run-yamllint
-        run: >-
-          uv tool run
-          --from "yamllint==${YAMLLINT_VERSION}"
-          yamllint .
+        run: yamllint .
