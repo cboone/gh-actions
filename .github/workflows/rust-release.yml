@@ -107,7 +107,9 @@ jobs:
           elif [ -f rust-toolchain ]; then
             toolchain="$(tr -d '[:space:]' < rust-toolchain)"
           else
-            echo "::error::Set rust-version input or commit a rust-toolchain.toml file in the consumer repo." >&2
+            echo "::error::Set the rust-version input," \
+              "ensure the configured rust-toolchain-file ('${TOOLCHAIN_FILE}') exists," \
+              "or commit a rust-toolchain file in the consumer repo." >&2
             exit 1
           fi
           echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
