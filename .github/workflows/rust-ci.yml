@@ -4,9 +4,19 @@ on:
   workflow_call:
     inputs:
       rust-version:
-        description: Rust toolchain version to install.
+        description: >-
+          Rust toolchain version to install. When empty, the workflow
+          reads the channel from rust-toolchain-file. At least one of
+          rust-version or rust-toolchain-file must resolve to a value.
         type: string
-        default: "stable"
+        default: ""
+      rust-toolchain-file:
+        description: >-
+          Path to a rust-toolchain.toml (or legacy rust-toolchain) file
+          in the consumer repo. Used when rust-version is empty. The
+          file's [toolchain] channel value is passed to dtolnay.
+        type: string
+        default: rust-toolchain.toml
       runs-on:
         description: >-
           Runner label (ubuntu-latest or macos-latest recommended;
@@ -26,7 +36,7 @@ on:
       nextest-version:
         description: cargo-nextest version to install.
         type: string
-        default: "0.9.132"
+        default: "0.9.133"
       test-args:
         description: >-
           Additional arguments passed to cargo test or cargo nextest run.
@@ -54,7 +64,7 @@ on:
       deny-version:
         description: cargo-deny version to install.
         type: string
-        default: "0.19.0"
+        default: "0.19.4"
       run-audit:
         description: Run cargo audit.
         type: boolean
@@ -85,11 +95,15 @@ on:
       codecov-cli-version:
         description: Codecov CLI version to install.
         type: string
-        default: "10.4.0"
+        default: "11.2.8"
       codecov-files:
         description: Coverage file path (used for llvm-cov output and Codecov upload).
         type: string
         default: lcov.info
+      llvm-cov-version:
+        description: cargo-llvm-cov version to install.
+        type: string
+        default: "0.8.5"
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -110,9 +124,32 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - name: Resolve Rust toolchain
+        id: rust-toolchain
+        shell: bash
+        env:
+          RUST_VERSION: ${{ inputs.rust-version }}
+          TOOLCHAIN_FILE: ${{ inputs.rust-toolchain-file }}
+        run: |
+          if [ -n "${RUST_VERSION}" ]; then
+            toolchain="${RUST_VERSION}"
+          elif [ -f "${TOOLCHAIN_FILE}" ]; then
+            toolchain="$(awk -F'"' '/^[[:space:]]*channel[[:space:]]*=/ { print $2; exit }' "${TOOLCHAIN_FILE}")"
+            if [ -z "${toolchain}" ]; then
+              echo "::error::${TOOLCHAIN_FILE} exists but has no [toolchain] channel value." >&2
+              exit 1
+            fi
+          elif [ -f rust-toolchain ]; then
+            toolchain="$(tr -d '[:space:]' < rust-toolchain)"
+          else
+            echo "::error::Set rust-version input or commit a rust-toolchain.toml file in the consumer repo." >&2
+            exit 1
+          fi
+          echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
         with:
-          toolchain: ${{ inputs.rust-version }}
+          toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
           components: ${{ inputs.coverage && 'llvm-tools-preview' || '' }}
 
       - name: Install extra components
@@ -175,7 +212,79 @@ jobs:
 
       - name: Install cargo-llvm-cov
         if: inputs.coverage
-        run: cargo install cargo-llvm-cov@0.8.5 --locked
+        shell: bash
+        env:
+          VERSION: ${{ inputs.llvm-cov-version }}
+        run: |
+          case "$(uname -s)" in
+            Linux)
+              case "$(uname -m)" in
+                x86_64)        target="x86_64-unknown-linux-gnu" ;;
+                arm64|aarch64) target="aarch64-unknown-linux-gnu" ;;
+                *)
+                  echo "Unsupported architecture: $(uname -m)" >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            Darwin)
+              case "$(uname -m)" in
+                x86_64)        target="x86_64-apple-darwin" ;;
+                arm64|aarch64) target="aarch64-apple-darwin" ;;
+                *)
+                  echo "Unsupported architecture: $(uname -m)" >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            *)
+              echo "Unsupported operating system: $(uname -s)" >&2
+              exit 1
+              ;;
+          esac
+
+          # Hardcoded SHA-256 checksums for cargo-llvm-cov v0.8.5 release
+          # archives. taiki-e/cargo-llvm-cov upstream does not publish a
+          # checksum file, so these are computed from the release artifacts
+          # and must be updated when VERSION changes.
+          supported_version="0.8.5"
+          if [ "${VERSION}" != "${supported_version}" ]; then
+            echo "Unsupported cargo-llvm-cov version: ${VERSION}" >&2
+            echo "Checksums are only available for v${supported_version}." >&2
+            echo "To use a different version, update the checksums in this workflow." >&2
+            exit 1
+          fi
+
+          case "${target}" in
+            x86_64-unknown-linux-gnu)  expected="7e62d664f5133d43d33a3b11138c93feff98bd71e953ddc260ea8ddf360a37c6" ;;
+            aarch64-unknown-linux-gnu) expected="8248a6d5dcb47307c2ef6d5815f90bca07d04a6f1acd06b658f689cb2d8247d9" ;;
+            x86_64-apple-darwin)       expected="b8598f0ea19900f6dea3b3fd4214f1de96f1bff47eaa32a775643fc402cabad0" ;;
+            aarch64-apple-darwin)      expected="816b6ff2c23ba569327d153189d7434afd501fc873cc0f5fbb0cfe412b97bc22" ;;
+            *)
+              echo "No checksum available for ${target}" >&2
+              exit 1
+              ;;
+          esac
+
+          archive="cargo-llvm-cov-${target}.tar.gz"
+          bin_dir="${RUNNER_TEMP}/cargo-llvm-cov-bin"
+          mkdir -p "${bin_dir}"
+          base="https://github.com/taiki-e/cargo-llvm-cov/releases/download/v${VERSION}"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          curl -sSfL "${base}/${archive}" -o "${archive_path}"
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          else
+            actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
+          fi
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            echo "Expected: ${expected}" >&2
+            echo "Actual:   ${actual}" >&2
+            exit 1
+          fi
+          tar -xz -C "${bin_dir}" -f "${archive_path}" cargo-llvm-cov
+          printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"
 
       - name: Run tests
         if: ${{ !inputs.coverage }}
@@ -273,9 +382,32 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - name: Resolve Rust toolchain
+        id: rust-toolchain
+        shell: bash
+        env:
+          RUST_VERSION: ${{ inputs.rust-version }}
+          TOOLCHAIN_FILE: ${{ inputs.rust-toolchain-file }}
+        run: |
+          if [ -n "${RUST_VERSION}" ]; then
+            toolchain="${RUST_VERSION}"
+          elif [ -f "${TOOLCHAIN_FILE}" ]; then
+            toolchain="$(awk -F'"' '/^[[:space:]]*channel[[:space:]]*=/ { print $2; exit }' "${TOOLCHAIN_FILE}")"
+            if [ -z "${toolchain}" ]; then
+              echo "::error::${TOOLCHAIN_FILE} exists but has no [toolchain] channel value." >&2
+              exit 1
+            fi
+          elif [ -f rust-toolchain ]; then
+            toolchain="$(tr -d '[:space:]' < rust-toolchain)"
+          else
+            echo "::error::Set rust-version input or commit a rust-toolchain.toml file in the consumer repo." >&2
+            exit 1
+          fi
+          echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
         with:
-          toolchain: ${{ inputs.rust-version }}
+          toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
           components: clippy
 
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
@@ -305,9 +437,32 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - name: Resolve Rust toolchain
+        id: rust-toolchain
+        shell: bash
+        env:
+          RUST_VERSION: ${{ inputs.rust-version }}
+          TOOLCHAIN_FILE: ${{ inputs.rust-toolchain-file }}
+        run: |
+          if [ -n "${RUST_VERSION}" ]; then
+            toolchain="${RUST_VERSION}"
+          elif [ -f "${TOOLCHAIN_FILE}" ]; then
+            toolchain="$(awk -F'"' '/^[[:space:]]*channel[[:space:]]*=/ { print $2; exit }' "${TOOLCHAIN_FILE}")"
+            if [ -z "${toolchain}" ]; then
+              echo "::error::${TOOLCHAIN_FILE} exists but has no [toolchain] channel value." >&2
+              exit 1
+            fi
+          elif [ -f rust-toolchain ]; then
+            toolchain="$(tr -d '[:space:]' < rust-toolchain)"
+          else
+            echo "::error::Set rust-version input or commit a rust-toolchain.toml file in the consumer repo." >&2
+            exit 1
+          fi
+          echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
         with:
-          toolchain: ${{ inputs.rust-version }}
+          toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
           components: rustfmt
 
       - name: Check formatting
@@ -321,9 +476,32 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - name: Resolve Rust toolchain
+        id: rust-toolchain
+        shell: bash
+        env:
+          RUST_VERSION: ${{ inputs.rust-version }}
+          TOOLCHAIN_FILE: ${{ inputs.rust-toolchain-file }}
+        run: |
+          if [ -n "${RUST_VERSION}" ]; then
+            toolchain="${RUST_VERSION}"
+          elif [ -f "${TOOLCHAIN_FILE}" ]; then
+            toolchain="$(awk -F'"' '/^[[:space:]]*channel[[:space:]]*=/ { print $2; exit }' "${TOOLCHAIN_FILE}")"
+            if [ -z "${toolchain}" ]; then
+              echo "::error::${TOOLCHAIN_FILE} exists but has no [toolchain] channel value." >&2
+              exit 1
+            fi
+          elif [ -f rust-toolchain ]; then
+            toolchain="$(tr -d '[:space:]' < rust-toolchain)"
+          else
+            echo "::error::Set rust-version input or commit a rust-toolchain.toml file in the consumer repo." >&2
+            exit 1
+          fi
+          echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
         with:
-          toolchain: ${{ inputs.rust-version }}
+          toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
 
       - name: Install cargo-deny
         shell: bash
@@ -398,9 +576,32 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - name: Resolve Rust toolchain
+        id: rust-toolchain
+        shell: bash
+        env:
+          RUST_VERSION: ${{ inputs.rust-version }}
+          TOOLCHAIN_FILE: ${{ inputs.rust-toolchain-file }}
+        run: |
+          if [ -n "${RUST_VERSION}" ]; then
+            toolchain="${RUST_VERSION}"
+          elif [ -f "${TOOLCHAIN_FILE}" ]; then
+            toolchain="$(awk -F'"' '/^[[:space:]]*channel[[:space:]]*=/ { print $2; exit }' "${TOOLCHAIN_FILE}")"
+            if [ -z "${toolchain}" ]; then
+              echo "::error::${TOOLCHAIN_FILE} exists but has no [toolchain] channel value." >&2
+              exit 1
+            fi
+          elif [ -f rust-toolchain ]; then
+            toolchain="$(tr -d '[:space:]' < rust-toolchain)"
+          else
+            echo "::error::Set rust-version input or commit a rust-toolchain.toml file in the consumer repo." >&2
+            exit 1
+          fi
+          echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
         with:
-          toolchain: ${{ inputs.rust-version }}
+          toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
 
       - name: Install cargo-audit
         shell: bash
@@ -491,4 +692,4 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0
+      - uses: crate-ci/typos@7c572958218557a3272c2d6719629443b5cc26fd # v1.45.2
