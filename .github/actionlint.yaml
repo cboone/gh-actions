@@ -1,0 +1,10 @@
+# actionlint v1.7.12 doesn't recognize `github.job_workflow_sha`, even though
+# GitHub documents it as available in reusable workflows
+# (https://docs.github.com/en/actions/learn-github-actions/contexts#github-context).
+# Suppress just that error globally; we use job_workflow_sha to pin
+# raw.githubusercontent.com fetches to the called workflow's own commit.
+
+paths:
+  .github/workflows/**/*.{yml,yaml}:
+    ignore:
+      - 'property "job_workflow_sha" is not defined in object type'
