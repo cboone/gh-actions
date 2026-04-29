@@ -7,6 +7,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Dependabot config (`.github/dependabot.yml`) covering both
+  `github-actions` (workflows + composite actions with external `uses:`)
+  and `npm` (devDependencies). Minor/patch updates are grouped weekly;
+  major updates open individual PRs
+- Scheduled `check-tool-versions.yml` workflow that runs weekly, queries
+  upstream releases for every tool Dependabot does not track (binary
+  downloads, hardcoded checksum tables, yamllint, Node LTS), and opens
+  or updates a single tracking issue when something is outdated. Closes
+  the issue automatically when versions are current
+- `scripts/check-tool-versions.py`: uv-managed Python script that powers
+  the scheduled check. Hardcodes the current pinned versions and notes
+  which bumps require regenerating SHA-256 checksums or hash files
+- `requirements/yamllint.txt`: hash-pinned (`uv pip compile
+  --generate-hashes`) requirements for yamllint and its transitive
+  dependencies
+- `.github/actionlint.yaml`: ignore-pattern for the
+  `github.job_workflow_sha` context property, which actionlint v1.7.12
+  does not yet recognise but GitHub provides at runtime in reusable
+  workflows
+
+### Changed
+
+- **Hardening** `cargo-llvm-cov` install in `rust-ci.yml`: replace
+  `cargo install cargo-llvm-cov@0.8.5 --locked` (which trusted crates.io
+  registry integrity) with a checksum-verified binary download from
+  `taiki-e/cargo-llvm-cov` releases. Hardcoded SHA-256 table mirrors
+  the scrut / cargo-audit / shfmt pattern; new `llvm-cov-version`
+  input. Eliminates the registry-only trust path for coverage runs.
+- **Hardening** yamllint in `text-lint.yml` and the local `make
+  lint-yaml`: switch from `uv tool run --from "yamllint==X.Y.Z"`
+  (PyPI-registry-only trust) to `uv pip install --require-hashes -r
+  requirements/yamllint.txt` against a hash-pinned manifest. The
+  workflow downloads the manifest from this repo at the workflow's own
+  SHA (`github.job_workflow_sha`), so a tampered registry response
+  cannot pass the per-package hash check. Every transitive dep of
+  yamllint is hash-pinned.
+- **Hardening** npm tool installs in `text-lint.yml`: replace `npm
+  install --global "<pkg>@<version>"` (no integrity check) with `npm ci`
+  against this repo's checked-in `package-lock.json`, fetched at the
+  workflow's own SHA. Per-package sha512 integrity is now enforced for
+  markdownlint-cli2, prettier, and cspell.
+- **rust-version pinning**: `rust-ci.yml` and `rust-release.yml`
+  default `rust-version` to empty and add a `rust-toolchain-file`
+  input (default `rust-toolchain.toml`). A new pre-step resolves the
+  toolchain by reading the consumer's `rust-toolchain.toml` channel
+  value when `rust-version` is empty. At least one of the two must
+  resolve; otherwise the workflow fails fast with a clear error. This
+  matches dtolnay/rust-toolchain's lack of native toolchain-file
+  support and lets the consumer repo (e.g. `ke`) pin the Rust
+  toolchain in the standard idiomatic place.
+- **README**: replace every `cboone/gh-actions/...@main` example with
+  `@v2.1.4` (the current released tag) and remove `@main` from the
+  Pinning section. Branch refs are no longer suggested as a "for
+  testing" option; consumers must pin to a release tag.
+
+### Changed
+
+- Pin `package.json` devDependencies to exact versions (no `^`/`~`) so a
+  fresh `npm install` cannot float
+- Annotate `dtolnay/rust-toolchain` SHA pins with the upstream commit
+  date (the action does not publish semver tags)
+- Move default `node-version` from major-only `"22"` to a specific Node
+  24 LTS release `"24.15.0"` in `text-lint.yml`, `npm-publish.yml`, and
+  `pages-deploy.yml`
+- Bump pinned tool defaults to current latest stable releases:
+  - actionlint 1.7.11 → 1.7.12
+  - golangci-lint 2.11.3 → 2.11.4
+  - gitleaks 8.30.0 → 8.30.1
+  - trufflehog 3.93.8 → 3.95.2
+  - GoReleaser 2.14.3 → 2.15.4
+  - cargo-deny 0.19.0 → 0.19.4
+  - cargo-nextest 0.9.132 → 0.9.133
+  - shfmt 3.13.0 → 3.13.1 (new hardcoded SHA-256 checksums; upstream
+    still does not publish a checksum file)
+  - yamllint 1.37.1 → 1.38.0
+  - codecov CLI 10.4.0 → 11.2.8 (major bump)
+  - uv 0.10.9 → 0.11.8
+  - cspell 9.7.0 → 10.0.0 (major bump)
+  - markdownlint-cli2 0.21.0 → 0.22.1
+  - prettier 3.8.1 → 3.8.3
+- Bump pinned third-party action SHAs to current latest releases:
+  - actions/setup-node v6 → v6.4.0
+  - actions/setup-go v6 → v6.4.0
+  - actions/upload-artifact v7 → v7.0.1
+  - github/codeql-action v4 → v4.35.2
+  - crate-ci/typos v1.44.0 → v1.45.2
+  - peter-evans/create-pull-request v7 → v8.1.1 (Node 20 → 24 runtime;
+    no input changes)
+  - softprops/action-gh-release v2 → v3.0.0 (Node 20 → 24 runtime; no
+    input changes)
+- Disable `MD060` (table-column-style) in `.markdownlint-cli2.jsonc`.
+  This rule is new in markdownlint v0.40 (shipped with markdownlint-cli2
+  0.22.1) and we don't enforce table-pipe alignment
+- Convert one emphasis-as-heading line in
+  `docs/plans/done/2026-03-27-add-zig-workflows.md` to a real `####`
+  heading so MD036 stays enabled
+
+### Documentation
+
+- Add **Pinning Policy and Trust Model** section to `AGENTS.md`
+  describing how each kind of dependency is pinned (commit SHA, archive
+  checksum, registry exact version, lockfile integrity) and which two
+  defaults intentionally float (`rust-version: "stable"`,
+  `node-version` for caller override ergonomics)
+
 ## [2.1.4] - 2026-04-27
 
 ### Fixed
