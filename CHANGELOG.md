@@ -107,9 +107,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add **Pinning Policy and Trust Model** section to `AGENTS.md`
   describing how each kind of dependency is pinned (commit SHA, archive
-  checksum, registry exact version, lockfile integrity) and which two
-  defaults intentionally float (`rust-version: "stable"`,
-  `node-version` for caller override ergonomics)
+  checksum, registry exact version, lockfile integrity). Document the
+  Rust toolchain as the one explicit version-pinning exception:
+  `rust-version` defaults to empty and `rust-toolchain-file` (default
+  `rust-toolchain.toml`) lets the consumer repo control whether the
+  channel is pinned (e.g., `"1.84.0"`) or floats with rustup
+  (`"stable"`). `node-version` defaults to an exact `"24.15.0"` and is
+  not a floating default; callers may override
 
 ## [2.1.4] - 2026-04-27
 
