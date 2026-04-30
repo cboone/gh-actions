@@ -10,7 +10,7 @@ install-actionlint:
 
 install-yamllint:
 	@if [ ! -x "$(YAMLLINT_VENV)/bin/yamllint" ] || ! cmp -s "$(YAMLLINT_REQ)" "$(YAMLLINT_VENV)/.requirements"; then \
-		uv venv "$(YAMLLINT_VENV)" --quiet && \
+		uv venv "$(YAMLLINT_VENV)" --clear --quiet && \
 		uv pip install --python "$(YAMLLINT_VENV)/bin/python" --require-hashes -r "$(YAMLLINT_REQ)" --quiet && \
 		cp "$(YAMLLINT_REQ)" "$(YAMLLINT_VENV)/.requirements"; \
 	fi
