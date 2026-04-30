@@ -4,7 +4,7 @@
   "description": "A collection of reusable GitHub Actions for CI/CD workflows.",
   "license": "MIT",
   "engines": {
-    "node": ">=20.18"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "format": "prettier --write .",
