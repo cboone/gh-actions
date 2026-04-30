@@ -160,15 +160,16 @@ def main() -> int:
         print("All pinned tool versions are current.")
         return 0
 
-    print("# Outdated tool versions\n")
     if outdated:
+        print("# Outdated tool versions\n")
         print("| Tool | Current | Latest | Notes |")
         print("| --- | --- | --- | --- |")
         for tool, latest in outdated:
             print(f"| {tool.name} | `{tool.current}` | `{latest}` | {tool.notes} |")
         print()
     if errors:
-        print("## Lookup errors\n")
+        heading = "## Lookup errors" if outdated else "# Lookup errors"
+        print(f"{heading}\n")
         for tool, msg in errors:
             print(f"- **{tool.name}**: {msg}")
         print()
