@@ -2,9 +2,10 @@ name: Check tool versions
 
 on:
   schedule:
-    # Mondays at 13:00 UTC (09:00 America/New_York), four hours after the
-    # weekly Dependabot run so the issue summarises what Dependabot can't
-    # already see.
+    # Mondays at 13:00 UTC, four hours after the weekly Dependabot run
+    # so the issue summarises what Dependabot can't already see. Cron
+    # runs in UTC year-round; the wall-clock time in any local zone
+    # shifts with DST.
     - cron: "0 13 * * 1"
   workflow_dispatch:
 

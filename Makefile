@@ -9,7 +9,7 @@ install-actionlint:
 	@VERSION=$(ACTIONLINT_VERSION) INSTALL_DIR=$(dir $(ACTIONLINT)) ./scripts/install-actionlint
 
 install-yamllint:
-	@if [ ! -x "$(YAMLLINT_VENV)/bin/yamllint" ] || ! cmp -s "$(YAMLLINT_REQ)" "$(YAMLLINT_VENV)/.requirements"; then \
+	@if [ ! -x "$(YAMLLINT_VENV)/bin/yamllint" ] || [ ! -f "$(YAMLLINT_VENV)/.requirements" ] || ! cmp -s "$(YAMLLINT_REQ)" "$(YAMLLINT_VENV)/.requirements"; then \
 		uv venv "$(YAMLLINT_VENV)" --clear --quiet && \
 		uv pip install --python "$(YAMLLINT_VENV)/bin/python" --require-hashes -r "$(YAMLLINT_REQ)" --quiet && \
 		cp "$(YAMLLINT_REQ)" "$(YAMLLINT_VENV)/.requirements"; \
