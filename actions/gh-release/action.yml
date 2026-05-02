@@ -39,9 +39,11 @@ inputs:
   files:
     description: >-
       Newline-delimited list of file paths to attach to the release.
-      Each line is passed verbatim to `gh release create`; glob
-      expansion is performed by the shell, so unmatched globs are
-      passed through unchanged.
+      Each line is subject to shell word splitting and glob expansion:
+      whitespace separates tokens (so file names containing spaces are
+      not supported), and globs are expanded against the working
+      directory. Unmatched globs are passed through literally so
+      `gh release create` produces a clear "file not found" error.
     required: false
     default: ""
   draft:

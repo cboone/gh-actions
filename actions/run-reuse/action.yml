@@ -28,7 +28,16 @@ runs:
         UV_VERSION: ${{ inputs.uv-version }}
       run: |
         case "$(uname -s)" in
-          Linux) target="x86_64-unknown-linux-gnu" ;;
+          Linux)
+            case "$(uname -m)" in
+              x86_64) target="x86_64-unknown-linux-gnu" ;;
+              arm64|aarch64) target="aarch64-unknown-linux-gnu" ;;
+              *)
+                echo "Unsupported Linux architecture: $(uname -m)" >&2
+                exit 1
+                ;;
+            esac
+            ;;
           Darwin)
             case "$(uname -m)" in
               x86_64) target="x86_64-apple-darwin" ;;
