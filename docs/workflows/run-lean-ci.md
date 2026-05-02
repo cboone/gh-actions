@@ -20,15 +20,14 @@ what callers want).
 
 ## Inputs
 
-| Name                  | Type    | Default          | Description                                                                                |
-| --------------------- | ------- | ---------------- | ------------------------------------------------------------------------------------------ |
-| `runs-on`             | string  | `ubuntu-latest`  | Runner label (Windows is not supported)                                                    |
-| `lean-toolchain-file` | string  | `lean-toolchain` | Path to the consumer's Lean toolchain file; used in the elan cache key                     |
-| `run-build`           | boolean | `true`           | Run `lake build` via `leanprover/lean-action`                                              |
-| `run-lint`            | boolean | `true`           | Run `lake lint` after the build                                                            |
-| `run-test`            | boolean | `true`           | Run `lake test` after the build                                                            |
-| `use-mathlib-cache`   | string  | `auto`           | Mathlib cache control passed to lean-action (`auto`, `true`, `false`)                      |
-| `timeout-minutes`     | number  | `30`             | Job timeout in minutes                                                                     |
+| Name                | Type    | Default         | Description                                                           |
+| ------------------- | ------- | --------------- | --------------------------------------------------------------------- |
+| `runs-on`           | string  | `ubuntu-latest` | Runner label (Windows is not supported)                               |
+| `run-build`         | boolean | `true`          | Run `lake build` via `leanprover/lean-action`                         |
+| `run-lint`          | boolean | `true`          | Run `lake lint` after the build                                       |
+| `run-test`          | boolean | `true`          | Run `lake test` after the build                                       |
+| `use-mathlib-cache` | string  | `auto`          | Mathlib cache control passed to lean-action (`auto`, `true`, `false`) |
+| `timeout-minutes`   | number  | `30`            | Job timeout in minutes                                                |
 
 ## Usage
 

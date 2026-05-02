@@ -9,13 +9,6 @@ on:
           Windows is not supported).
         type: string
         default: ubuntu-latest
-      lean-toolchain-file:
-        description: >-
-          Path to the consumer repo's Lean toolchain file. Used as part
-          of the elan toolchain cache key. lean-action reads this file
-          natively when installing the toolchain.
-        type: string
-        default: lean-toolchain
       run-build:
         description: Run lake build via lean-action.
         type: boolean
@@ -55,7 +48,7 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.elan
-          key: elan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles(inputs.lean-toolchain-file) }}
+          key: elan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}
 
       - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1.5.0
         with:
