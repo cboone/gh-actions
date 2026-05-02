@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `lint-text.yml` `preset` input with a `lean-math` value: opt-in
+  Pandoc-flavored academic Markdown config bundle. When set and the
+  consumer doesn't ship a local markdownlint or cspell config, the
+  workflow fetches the preset from this repo (at the workflow's own
+  SHA, same supply-chain model as the npm/yamllint installs) and
+  drops it into the workspace so the tools auto-discover it. A local
+  consumer config always takes precedence. Preset sources live at
+  `presets/lean-math/`. Targets Lean + paper-backed formalization
+  repos (`shannon-entropy`, `zhang-yeung-inequality`,
+  `strength-model`) that previously carried duplicated configs
+
 ## [3.0.0] - 2026-05-02
 
 ### Changed
