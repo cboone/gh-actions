@@ -942,46 +942,7 @@ jobs:
 
 ## Migration
 
-The first release that includes these path renames is a breaking release.
-Consumers moving to that release must update action paths and reusable workflow
-filenames in their `uses:` strings. Old paths remain available only on older
-release tags that predate the rename.
-
-### Composite Action Paths
-
-| Old path | New path |
-| --- | --- |
-| `cboone/gh-actions/actions/gh-release@<tag>` | `cboone/gh-actions/actions/create-gh-release@<tag>` |
-| `cboone/gh-actions/actions/setup-actionlint@<tag>` | `cboone/gh-actions/actions/set-up-actionlint@<tag>` |
-| `cboone/gh-actions/actions/setup-golangci-lint@<tag>` | `cboone/gh-actions/actions/set-up-golangci-lint@<tag>` |
-| `cboone/gh-actions/actions/setup-goreleaser@<tag>` | `cboone/gh-actions/actions/set-up-goreleaser@<tag>` |
-| `cboone/gh-actions/actions/setup-scrut@<tag>` | `cboone/gh-actions/actions/set-up-scrut@<tag>` |
-| `cboone/gh-actions/actions/setup-shfmt@<tag>` | `cboone/gh-actions/actions/set-up-shfmt@<tag>` |
-
-### Reusable Workflow Paths
-
-| Old path | New path |
-| --- | --- |
-| `cboone/gh-actions/.github/workflows/create-release.yml@<tag>` | `cboone/gh-actions/.github/workflows/create-gh-release-from-changelog.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/go-ci.yml@<tag>` | `cboone/gh-actions/.github/workflows/run-go-ci.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/go-release.yml@<tag>` | `cboone/gh-actions/.github/workflows/release-go-binaries.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/rust-ci.yml@<tag>` | `cboone/gh-actions/.github/workflows/run-rust-ci.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/rust-release.yml@<tag>` | `cboone/gh-actions/.github/workflows/release-rust-binaries.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/secret-scan.yml@<tag>` | `cboone/gh-actions/.github/workflows/scan-for-secrets.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/text-lint.yml@<tag>` | `cboone/gh-actions/.github/workflows/lint-text.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/shell-lint.yml@<tag>` | `cboone/gh-actions/.github/workflows/lint-shell.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/github-lint.yml@<tag>` | `cboone/gh-actions/.github/workflows/lint-github-actions.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/pages-deploy.yml@<tag>` | `cboone/gh-actions/.github/workflows/deploy-to-pages.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/codeql.yml@<tag>` | `cboone/gh-actions/.github/workflows/analyze-with-codeql.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/scrut.yml@<tag>` | `cboone/gh-actions/.github/workflows/run-scrut-tests.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/npm-publish.yml@<tag>` | `cboone/gh-actions/.github/workflows/publish-to-npm.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/zig-ci.yml@<tag>` | `cboone/gh-actions/.github/workflows/run-zig-ci.yml@<tag>` |
-| `cboone/gh-actions/.github/workflows/zig-release.yml@<tag>` | `cboone/gh-actions/.github/workflows/release-zig-binaries.yml@<tag>` |
-
-Do not change external GitHub Actions such as `actions/setup-go` or
-`actions/setup-node` as part of this migration. If branch protection rules
-require specific workflow status check names, update those settings after the
-workflow rename lands.
+See [docs/migrations/v3.md](docs/migrations/v3.md) for the v3 path renames.
 
 ## Versioning
 
