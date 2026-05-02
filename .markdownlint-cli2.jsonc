@@ -17,6 +17,7 @@
     "MD060": false,
   },
 
-  // Files to ignore
-  "ignores": ["node_modules/", "CHANGELOG.md"],
+  // Files to ignore. .workmux/ holds workmux-generated worktree
+  // scratchpads (gitignored locally); not project content.
+  "ignores": ["node_modules/", "CHANGELOG.md", ".workmux/"],
 }
