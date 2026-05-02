@@ -128,6 +128,41 @@ The Go CI workflow expects a Makefile in the consuming repo with `vet`,
 `test`, `lint`, `build`, and `fmt` targets, where `fmt` is a format check
 (see [run-go-ci](docs/workflows/run-go-ci.md) for details).
 
+## Trust model and pinning
+
+Every external dependency that runs in CI is pinned with the strongest
+integrity check available for its ecosystem.
+
+- **GitHub Actions (`uses:`)**: pinned to a 40-char commit SHA with a
+  `# vX.Y.Z` comment.
+- **Binary downloads via `curl`**: SHA-256 verified against an upstream
+  checksum file, or against hardcoded checksums in this repo where
+  upstream does not publish one (currently scrut, shfmt, cargo-audit,
+  cargo-llvm-cov).
+- **Python tools**: installed via `uv pip install --require-hashes`
+  against a manifest with hash-pinned transitive deps, fetched at the
+  workflow's own SHA.
+- **npm tools**: installed via `npm ci` against this repo's
+  `package-lock.json` (per-package sha512 integrity), fetched at the
+  workflow's own SHA.
+- **Rust tooling**: installed from binary release tarballs with SHA-256
+  verification, never via `cargo install` (which would trust crates.io
+  alone).
+- **`package.json` devDependencies**: exact versions; `package-lock.json`
+  enforces sha512 integrity on every fresh install.
+
+> Never let an upstream registry (npm, PyPI, crates.io) be the sole
+> integrity boundary for anything that runs in CI.
+
+[`.github/workflows/check-tool-versions.yml`](.github/workflows/check-tool-versions.yml)
+runs weekly to surface upstream releases of tools that Dependabot does not
+track (workflow `env:` versions, hardcoded checksums, the yamllint hash
+manifest), opening or updating a single tracking issue when something is
+outdated.
+
+For the long-form version of this policy, see
+[AGENTS.md](AGENTS.md#pinning-policy-and-trust-model).
+
 ## Migration
 
 See [docs/migrations/v3.md](docs/migrations/v3.md) for the v3 path renames.
