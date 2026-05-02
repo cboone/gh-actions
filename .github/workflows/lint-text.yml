@@ -159,7 +159,7 @@ jobs:
           fi
 
       - name: Install lint tools (sha512-verified via gh-actions lockfile)
-        if: ${{ !inputs.use-consumer-versions }}
+        if: ${{ !inputs.use-consumer-versions && (inputs.run-markdownlint || inputs.run-prettier || inputs.run-cspell) }}
         env:
           # Pin package.json + package-lock.json to the same SHA as this
           # workflow so a tampered registry response cannot slip past npm
@@ -178,7 +178,7 @@ jobs:
           base="https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}"
           curl -sSfL "${base}/package.json"      -o "${install_dir}/package.json"
           curl -sSfL "${base}/package-lock.json" -o "${install_dir}/package-lock.json"
-          (cd "${install_dir}" && npm ci --ignore-scripts --no-audit --no-fund)
+          (cd "${install_dir}" && npm ci --ignore-scripts --include=dev --no-audit --no-fund)
           printf '%s\n' "${install_dir}/node_modules/.bin" >> "${GITHUB_PATH}"
 
       - name: Install lint tools (consumer's package-lock.json)
@@ -201,7 +201,7 @@ jobs:
             echo "::error::${msg}" >&2
             exit 1
           fi
-          npm ci --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --include=dev --no-audit --no-fund
           printf '%s\n' "${GITHUB_WORKSPACE}/node_modules/.bin" >> "${GITHUB_PATH}"
 
       - name: Run markdownlint
