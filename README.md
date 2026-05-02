@@ -11,7 +11,10 @@ There are many, these are mine.
   - [run-gitleaks](#run-gitleaks)
   - [run-trufflehog](#run-trufflehog)
   - [run-markscribe](#run-markscribe)
+  - [run-cspell](#run-cspell)
+  - [run-reuse](#run-reuse)
   - [create-pull-request](#create-pull-request)
+  - [gh-release](#gh-release)
 - [Reusable Workflows](#reusable-workflows)
   - [create-release](#create-release)
   - [go-ci](#go-ci)
@@ -187,6 +190,61 @@ templates.
     write-to: "README.md"
 ```
 
+### run-cspell
+
+Install cspell and run it with inline pull-request annotations. Thin
+alternative to
+[`streetsidesoftware/cspell-action`](https://github.com/streetsidesoftware/cspell-action).
+Installs cspell from this repo's sha512-pinned `package-lock.json`
+(same trust path as the [text-lint](#text-lint) reusable workflow) and
+registers a problem matcher so cspell's default
+`path:line:col - Unknown word` output surfaces as PR annotations.
+
+Node.js must be available on the runner; pair with `actions/setup-node`
+if it is not already installed. For most projects, the
+[text-lint](#text-lint) reusable workflow with `run-cspell: true` is a
+better fit; reach for this action when you need cspell standalone in a
+larger custom workflow.
+
+#### Inputs
+
+| Name     | Description                                                          | Required | Default |
+| -------- | -------------------------------------------------------------------- | -------- | ------- |
+| `files`  | Newline-delimited globs passed to cspell                             | No       | `.`     |
+| `config` | Path to a cspell config file (auto-discovered when empty)            | No       | `""`    |
+| `args`   | Extra arguments to pass to cspell, one per line                      | No       | `""`    |
+
+#### Usage
+
+```yaml
+- uses: actions/setup-node@v4
+  with:
+    node-version: "24.15.0"
+- uses: cboone/gh-actions/actions/run-cspell@v2.1.4
+```
+
+### run-reuse
+
+Install [reuse](https://reuse.software/) and run it (default:
+`reuse lint`) for SPDX/REUSE compliance. Thin alternative to
+[`fsfe/reuse-action`](https://github.com/fsfe/reuse-action). Installs
+reuse from this repo's hash-pinned `requirements/reuse.txt` (every
+transitive dependency is sha256-pinned via
+`uv pip compile --generate-hashes`).
+
+#### Inputs
+
+| Name         | Description                                              | Required | Default    |
+| ------------ | -------------------------------------------------------- | -------- | ---------- |
+| `uv-version` | uv version to install for the reuse install step        | No       | `0.11.8`   |
+| `args`       | Arguments to pass to `reuse`, one per line              | No       | `lint`     |
+
+#### Usage
+
+```yaml
+- uses: cboone/gh-actions/actions/run-reuse@v2.1.4
+```
+
 ### create-pull-request
 
 SHA-pinned wrapper around
@@ -230,6 +288,52 @@ individually.
     body: "Automated update."
     labels: automation
     delete-branch: true
+```
+
+### gh-release
+
+Create a GitHub Release with `gh release create`. Thin alternative to
+[`softprops/action-gh-release`](https://github.com/softprops/action-gh-release)
+for callers that need asset uploads, auto-generated release notes, and
+draft/prerelease flags. The `gh` CLI ships preinstalled on
+GitHub-hosted runners, so no binary download or checksum table is needed.
+
+For changelog-driven releases, prefer the [create-release](#create-release)
+reusable workflow. Reach for `gh-release` when you need to attach files
+or auto-generate notes from merged PRs.
+
+#### Inputs
+
+| Name                     | Description                                                     | Required | Default                |
+| ------------------------ | --------------------------------------------------------------- | -------- | ---------------------- |
+| `tag-name`               | Git tag for the release                                         | No       | `${{ github.ref_name }}` |
+| `name`                   | Release title (defaults to the tag name when empty)             | No       | `""`                   |
+| `body`                   | Inline release notes                                            | No       | `""`                   |
+| `body-path`              | Path to a file containing release notes                         | No       | `""`                   |
+| `generate-release-notes` | Auto-generate release notes from merged pull requests           | No       | `false`                |
+| `files`                  | Newline-delimited file paths to attach (globs are expanded)     | No       | `""`                   |
+| `draft`                  | Create the release as a draft                                   | No       | `false`                |
+| `prerelease`             | Mark the release as a prerelease                                | No       | `false`                |
+| `target-commitish`       | Commit SHA, branch, or tag to point the release at              | No       | `""`                   |
+| `token`                  | GitHub token (must have `contents: write`)                      | No       | `${{ github.token }}`  |
+
+`body`, `body-path`, and `generate-release-notes` are mutually exclusive.
+
+#### Outputs
+
+| Name  | Description                |
+| ----- | -------------------------- |
+| `url` | URL of the created release |
+
+#### Usage
+
+```yaml
+- uses: cboone/gh-actions/actions/gh-release@v2.1.4
+  with:
+    files: |
+      dist/*.tar.gz
+      dist/*.zip
+    generate-release-notes: true
 ```
 
 ## Reusable Workflows
