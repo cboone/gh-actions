@@ -133,3 +133,9 @@ Lines starting with `:` are emitted as Ruby symbols (constraints
 like `:macos` or `:linux`). Other lines are emitted as quoted
 strings (formula dependencies like `openssl`). Blank lines are
 ignored.
+
+When `homebrew-depends-on` includes `:macos` or `:linux`, the workflow
+cross-checks the constraint against the `targets` matrix and fails fast
+if they conflict (for example, `:macos` declared alongside a
+`*-unknown-linux-*` target). This prevents generating a self-contradictory
+formula that restricts to one OS while shipping bottles for the other.

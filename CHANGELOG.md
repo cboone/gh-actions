@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   symbols (e.g. `:macos`), other lines are emitted as quoted strings
   (e.g. `openssl`). Needed for macOS-only tools and tools with
   library dependencies (#31)
+- Fail-fast validation in `release-rust-binaries.yml` when
+  `homebrew-depends-on` declares `:macos` or `:linux` but the `targets`
+  matrix includes a target for the other platform. Prevents generating a
+  self-contradictory formula that restricts to one OS while shipping
+  bottles for the other (#56)
 - Reusable workflow `run-lean-ci.yml` for Lean Lake projects using
   `leanprover/lean-action`. Builds via lean-action (with elan toolchain
   caching and pass-through control over the Mathlib build cache), then

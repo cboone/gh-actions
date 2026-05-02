@@ -253,6 +253,8 @@ jobs:
         env:
           HOMEBREW_TAP: ${{ inputs.homebrew-tap }}
           FORMULA_PATH: ${{ inputs.homebrew-formula-path }}
+          TARGETS: ${{ inputs.targets }}
+          DEPENDS_ON: ${{ inputs.homebrew-depends-on }}
         run: |
           if [ -z "${HOMEBREW_TAP}" ]; then
             echo "Error: homebrew-tap is required when update-homebrew is true" >&2
@@ -261,6 +263,58 @@ jobs:
           if [ -z "${FORMULA_PATH}" ]; then
             echo "Error: homebrew-formula-path is required when update-homebrew is true" >&2
             exit 1
+          fi
+
+          # Cross-check ':macos'/':linux' constraints in homebrew-depends-on
+          # against the targets matrix so the formula can't both restrict to
+          # one OS and ship bottles for the other.
+          declared_macos=false
+          declared_linux=false
+          if [ -n "${DEPENDS_ON}" ]; then
+            while IFS= read -r dep; do
+              dep="${dep#"${dep%%[![:space:]]*}"}"
+              dep="${dep%"${dep##*[![:space:]]}"}"
+              case "${dep}" in
+                :macos) declared_macos=true ;;
+                :linux) declared_linux=true ;;
+              esac
+            done <<< "${DEPENDS_ON}"
+          fi
+
+          if [ "${declared_macos}" = "true" ] || [ "${declared_linux}" = "true" ]; then
+            readarray -t target_triples < <(printf '%s' "${TARGETS}" | jq -r '.[].target')
+            if [ "${declared_macos}" = "true" ]; then
+              conflicts=()
+              for t in "${target_triples[@]}"; do
+                case "${t}" in
+                  *-apple-darwin) ;;
+                  *) conflicts+=("${t}") ;;
+                esac
+              done
+              if [ ${#conflicts[@]} -gt 0 ]; then
+                echo "Error: homebrew-depends-on declares ':macos' but targets" \
+                  "includes non-macOS target(s): ${conflicts[*]}." >&2
+                echo "Either remove ':macos' from homebrew-depends-on or" \
+                  "restrict targets to *-apple-darwin entries." >&2
+                exit 1
+              fi
+            fi
+            if [ "${declared_linux}" = "true" ]; then
+              conflicts=()
+              for t in "${target_triples[@]}"; do
+                case "${t}" in
+                  *-linux-*) ;;
+                  *) conflicts+=("${t}") ;;
+                esac
+              done
+              if [ ${#conflicts[@]} -gt 0 ]; then
+                echo "Error: homebrew-depends-on declares ':linux' but targets" \
+                  "includes non-Linux target(s): ${conflicts[*]}." >&2
+                echo "Either remove ':linux' from homebrew-depends-on or" \
+                  "restrict targets to *-linux-* entries." >&2
+                exit 1
+              fi
+            fi
           fi
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
