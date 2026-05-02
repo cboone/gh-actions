@@ -28,6 +28,7 @@ workflow fails fast.
 | `homebrew-license`      | string  | `"MIT"`               | SPDX license identifier for the Homebrew formula             |
 | `homebrew-test`         | string  | `""`                  | Custom Ruby body for the formula `test do` block             |
 | `homebrew-desc`         | string  | `""`                  | Description for the Homebrew formula (defaults to binary)    |
+| `homebrew-depends-on`   | string  | `""`                  | Newline-delimited Homebrew `depends_on` declarations         |
 | `timeout-minutes`       | number  | `30`                  | Job timeout in minutes                                       |
 
 ## Secrets
@@ -101,3 +102,31 @@ jobs:
 
 The value is indented to match the formula's `test do` block, so write
 it at column 0. Multi-line bodies are supported.
+
+With Homebrew formula dependency declarations (e.g. for a macOS-only
+tool that also links against `openssl`):
+
+```yaml
+jobs:
+  release:
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.0.0
+    with:
+      targets: >-
+        [
+          {"target": "aarch64-apple-darwin", "runner": "macos-latest"},
+          {"target": "x86_64-apple-darwin", "runner": "macos-latest"}
+        ]
+      update-homebrew: true
+      homebrew-tap: myuser/homebrew-tap
+      homebrew-formula-path: Formula/mytool.rb
+      homebrew-depends-on: |
+        :macos
+        openssl
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+```
+
+Lines starting with `:` are emitted as Ruby symbols (constraints
+like `:macos` or `:linux`). Other lines are emitted as quoted
+strings (formula dependencies like `openssl`). Blank lines are
+ignored.

@@ -78,6 +78,15 @@ on:
           the binary name.
         type: string
         default: ""
+      homebrew-depends-on:
+        description: >-
+          Newline-delimited list of Homebrew depends_on declarations
+          (e.g. ":macos" or "openssl"). Each non-empty line becomes a
+          separate depends_on statement in the formula. Lines starting
+          with ":" are emitted as Ruby symbols; other lines are emitted
+          as quoted strings.
+        type: string
+        default: ""
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -296,6 +305,7 @@ jobs:
           LICENSE: ${{ inputs.homebrew-license }}
           HOMEBREW_TEST: ${{ inputs.homebrew-test }}
           DESC: ${{ inputs.homebrew-desc }}
+          DEPENDS_ON: ${{ inputs.homebrew-depends-on }}
         run: |
           if [ -n "${ARCHIVE_PREFIX}" ]; then
             prefix="${ARCHIVE_PREFIX}"
@@ -343,6 +353,20 @@ jobs:
             echo "  version \"${VERSION}\""
             echo "  license \"${LICENSE}\""
             echo ""
+
+            if [ -n "${DEPENDS_ON}" ]; then
+              while IFS= read -r dep; do
+                dep="${dep#"${dep%%[![:space:]]*}"}"
+                dep="${dep%"${dep##*[![:space:]]}"}"
+                [ -z "${dep}" ] && continue
+                if [ "${dep#:}" != "${dep}" ]; then
+                  echo "  depends_on ${dep}"
+                else
+                  echo "  depends_on \"${dep}\""
+                fi
+              done <<< "${DEPENDS_ON}"
+              echo ""
+            fi
 
             has_macos=false
             if sha="$(get_sha "aarch64-apple-darwin")"; then
