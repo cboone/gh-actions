@@ -1,4 +1,4 @@
-name: Setup GoReleaser
+name: Set up GoReleaser
 description: Install GoReleaser binary with a pinned version.
 
 inputs:

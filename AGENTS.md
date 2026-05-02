@@ -10,36 +10,39 @@ verification. The repository is consumed by 26+ downstream repos.
 
 ```text
 actions/
+  create-gh-release/     # Create GitHub Release with gh
   create-pull-request/   # Wrapper: peter-evans/create-pull-request (SHA-pinned)
+  run-cspell/            # Install and run cspell spell checker
   run-gitleaks/          # Install and run gitleaks secret scanner
   run-markscribe/        # Install and run markscribe README template generator
+  run-reuse/             # Install and run REUSE compliance checker
   run-trufflehog/        # Install and run trufflehog secret scanner
-  setup-actionlint/      # Install actionlint
-  setup-golangci-lint/   # Install golangci-lint
-  setup-goreleaser/      # Install GoReleaser
-  setup-scrut/           # Install scrut CLI test runner
-  setup-shfmt/           # Install shfmt
+  set-up-actionlint/     # Install actionlint
+  set-up-golangci-lint/  # Install golangci-lint
+  set-up-goreleaser/     # Install GoReleaser
+  set-up-scrut/          # Install scrut CLI test runner
+  set-up-shfmt/          # Install shfmt
 .github/
   workflows/
-    create-release.yml   # Reusable: create GitHub Release from changelog
-    go-ci.yml            # Reusable: Go test, lint, build, scrut, format check
-    go-release.yml       # Reusable: GoReleaser release
-    rust-ci.yml          # Reusable: Rust test, clippy, fmt, deny, audit, typos
-    rust-release.yml     # Reusable: Rust binary release with matrix builds
-    codeql.yml           # Reusable: GitHub CodeQL security analysis
-    scrut.yml            # Reusable: scrut CLI snapshot tests
-    secret-scan.yml      # Reusable: gitleaks and/or trufflehog scanning
-    text-lint.yml        # Reusable: markdownlint, Prettier, cspell, yamllint
-    shell-lint.yml       # Reusable: ShellCheck and shfmt
-    github-lint.yml      # Reusable: actionlint
-    pages-deploy.yml     # Reusable: GitHub Pages build and deploy
-    npm-publish.yml      # Reusable: npm publish to registry
-    zig-ci.yml           # Reusable: Zig test, format, build, cross-compile, scrut
-    zig-release.yml      # Reusable: Zig cross-compile release
-    release.yml          # Self-hosting: runs create-release on version tags
-    ci.yml               # Self-hosting: runs github-lint on this repo
-    gitleaks.yml         # Self-hosting: runs secret-scan with gitleaks
-    trufflehog.yml       # Self-hosting: runs secret-scan with trufflehog
+    analyze-with-codeql.yml                 # Reusable: GitHub CodeQL security analysis
+    create-gh-release-from-changelog.yml    # Reusable: create GitHub Release from changelog
+    deploy-to-pages.yml                     # Reusable: GitHub Pages build and deploy
+    lint-github-actions.yml                 # Reusable: actionlint
+    lint-shell.yml                          # Reusable: ShellCheck and shfmt
+    lint-text.yml                           # Reusable: markdownlint, Prettier, cspell, yamllint
+    publish-to-npm.yml                      # Reusable: npm publish to registry
+    release-go-binaries.yml                 # Reusable: GoReleaser release
+    release-rust-binaries.yml               # Reusable: Rust binary release with matrix builds
+    release-zig-binaries.yml                # Reusable: Zig cross-compile release
+    run-go-ci.yml                           # Reusable: Go test, lint, build, scrut, format check
+    run-rust-ci.yml                         # Reusable: Rust test, clippy, fmt, deny, audit, typos
+    run-scrut-tests.yml                     # Reusable: scrut CLI snapshot tests
+    run-zig-ci.yml                          # Reusable: Zig test, format, build, cross-compile, scrut
+    scan-for-secrets.yml                    # Reusable: gitleaks and/or trufflehog scanning
+    create-gh-release-on-tag.yml            # Self-hosting: runs changelog release on version tags
+    run-ci.yml                              # Self-hosting: runs lint-github-actions on this repo
+    scan-for-secrets-with-gitleaks.yml      # Self-hosting: runs scan-for-secrets with gitleaks
+    scan-for-secrets-with-trufflehog.yml    # Self-hosting: runs scan-for-secrets with trufflehog
   copilot-instructions.md
 docs/plans/              # Plan documents (todo/ and done/)
 ```
@@ -56,7 +59,8 @@ repositories cannot reference local composite actions.
 
 ### Naming
 
-- `setup-*` actions install a tool and add it to `GITHUB_PATH` (install only).
+- Use imperative path names for local composite actions and reusable workflows.
+- `set-up-*` actions install a tool and add it to `GITHUB_PATH` (install only).
 - `run-*` actions install a tool and then execute it (install and run).
 
 ### SHA-256 Checksum Verification
@@ -109,7 +113,7 @@ not fine for the supply chain feeding 26+ downstream repos.
 
 All tool versions are pinned to exact patch releases. The Rust
 toolchain is the one explicit exception: `rust-version` and
-`rust-toolchain-file` in `rust-ci.yml` / `rust-release.yml` work
+`rust-toolchain-file` in `run-rust-ci.yml` / `release-rust-binaries.yml` work
 together so the consumer repo controls pinning.
 
 - `rust-version`: explicit toolchain string; defaults to empty.
@@ -121,8 +125,8 @@ together so the consumer repo controls pinning.
 - The workflow fails fast if neither input resolves to a value.
 
 `node-version` defaults to a specific Node 24 LTS release
-(`"24.15.0"`) in `text-lint.yml`, `npm-publish.yml`, and
-`pages-deploy.yml`; callers may override with their own pinned
+(`"24.15.0"`) in `lint-text.yml`, `publish-to-npm.yml`, and
+`deploy-to-pages.yml`; callers may override with their own pinned
 version.
 
 ### Automated Updates
@@ -152,9 +156,9 @@ Only Linux and macOS runners are supported. Each installer uses a `uname -s`
 case statement with `Linux)` and `Darwin)` branches, plus a `*)` catch-all
 that exits with an error. Windows is not supported.
 
-### Makefile Target Convention for go-ci.yml
+### Makefile Target Convention for run-go-ci.yml
 
-Consuming Go repos must provide Makefile targets for each enabled go-ci.yml
+Consuming Go repos must provide Makefile targets for each enabled run-go-ci.yml
 job: `vet`, `test`, `lint`, `build`, `fmt`. The `fmt` target must be a format
 check (exit non-zero on unformatted code), not a write operation.
 
@@ -191,9 +195,10 @@ for full details.
 
 ## Testing
 
-The repository self-hosts its own workflows as integration tests. The `ci.yml`,
-`gitleaks.yml`, and `trufflehog.yml` files call the reusable workflows from this
-same repository. There is no unit test framework.
+The repository self-hosts its own workflows as integration tests. The `run-ci.yml`,
+`scan-for-secrets-with-gitleaks.yml`, and
+`scan-for-secrets-with-trufflehog.yml` files call the reusable workflows from
+this same repository. There is no unit test framework.
 
 ## Local Development
 

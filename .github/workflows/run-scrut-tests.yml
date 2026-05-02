@@ -1,4 +1,4 @@
-name: Scrut
+name: Run scrut tests
 
 on:
   workflow_call:

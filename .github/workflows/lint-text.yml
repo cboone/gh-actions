@@ -1,4 +1,4 @@
-name: Text Lint
+name: Lint text
 
 on:
   workflow_call:
@@ -65,7 +65,7 @@ jobs:
             echo "::error::github.job_workflow_sha is empty; this workflow must be called via workflow_call." >&2
             exit 1
           fi
-          install_dir="${RUNNER_TEMP}/text-lint-tools"
+          install_dir="${RUNNER_TEMP}/lint-text-tools"
           mkdir -p "${install_dir}"
           base="https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}"
           curl -sSfL "${base}/package.json"      -o "${install_dir}/package.json"

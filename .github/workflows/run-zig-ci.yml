@@ -1,4 +1,4 @@
-name: Zig CI
+name: Run Zig CI
 
 on:
   workflow_call:

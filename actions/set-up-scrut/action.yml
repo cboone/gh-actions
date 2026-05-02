@@ -1,4 +1,4 @@
-name: Setup scrut
+name: Set up scrut
 description: Install scrut CLI testing tool with a pinned version.
 
 inputs:

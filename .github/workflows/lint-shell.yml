@@ -1,4 +1,4 @@
-name: Shell Lint
+name: Lint shell
 
 on:
   workflow_call:

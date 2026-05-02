@@ -1,16 +1,16 @@
-name: Setup golangci-lint
-description: Install golangci-lint binary with a pinned version.
+name: Set up actionlint
+description: Install actionlint binary with a pinned version.
 
 inputs:
   version:
-    description: golangci-lint version to install
+    description: actionlint version to install
     required: false
-    default: "2.11.4"
+    default: "1.7.12"
 
 runs:
   using: composite
   steps:
-    - name: Install golangci-lint
+    - name: Install actionlint
       shell: bash
       env:
         VERSION: ${{ inputs.version }}
@@ -33,15 +33,15 @@ runs:
             ;;
         esac
 
-        archive="golangci-lint-${VERSION}-${os}-${arch}.tar.gz"
-        bin_dir="${RUNNER_TEMP}/golangci-lint-bin"
-        mkdir -p "${bin_dir}"
-        base_url="https://github.com/golangci/golangci-lint/releases/download/v${VERSION}"
-        archive_path="${RUNNER_TEMP}/${archive}"
-        curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
-        curl -sSfL "${base_url}/golangci-lint-${VERSION}-checksums.txt" \
-          -o "${RUNNER_TEMP}/golangci-lint-checksums.txt"
-        expected="$(grep -F "${archive}" "${RUNNER_TEMP}/golangci-lint-checksums.txt" | head -1 | awk '{print $1}')"
+        install_dir="${RUNNER_TEMP}/actionlint-bin"
+        mkdir -p "${install_dir}"
+        base="https://github.com/rhysd/actionlint/releases/download"
+        archive="actionlint_${VERSION}_${os}_${arch}.tar.gz"
+        archive_path="${install_dir}/${archive}"
+        curl -sSfL "${base}/v${VERSION}/${archive}" -o "${archive_path}"
+        curl -sSfL "${base}/v${VERSION}/actionlint_${VERSION}_checksums.txt" \
+          -o "${install_dir}/checksums.txt"
+        expected="$(grep -F "${archive}" "${install_dir}/checksums.txt" | head -1 | awk '{print $1}')"
         if [ -z "${expected}" ]; then
           echo "Checksum entry not found for ${archive}" >&2
           exit 1
@@ -57,9 +57,6 @@ runs:
           echo "Actual:   ${actual}" >&2
           exit 1
         fi
-        tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
-        install -m 0755 \
-          "${RUNNER_TEMP}/golangci-lint-${VERSION}-${os}-${arch}/golangci-lint" \
-          "${bin_dir}/golangci-lint"
-        printf '%s\n' "${bin_dir}" >> "${GITHUB_PATH}"
-        "${bin_dir}/golangci-lint" version
+        tar -xz -C "${install_dir}" -f "${archive_path}" actionlint
+        printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+        "${install_dir}/actionlint" -version

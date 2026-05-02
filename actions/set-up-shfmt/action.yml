@@ -1,4 +1,4 @@
-name: Setup shfmt
+name: Set up shfmt
 description: Install shfmt binary with a pinned version.
 
 inputs:
