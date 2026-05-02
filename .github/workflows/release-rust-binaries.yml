@@ -326,7 +326,14 @@ jobs:
             | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1' \
             | tr -d ' ')"
 
-          desc="${DESC:-${BINARY}}"
+          # Escape for Ruby double-quoted strings: backslash, double quote,
+          # and # (the last to prevent #{...} interpolation). Strip CR and
+          # replace LF with space to keep the formula on one line.
+          desc_raw="${DESC:-${BINARY}}"
+          desc="$(printf '%s' "${desc_raw}" \
+            | tr -d '\r' \
+            | tr '\n' ' ' \
+            | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/#/\\#/g')"
 
           # Write formula file using a command group
           {
