@@ -92,6 +92,7 @@ jobs:
           {"target": "aarch64-apple-darwin", "runner": "macos-latest"},
           {"target": "x86_64-unknown-linux-gnu", "runner": "ubuntu-latest"}
         ]
+      binary-name: mytool
       update-homebrew: true
       homebrew-tap: myuser/homebrew-tap
       homebrew-formula-path: Formula/mytool.rb
