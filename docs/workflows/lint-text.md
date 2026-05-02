@@ -72,10 +72,11 @@ lockfile rather than this gh-actions repo. Requirements when
 - The consumer must have `package.json` and `package-lock.json`
   committed at the repo root.
 - Every enabled npm-based tool (`run-markdownlint`, `run-prettier`,
-  `run-cspell`) must be listed as a `devDependency` in the consumer's
-  `package.json`. The workflow fails fast with a clear error if either
-  file is missing; if a tool is missing from `devDependencies`, the
-  corresponding run step fails with `command not found`.
+  `run-cspell`) must be present in the consumer's `package-lock.json`,
+  typically declared as a `devDependency` in `package.json`. The
+  workflow fails fast with a clear error if either file is missing;
+  if a tool is missing from the lockfile, the corresponding run step
+  fails with `command not found`.
 
 `yamllint` is unaffected by this input (Python tool, installed via
 `uv pip install --require-hashes` from this repo's

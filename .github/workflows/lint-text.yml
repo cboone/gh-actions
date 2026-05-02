@@ -43,8 +43,9 @@ on:
           and CI must agree on tool versions. The consumer is then
           responsible for their lockfile's integrity: a committed
           package-lock.json with sha512 integrity hashes is required,
-          and every enabled tool must be a devDependency. yamllint is
-          unaffected (Python, not npm).
+          and every enabled tool must be present in package-lock.json
+          (typically declared as a devDependency in package.json).
+          yamllint is unaffected (Python, not npm).
         type: boolean
         default: false
       timeout-minutes:
@@ -190,8 +191,8 @@ jobs:
         # per-package sha512 integrity, so the trust boundary becomes
         # the consumer's reviewed lockfile rather than this gh-actions
         # repo. The consumer is responsible for committing
-        # package-lock.json and listing every enabled tool as a
-        # devDependency.
+        # package-lock.json with every enabled tool present (typically
+        # as a devDependency in package.json).
         run: |
           if [ ! -f package.json ]; then
             echo "::error::use-consumer-versions=true but package.json is missing in the consumer repo." >&2
