@@ -44,8 +44,15 @@ actions/
     scan-for-secrets-with-gitleaks.yml      # Self-hosting: runs scan-for-secrets with gitleaks
     scan-for-secrets-with-trufflehog.yml    # Self-hosting: runs scan-for-secrets with trufflehog
   copilot-instructions.md
-docs/plans/              # Plan documents (todo/ and done/)
+docs/
+  migrations/            # Major-version migration guides (vN.md)
+  plans/                 # Plan documents (todo/ and done/)
+  workflows/             # Per-reusable-workflow reference docs (<name>.md)
 ```
+
+Each composite action also has a `README.md` next to its `action.yml`
+(e.g. `actions/run-cspell/README.md`); see "Documentation layout" below
+for details.
 
 ## Key Conventions
 
@@ -72,6 +79,9 @@ this repo's pinning model; their checksums are hardcoded in the workflow
 files.
 
 ### Pinning Policy and Trust Model
+
+A condensed summary lives in [README.md](README.md#trust-model-and-pinning).
+This section is the canonical longer form.
 
 The repo applies the strongest available pin to each kind of dependency
 and refuses to fall back on third-party registry integrity alone for
