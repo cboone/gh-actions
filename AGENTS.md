@@ -35,6 +35,7 @@ actions/
     release-rust-binaries.yml               # Reusable: Rust binary release with matrix builds
     release-zig-binaries.yml                # Reusable: Zig cross-compile release
     run-go-ci.yml                           # Reusable: Go test, lint, build, scrut, format check
+    run-lean-ci.yml                         # Reusable: Lean lake build, lake lint, lake test
     run-rust-ci.yml                         # Reusable: Rust test, clippy, fmt, deny, audit, typos
     run-scrut-tests.yml                     # Reusable: scrut CLI snapshot tests
     run-zig-ci.yml                          # Reusable: Zig test, format, build, cross-compile, scrut
