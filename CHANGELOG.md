@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `presets/lean-math/`. Targets Lean + paper-backed formalization
   repos (`shannon-entropy`, `zhang-yeung-inequality`,
   `strength-model`) that previously carried duplicated configs
+- `homebrew-desc` input on `release-rust-binaries.yml` for setting the
+  generated Homebrew formula's `desc` field. Defaults to the binary
+  name when empty, preserving prior behavior (#30)
 
 ## [3.0.0] - 2026-05-02
 

@@ -72,6 +72,12 @@ on:
           system bin/"<binary>", "--version"
         type: string
         default: ""
+      homebrew-desc:
+        description: >-
+          Description for the Homebrew formula. When empty, defaults to
+          the binary name.
+        type: string
+        default: ""
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -289,6 +295,7 @@ jobs:
           REPO: ${{ github.repository }}
           LICENSE: ${{ inputs.homebrew-license }}
           HOMEBREW_TEST: ${{ inputs.homebrew-test }}
+          DESC: ${{ inputs.homebrew-desc }}
         run: |
           if [ -n "${ARCHIVE_PREFIX}" ]; then
             prefix="${ARCHIVE_PREFIX}"
@@ -319,10 +326,12 @@ jobs:
             | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2)}1' \
             | tr -d ' ')"
 
+          desc="${DESC:-${BINARY}}"
+
           # Write formula file using a command group
           {
             echo "class ${class_name} < Formula"
-            echo "  desc \"${BINARY}\""
+            echo "  desc \"${desc}\""
             echo "  homepage \"https://github.com/${REPO}\""
             echo "  version \"${VERSION}\""
             echo "  license \"${LICENSE}\""

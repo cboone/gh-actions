@@ -27,6 +27,7 @@ workflow fails fast.
 | `homebrew-formula-path` | string  | `""`                  | Path to the formula in the tap repo (e.g. Formula/mytool.rb) |
 | `homebrew-license`      | string  | `"MIT"`               | SPDX license identifier for the Homebrew formula             |
 | `homebrew-test`         | string  | `""`                  | Custom Ruby body for the formula `test do` block             |
+| `homebrew-desc`         | string  | `""`                  | Description for the Homebrew formula (defaults to binary)    |
 | `timeout-minutes`       | number  | `30`                  | Job timeout in minutes                                       |
 
 ## Secrets
