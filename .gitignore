@@ -10,6 +10,9 @@ node_modules/
 # Agent config
 .claude/settings.local.json
 
+# workmux per-worktree scratch (PROMPT files, etc.)
+.workmux/
+
 # Secrets
 .env
 .env.*
