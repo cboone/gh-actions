@@ -159,7 +159,9 @@ jobs:
           fi
 
       - name: Install lint tools (sha512-verified via gh-actions lockfile)
-        if: ${{ !inputs.use-consumer-versions && (inputs.run-markdownlint || inputs.run-prettier || inputs.run-cspell) }}
+        if: >-
+          ${{ !inputs.use-consumer-versions
+          && (inputs.run-markdownlint || inputs.run-prettier || inputs.run-cspell) }}
         env:
           # Pin package.json + package-lock.json to the same SHA as this
           # workflow so a tampered registry response cannot slip past npm
