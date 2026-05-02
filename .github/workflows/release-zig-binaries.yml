@@ -1,4 +1,4 @@
-name: Zig Release
+name: Release Zig binaries
 
 on:
   workflow_call:

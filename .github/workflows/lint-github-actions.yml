@@ -1,4 +1,4 @@
-name: GitHub Lint
+name: Lint GitHub Actions
 
 on:
   workflow_call:

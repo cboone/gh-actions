@@ -1,4 +1,4 @@
-name: Rust Release
+name: Release Rust binaries
 
 on:
   workflow_call:

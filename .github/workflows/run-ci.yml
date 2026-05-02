@@ -1,4 +1,4 @@
-name: CI
+name: Run CI
 
 on:
   push:
@@ -24,4 +24,4 @@ concurrency:
 
 jobs:
   actionlint:
-    uses: ./.github/workflows/github-lint.yml
+    uses: ./.github/workflows/lint-github-actions.yml
