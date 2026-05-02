@@ -17,9 +17,19 @@ on:
         type: string
         default: ""
       rust-version:
-        description: Rust toolchain version to install.
+        description: >-
+          Rust toolchain version to install. When empty, the workflow
+          reads the channel from rust-toolchain-file. At least one of
+          rust-version or rust-toolchain-file must resolve to a value.
         type: string
-        default: "stable"
+        default: ""
+      rust-toolchain-file:
+        description: >-
+          Path to a rust-toolchain.toml (or legacy rust-toolchain) file
+          in the consumer repo. Used when rust-version is empty. The
+          file's [toolchain] channel value is passed to dtolnay.
+        type: string
+        default: rust-toolchain.toml
       build-args:
         description: Additional arguments passed to cargo build.
         type: string
@@ -79,9 +89,34 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - name: Resolve Rust toolchain
+        id: rust-toolchain
+        shell: bash
+        env:
+          RUST_VERSION: ${{ inputs.rust-version }}
+          TOOLCHAIN_FILE: ${{ inputs.rust-toolchain-file }}
+        run: |
+          if [ -n "${RUST_VERSION}" ]; then
+            toolchain="${RUST_VERSION}"
+          elif [ -f "${TOOLCHAIN_FILE}" ]; then
+            toolchain="$(awk -F'"' '/^[[:space:]]*channel[[:space:]]*=/ { print $2; exit }' "${TOOLCHAIN_FILE}")"
+            if [ -z "${toolchain}" ]; then
+              echo "::error::${TOOLCHAIN_FILE} exists but has no [toolchain] channel value." >&2
+              exit 1
+            fi
+          elif [ -f rust-toolchain ]; then
+            toolchain="$(tr -d '[:space:]' < rust-toolchain)"
+          else
+            echo "::error::Set the rust-version input," \
+              "ensure the configured rust-toolchain-file ('${TOOLCHAIN_FILE}') exists," \
+              "or commit a rust-toolchain file in the consumer repo." >&2
+            exit 1
+          fi
+          echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
+
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
         with:
-          toolchain: ${{ inputs.rust-version }}
+          toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
           targets: ${{ matrix.target }}
 
       - name: Detect binary name
@@ -141,7 +176,7 @@ jobs:
             -C "target/${TARGET}/release" "${BINARY}"
           echo "archive=${archive}" >> "${GITHUB_OUTPUT}"
 
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-${{ matrix.target }}
           path: ${{ steps.package.outputs.archive }}

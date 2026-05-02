@@ -1,0 +1,122 @@
+name: Check tool versions
+
+on:
+  schedule:
+    # Mondays at 13:00 UTC. Cron runs in UTC year-round; the
+    # wall-clock time in any local zone shifts with DST. This workflow
+    # tracks tools Dependabot doesn't, so its timing relative to the
+    # weekly Dependabot run is not material.
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      UV_VERSION: 0.11.8
+      ISSUE_TITLE: "Outdated pinned tool versions"
+      ISSUE_LABEL: "dependencies"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install uv (checksum-verified)
+        run: |
+          archive="uv-x86_64-unknown-linux-gnu.tar.gz"
+          base_url="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}"
+          archive_path="${RUNNER_TEMP}/${archive}"
+          curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
+          curl -sSfL "${base_url}/${archive}.sha256" -o "${archive_path}.sha256"
+          expected="$(awk '{print $1}' "${archive_path}.sha256")"
+          actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
+          if [ "${expected}" != "${actual}" ]; then
+            echo "Checksum verification failed for ${archive}" >&2
+            exit 1
+          fi
+          install_dir="${RUNNER_TEMP}/uv-bin"
+          mkdir -p "${install_dir}"
+          tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
+          install -m 0755 "${RUNNER_TEMP}/uv-x86_64-unknown-linux-gnu/uv" "${install_dir}/uv"
+          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run version check
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          ./scripts/check-tool-versions.py > "${RUNNER_TEMP}/report.md"
+          status=$?
+          set -e
+          {
+            echo "status=${status}"
+            echo "report-path=${RUNNER_TEMP}/report.md"
+          } >> "${GITHUB_OUTPUT}"
+          echo "::group::Report"
+          cat "${RUNNER_TEMP}/report.md"
+          echo "::endgroup::"
+
+      - name: Open or update tracking issue
+        if: steps.check.outputs.status != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPORT: ${{ steps.check.outputs.report-path }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Find an existing open issue with the same title; update it
+          # in place so we don't accumulate duplicates week over week.
+          existing="$(gh issue list \
+            --repo "${REPO}" \
+            --state open \
+            --label "${ISSUE_LABEL}" \
+            --search "in:title \"${ISSUE_TITLE}\"" \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [ -n "${existing}" ]; then
+            gh issue edit "${existing}" \
+              --repo "${REPO}" \
+              --body-file "${REPORT}"
+            echo "Updated issue #${existing}"
+          else
+            gh issue create \
+              --repo "${REPO}" \
+              --title "${ISSUE_TITLE}" \
+              --label "${ISSUE_LABEL}" \
+              --body-file "${REPORT}"
+          fi
+
+      - name: Close tracking issue when everything is current
+        if: steps.check.outputs.status == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          existing="$(gh issue list \
+            --repo "${REPO}" \
+            --state open \
+            --label "${ISSUE_LABEL}" \
+            --search "in:title \"${ISSUE_TITLE}\"" \
+            --json number \
+            --jq '.[0].number // empty')"
+          if [ -n "${existing}" ]; then
+            gh issue close "${existing}" \
+              --repo "${REPO}" \
+              --comment "All pinned tool versions are current."
+            echo "Closed issue #${existing}"
+          fi
+
+      - name: Fail job on lookup errors
+        if: steps.check.outputs.status == '2'
+        run: |
+          echo "::error::One or more upstream version lookups failed; see report above."
+          exit 1

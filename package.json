@@ -4,7 +4,7 @@
   "description": "A collection of reusable GitHub Actions for CI/CD workflows.",
   "license": "MIT",
   "engines": {
-    "node": ">=20.18"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "format": "prettier --write .",
@@ -15,8 +15,8 @@
     "spell:list": "cspell . --unique --words-only --no-progress"
   },
   "devDependencies": {
-    "cspell": "^9.7.0",
-    "markdownlint-cli2": "^0.21.0",
-    "prettier": "^3.8.1"
+    "cspell": "10.0.0",
+    "markdownlint-cli2": "0.22.1",
+    "prettier": "3.8.3"
   }
 }

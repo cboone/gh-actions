@@ -1,19 +1,27 @@
-ACTIONLINT_VERSION := 1.7.11
-YAMLLINT_VERSION := 1.37.1
+ACTIONLINT_VERSION := 1.7.12
 ACTIONLINT := .local/bin/actionlint
+YAMLLINT_VENV := .local/yamllint-venv
+YAMLLINT_REQ := requirements/yamllint.txt
 
-.PHONY: lint lint-yaml lint-md format format-check spell setup help install-actionlint
+.PHONY: lint lint-yaml lint-md format format-check spell setup help install-actionlint install-yamllint
 
 install-actionlint:
 	@VERSION=$(ACTIONLINT_VERSION) INSTALL_DIR=$(dir $(ACTIONLINT)) ./scripts/install-actionlint
 
-setup: install-actionlint ## Install local tool dependencies
+install-yamllint:
+	@if [ ! -x "$(YAMLLINT_VENV)/bin/yamllint" ] || [ ! -f "$(YAMLLINT_VENV)/.requirements" ] || ! cmp -s "$(YAMLLINT_REQ)" "$(YAMLLINT_VENV)/.requirements"; then \
+		uv venv "$(YAMLLINT_VENV)" --clear --quiet && \
+		uv pip install --python "$(YAMLLINT_VENV)/bin/python" --require-hashes -r "$(YAMLLINT_REQ)" --quiet && \
+		cp "$(YAMLLINT_REQ)" "$(YAMLLINT_VENV)/.requirements"; \
+	fi
+
+setup: install-actionlint install-yamllint ## Install local tool dependencies
 
 lint: install-actionlint ## Lint GitHub Actions workflows
 	$(ACTIONLINT)
 
-lint-yaml: ## Lint YAML files
-	uv tool run --from "yamllint==$(YAMLLINT_VERSION)" yamllint .
+lint-yaml: install-yamllint ## Lint YAML files
+	$(YAMLLINT_VENV)/bin/yamllint .
 
 lint-md: ## Lint Markdown files
 	npx markdownlint-cli2 "**/*.md"

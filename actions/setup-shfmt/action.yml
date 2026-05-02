@@ -8,7 +8,7 @@ inputs:
       is supported; update the checksums in this action to use a
       different version.
     required: false
-    default: "3.13.0"
+    default: "3.13.1"
 
 runs:
   using: composite
@@ -36,11 +36,11 @@ runs:
             ;;
         esac
 
-        # Hardcoded SHA-256 checksums for shfmt v3.13.0 release binaries.
+        # Hardcoded SHA-256 checksums for shfmt v3.13.1 release binaries.
         # shfmt upstream stopped publishing sha256sums.txt starting with
         # v3.13.0 (mvdan/sh#1283, mvdan/sh#1309), so checksums are
         # embedded here and must be updated when VERSION changes.
-        supported_version="3.13.0"
+        supported_version="3.13.1"
         if [ "${VERSION}" != "${supported_version}" ]; then
           echo "Unsupported shfmt version: ${VERSION}" >&2
           echo "Checksums are only available for v${supported_version}." >&2
@@ -49,10 +49,10 @@ runs:
         fi
 
         case "${os}-${arch}" in
-          linux-amd64)  expected="70aa99784703a8d6569bbf0b1e43e1a91906a4166bf1a79de42050a6d0de7551" ;;
-          linux-arm64)  expected="2091a31afd47742051a77bf7cfd175533ab07e924c20ef3151cd108fa1cab5b0" ;;
-          darwin-amd64) expected="b6890a0009abf71d36d7c536ad56e3132c547ceb77cd5d5ee62b3469ab4e9417" ;;
-          darwin-arm64) expected="650970603b5946dc6041836ddcfa7a19d99b5da885e4687f64575508e99cf718" ;;
+          linux-amd64)  expected="fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1" ;;
+          linux-arm64)  expected="32d92acaa5cd8abb29fc49dac123dc412442d5713967819d8af2c29f1b3857c7" ;;
+          darwin-amd64) expected="6feedafc72915794163114f512348e2437d080d0047ef8b8fa2ec63b575f12af" ;;
+          darwin-arm64) expected="9680526be4a66ea1ffe988ed08af58e1400fe1e4f4aef5bd88b20bb9b3da33f8" ;;
           *)
             echo "No checksum available for ${os}-${arch}" >&2
             exit 1
