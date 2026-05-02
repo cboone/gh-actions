@@ -169,6 +169,86 @@ check (exit non-zero on unformatted code), not a write operation.
 - Inputs are passed to shell steps via `env:` mappings, not inline expressions.
 - Tools are installed to `RUNNER_TEMP` and added to `GITHUB_PATH`.
 
+## Documentation layout
+
+The repository's user-facing and agent-facing docs are organized as follows.
+Keep this layout intact when adding or editing documentation.
+
+- `README.md` (root) is the canonical source for orientation, the
+  per-component Quick Reference, the quickstart, the trust model summary,
+  supported platforms, versioning policy, and local development. It does
+  not carry per-component reference tables.
+- `actions/<name>/README.md` is the canonical source for each composite
+  action's full reference (description, caveats, inputs, outputs, usage
+  examples). GitHub renders this README when a visitor browses into the
+  action's directory.
+- `docs/workflows/<name>.md` is the canonical source for each reusable
+  workflow's full reference. Reusable workflows do not have their own
+  directory under `.github/workflows/` (only `.yml` files live there), so
+  workflow docs live in `docs/workflows/`, parallel to `docs/migrations/`.
+- `docs/migrations/vN.md` is the canonical source for each major-version
+  migration guide (path renames, breaking input changes, removed
+  components).
+- `AGENTS.md` (this file, with `CLAUDE.md` symlinked to it) is the
+  canonical source for repository conventions, agent guidance, and
+  contributor procedures. The trust model long form lives here; the
+  README has a condensed summary that links back.
+- `.github/copilot-instructions.md` is the canonical source for PR-review
+  anti-patterns and Copilot-specific guidance.
+
+### Per-component doc template
+
+Use this template when creating a new `actions/<name>/README.md` or
+`docs/workflows/<name>.md`. Sections that do not apply to a given
+component (no outputs, no secrets) are omitted entirely rather than left
+empty.
+
+````markdown
+# <name>
+
+<1 to 3 sentence description of what the action or workflow does.>
+
+<Caveats, if any. For example: Makefile-targets requirement, pinned-version
+requirement, GITHUB_TOKEN requirement, changelog-format requirement.>
+
+## Inputs
+
+| Name      | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `example` | ...  | ...     | ...         |
+
+## Outputs
+
+| Name      | Description |
+| --------- | ----------- |
+| `example` | ...         |
+
+## Secrets
+
+| Name      | Required | Description |
+| --------- | -------- | ----------- |
+| `EXAMPLE` | ...      | ...         |
+
+## Usage
+
+```yaml
+- uses: cboone/gh-actions/actions/<name>@v3.0.0
+  with:
+    example: value
+```
+````
+
+For reusable workflows, the Usage example uses the `jobs:` form:
+
+```yaml
+jobs:
+  example:
+    uses: cboone/gh-actions/.github/workflows/<name>.yml@v3.0.0
+```
+
+All Usage examples pin to the current released tag (currently `@v3.0.0`),
+per the existing rule in `.github/copilot-instructions.md`.
+
 ## Adding a New Action
 
 1. Create `actions/<name>/action.yml` with `using: composite`.
