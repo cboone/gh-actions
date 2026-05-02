@@ -257,6 +257,13 @@ per the existing rule in `.github/copilot-instructions.md`.
 1. Download the tool, verify SHA-256 checksum, install to `RUNNER_TEMP`.
 1. Append the install directory to `GITHUB_PATH`.
 1. For `run-*` actions, add a second step that executes the tool.
+1. Create `actions/<name>/README.md` from the per-component template
+   documented under "Documentation layout" above. GitHub renders this
+   README when a visitor browses into the action's directory.
+1. Add a row to the Quick Reference table in the root `README.md`, under
+   the appropriate group (Linting and formatting, Testing and CI,
+   Releasing and publishing, Security and supply chain, or Repository
+   chores), linking to the new `actions/<name>/README.md`.
 
 ## Adding a New Workflow
 
@@ -264,14 +271,25 @@ per the existing rule in `.github/copilot-instructions.md`.
 1. Define inputs with types and defaults; keep permissions minimal.
 1. Inline tool installation (do not reference local composite actions).
 1. Follow the same checksum verification pattern used by existing workflows.
+1. Create `docs/workflows/<name>.md` from the per-component template
+   documented under "Documentation layout" above. Reusable workflows do
+   not have their own directory under `.github/workflows/`, so workflow
+   docs live in `docs/workflows/`.
+1. Add a row to the Quick Reference table in the root `README.md`, under
+   the appropriate group, linking to the new `docs/workflows/<name>.md`.
 
 ## Releasing
 
-This repository has no GoReleaser config or release workflow for itself. Releases
-are pure Git tags. Use the `/release` skill, which analyzes conventional commits,
-recommends a version bump, updates CHANGELOG.md, creates a release commit, and
-tags it locally. Then push the commit and tag. See the README Versioning section
-for full details.
+This repository has no GoReleaser config or release workflow for itself.
+Releases are pure Git tags. Use the `/release` skill, which analyzes
+conventional commits, recommends a version bump, updates CHANGELOG.md,
+creates a release commit, and tags it locally. Then push the commit and
+tag. See the README Versioning section for full details.
+
+When a release introduces breaking changes (path renames, removed inputs,
+removed components), document them in `docs/migrations/vN.md` (parallel to
+`docs/migrations/v3.md`) and link the new migration guide from the README
+Migration section.
 
 ## Testing
 
