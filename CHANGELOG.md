@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-05-01
+
 ### Added
 
 - `zig-version-file` input on `zig-ci.yml` and `zig-release.yml`,
@@ -93,7 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   support and lets the consumer repo (e.g. `ke`) pin the Rust
   toolchain in the standard idiomatic place.
 - **README**: replace every `cboone/gh-actions/...@main` example with
-  `@v2.1.4` (the current released tag) and remove `@main` from the
+  `@v2.2.0` (the current released tag) and remove `@main` from the
   Pinning section. Branch refs are no longer suggested as a "for
   testing" option; consumers must pin to a release tag.
 - Pin `package.json` devDependencies to exact versions (no `^`/`~`) so a
@@ -302,7 +304,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v2.1.4...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/cboone/gh-actions/compare/v2.1.4...v2.2.0
 [2.1.4]: https://github.com/cboone/gh-actions/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/cboone/gh-actions/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/cboone/gh-actions/compare/v2.1.1...v2.1.2
