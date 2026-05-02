@@ -26,6 +26,7 @@ workflow fails fast.
 | `homebrew-tap`          | string  | `""`                  | Homebrew tap repository (e.g. user/homebrew-tap)             |
 | `homebrew-formula-path` | string  | `""`                  | Path to the formula in the tap repo (e.g. Formula/mytool.rb) |
 | `homebrew-license`      | string  | `"MIT"`               | SPDX license identifier for the Homebrew formula             |
+| `homebrew-test`         | string  | `""`                  | Custom Ruby body for the formula `test do` block             |
 | `timeout-minutes`       | number  | `30`                  | Job timeout in minutes                                       |
 
 ## Secrets
@@ -67,3 +68,35 @@ jobs:
     secrets:
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
+
+By default the generated formula's test block is:
+
+```ruby
+test do
+  system bin/"<binary>", "--version"
+end
+```
+
+To assert against the binary's output instead, pass `homebrew-test`:
+
+```yaml
+jobs:
+  release:
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.0.0
+    with:
+      targets: >-
+        [
+          {"target": "aarch64-apple-darwin", "runner": "macos-latest"},
+          {"target": "x86_64-unknown-linux-gnu", "runner": "ubuntu-latest"}
+        ]
+      update-homebrew: true
+      homebrew-tap: myuser/homebrew-tap
+      homebrew-formula-path: Formula/mytool.rb
+      homebrew-test: |
+        assert_match version.to_s, shell_output("#{bin}/mytool --version")
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+```
+
+The value is indented to match the formula's `test do` block, so write
+it at column 0. Multi-line bodies are supported.

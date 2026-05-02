@@ -64,6 +64,14 @@ on:
           (e.g. MIT, Apache-2.0). Defaults to MIT.
         type: string
         default: "MIT"
+      homebrew-test:
+        description: >-
+          Custom Ruby code for the Homebrew formula test block. The
+          value is inserted inside the generated `test do ... end`
+          block, indented to match. When empty, defaults to:
+          system bin/"<binary>", "--version"
+        type: string
+        default: ""
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -280,6 +288,7 @@ jobs:
           FORMULA_PATH: ${{ inputs.homebrew-formula-path }}
           REPO: ${{ github.repository }}
           LICENSE: ${{ inputs.homebrew-license }}
+          HOMEBREW_TEST: ${{ inputs.homebrew-test }}
         run: |
           if [ -n "${ARCHIVE_PREFIX}" ]; then
             prefix="${ARCHIVE_PREFIX}"
@@ -369,7 +378,11 @@ jobs:
             echo "  end"
             echo ""
             echo "  test do"
-            echo "    system bin/\"${BINARY}\", \"--version\""
+            if [ -n "${HOMEBREW_TEST}" ]; then
+              printf '%s\n' "${HOMEBREW_TEST%$'\n'}" | sed '/./s/^/    /'
+            else
+              echo "    system bin/\"${BINARY}\", \"--version\""
+            fi
             echo "  end"
             echo "end"
           } > "homebrew-tap/${FORMULA_PATH}"
