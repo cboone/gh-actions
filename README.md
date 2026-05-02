@@ -751,7 +751,7 @@ Default `cross-targets`:
 x86_64-linux-gnu aarch64-linux-gnu x86_64-macos aarch64-macos x86_64-windows-gnu
 ```
 
-Specify exactly one of `zig-version` or `zig-version-file`. If both are
+Specify at most one of `zig-version` or `zig-version-file`. If both are
 set, `zig-version` takes precedence. If neither is set, `mlugg/setup-zig`
 falls back to its own auto-detection (reads `minimum_zig_version` from
 `build.zig.zon`, or installs `latest` if no `build.zig.zon` is present).

@@ -113,6 +113,10 @@ jobs:
           else
             version=""
           fi
+          if [[ -n "${version}" && ! "${version}" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+            echo "::error::Resolved Zig version contains invalid characters" >&2
+            exit 1
+          fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
@@ -152,6 +156,10 @@ jobs:
             fi
           else
             version=""
+          fi
+          if [[ -n "${version}" && ! "${version}" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+            echo "::error::Resolved Zig version contains invalid characters" >&2
+            exit 1
           fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
@@ -193,6 +201,10 @@ jobs:
           else
             version=""
           fi
+          if [[ -n "${version}" && ! "${version}" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+            echo "::error::Resolved Zig version contains invalid characters" >&2
+            exit 1
+          fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
@@ -232,6 +244,10 @@ jobs:
             fi
           else
             version=""
+          fi
+          if [[ -n "${version}" && ! "${version}" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+            echo "::error::Resolved Zig version contains invalid characters" >&2
+            exit 1
           fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
@@ -280,6 +296,10 @@ jobs:
             fi
           else
             version=""
+          fi
+          if [[ -n "${version}" && ! "${version}" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+            echo "::error::Resolved Zig version contains invalid characters" >&2
+            exit 1
           fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
