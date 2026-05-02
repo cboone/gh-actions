@@ -163,6 +163,12 @@ outdated.
 For the long-form version of this policy, see
 [AGENTS.md](AGENTS.md#pinning-policy-and-trust-model).
 
+## Supported platforms
+
+Linux and macOS only. Every installer guards against unsupported runners
+with a `uname -s` case statement that exits non-zero when neither `Linux`
+nor `Darwin` matches. Windows runners are not supported.
+
 ## Migration
 
 See [docs/migrations/v3.md](docs/migrations/v3.md) for the v3 path renames.
@@ -202,6 +208,23 @@ Always pin to an exact release tag (e.g. `@v3.0.0`). Branch refs like
 `@main` are not supported: they float, they bypass our SHA-pin and
 checksum contract, and the supply-chain risk is not worth the
 convenience.
+
+## Local development
+
+For contributors working on this repo. Common Make targets:
+
+| Target              | What it does                                  |
+| ------------------- | --------------------------------------------- |
+| `make help`         | List available targets                        |
+| `make lint`         | Run actionlint on workflow files              |
+| `make lint-md`      | Run markdownlint-cli2 on Markdown files       |
+| `make lint-yaml`    | Run yamllint                                  |
+| `make spell`        | Run cspell                                    |
+| `make format`       | Run Prettier in write mode                    |
+| `make format-check` | Run Prettier in check mode                    |
+
+For repository conventions and contribution procedures, see
+[AGENTS.md](AGENTS.md).
 
 ## License
 
