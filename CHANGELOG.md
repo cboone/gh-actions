@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-05-02
+
 ### Changed
 
 - **Breaking:** Renamed public composite action paths and reusable workflow
@@ -313,7 +315,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v2.2.0...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/cboone/gh-actions/compare/v2.2.0...v3.0.0
 [2.2.0]: https://github.com/cboone/gh-actions/compare/v2.1.4...v2.2.0
 [2.1.4]: https://github.com/cboone/gh-actions/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/cboone/gh-actions/compare/v2.1.2...v2.1.3

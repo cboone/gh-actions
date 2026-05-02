@@ -50,7 +50,7 @@ Install golangci-lint binary with a pinned version.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-golangci-lint@v2.2.0
+- uses: cboone/gh-actions/actions/set-up-golangci-lint@v3.0.0
   with:
     version: "2.11.4"
 - run: golangci-lint run ./...
@@ -69,7 +69,7 @@ Install GoReleaser binary with a pinned version.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-goreleaser@v2.2.0
+- uses: cboone/gh-actions/actions/set-up-goreleaser@v3.0.0
   with:
     version: "2.15.4"
 - run: goreleaser release --clean
@@ -88,7 +88,7 @@ Install scrut CLI testing tool with a pinned version.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-scrut@v2.2.0
+- uses: cboone/gh-actions/actions/set-up-scrut@v3.0.0
 - run: scrut test tests/
 ```
 
@@ -105,7 +105,7 @@ Install actionlint binary with a pinned version.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-actionlint@v2.2.0
+- uses: cboone/gh-actions/actions/set-up-actionlint@v3.0.0
 - run: actionlint
 ```
 
@@ -125,7 +125,7 @@ the hardcoded SHA-256 checksums in `actions/set-up-shfmt/action.yml` first.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-shfmt@v2.2.0
+- uses: cboone/gh-actions/actions/set-up-shfmt@v3.0.0
 - run: shfmt -d .
 ```
 
@@ -143,7 +143,7 @@ Install gitleaks binary and run a scan.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-gitleaks@v2.2.0
+- uses: cboone/gh-actions/actions/run-gitleaks@v3.0.0
 ```
 
 ### run-trufflehog
@@ -160,7 +160,7 @@ Install trufflehog binary and run a scan.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-trufflehog@v2.2.0
+- uses: cboone/gh-actions/actions/run-trufflehog@v3.0.0
 ```
 
 ### run-markscribe
@@ -183,7 +183,7 @@ templates.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-markscribe@v2.2.0
+- uses: cboone/gh-actions/actions/run-markscribe@v3.0.0
   env:
     GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
   with:
@@ -221,7 +221,7 @@ larger custom workflow.
 - uses: actions/setup-node@v4
   with:
     node-version: "24.15.0"
-- uses: cboone/gh-actions/actions/run-cspell@v2.2.0
+- uses: cboone/gh-actions/actions/run-cspell@v3.0.0
 ```
 
 ### run-reuse
@@ -243,7 +243,7 @@ transitive dependency is sha256-pinned via
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-reuse@v2.2.0
+- uses: cboone/gh-actions/actions/run-reuse@v3.0.0
 ```
 
 ### create-pull-request
@@ -281,7 +281,7 @@ individually.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/create-pull-request@v2.2.0
+- uses: cboone/gh-actions/actions/create-pull-request@v3.0.0
   with:
     branch: chore/update-data
     commit-message: "chore: update generated data"
@@ -329,7 +329,7 @@ or auto-generate notes from merged PRs.
 #### Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/create-gh-release@v2.2.0
+- uses: cboone/gh-actions/actions/create-gh-release@v3.0.0
   with:
     files: |
       dist/*.tar.gz
@@ -361,7 +361,7 @@ changelog file in Keep a Changelog format.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/create-gh-release-from-changelog.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/create-gh-release-from-changelog.yml@v3.0.0
 ```
 
 ### run-go-ci
@@ -408,7 +408,7 @@ Consuming repos must provide a Makefile with targets matching each enabled job:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@v3.0.0
     with:
       run-lint: true
       run-format-check: true
@@ -444,7 +444,7 @@ Run GoReleaser to build and publish a Go release.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-go-binaries.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/release-go-binaries.yml@v3.0.0
     with:
       goreleaser-version: "2.15.4"
     secrets:
@@ -494,7 +494,7 @@ checking. Each check runs as a separate job that can be toggled on or off.
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v3.0.0
     with:
       run-deny: true
       run-audit: true
@@ -506,7 +506,7 @@ With cargo-nextest and coverage:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v3.0.0
     with:
       use-nextest: true
       coverage: true
@@ -548,7 +548,7 @@ updates.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.0.0
     with:
       targets: >-
         [
@@ -563,7 +563,7 @@ With Homebrew formula updates:
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.0.0
     with:
       targets: >-
         [
@@ -601,7 +601,7 @@ full-history and working-tree scan scopes.
 ```yaml
 jobs:
   scan:
-    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v3.0.0
     with:
       tool: both
 ```
@@ -629,7 +629,7 @@ and yamllint YAML validation. Each tool can be toggled independently.
 ```yaml
 jobs:
   text:
-    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.0.0
     with:
       run-cspell: true
 ```
@@ -658,7 +658,7 @@ the hardcoded SHA-256 checksums in `.github/workflows/lint-shell.yml` first.
 ```yaml
 jobs:
   shell:
-    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v3.0.0
 ```
 
 ### lint-github-actions
@@ -679,7 +679,7 @@ Run actionlint to validate GitHub Actions workflow files.
 ```yaml
 jobs:
   github:
-    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v3.0.0
 ```
 
 ### deploy-to-pages
@@ -707,7 +707,7 @@ and/or Node.js before running the build command.
 ```yaml
 jobs:
   pages:
-    uses: cboone/gh-actions/.github/workflows/deploy-to-pages.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/deploy-to-pages.yml@v3.0.0
     with:
       build-command: "npm run build"
       artifact-path: ./dist
@@ -739,7 +739,7 @@ includes it.
 ```yaml
 jobs:
   codeql:
-    uses: cboone/gh-actions/.github/workflows/analyze-with-codeql.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/analyze-with-codeql.yml@v3.0.0
     with:
       languages: go
       go-version: "1.25"
@@ -773,7 +773,7 @@ SHA-256 checksum verification and runs tests against the specified directory.
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.0.0
 ```
 
 With a custom shell and environment variables:
@@ -781,7 +781,7 @@ With a custom shell and environment variables:
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.0.0
     with:
       scrut-shell: zsh
       scrut-env: |
@@ -815,7 +815,7 @@ between `npm ci` and `npm install`.
 ```yaml
 jobs:
   publish:
-    uses: cboone/gh-actions/.github/workflows/publish-to-npm.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/publish-to-npm.yml@v3.0.0
     secrets:
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -868,7 +868,7 @@ With an explicit version:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v3.0.0
     with:
       zig-version: "0.14.1"
       run-cross-compile: true
@@ -879,7 +879,7 @@ Reading the version from `build.zig.zon`:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v3.0.0
     with:
       zig-version-file: build.zig.zon
       run-cross-compile: true
@@ -890,7 +890,7 @@ With scrut CLI tests:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v3.0.0
     with:
       zig-version-file: build.zig.zon
       run-scrut: true
@@ -934,7 +934,7 @@ set `mlugg/setup-zig` falls back to its own auto-detection.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-zig-binaries.yml@v2.2.0
+    uses: cboone/gh-actions/.github/workflows/release-zig-binaries.yml@v3.0.0
     with:
       zig-version-file: build.zig.zon
       binary-name: "my-tool"
@@ -986,7 +986,7 @@ workflow rename lands.
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/) with exact version
-tags. Pin to a specific version (e.g., `@v2.2.0`) for production use.
+tags. Pin to a specific version (e.g., `@v3.0.0`) for production use.
 
 ### Version bumps
 
@@ -1004,17 +1004,17 @@ tags. Pin to a specific version (e.g., `@v2.2.0`) for production use.
 Releases are created with the `/release` skill, which analyzes conventional
 commits, recommends a version bump, updates CHANGELOG.md, creates a release
 commit, and tags it. The recommended outcome for each release is a single
-exact version tag (e.g., `v2.2.0`) pointing to the release commit.
+exact version tag (e.g., `v3.0.0`) pointing to the release commit.
 
 After tagging locally, push:
 
 ```bash
-git push origin main v2.2.0
+git push origin main v3.0.0
 ```
 
 ### Pinning for callers
 
-Always pin to an exact release tag (e.g. `@v2.2.0`). Branch refs like
+Always pin to an exact release tag (e.g. `@v3.0.0`). Branch refs like
 `@main` are not supported: they float, they bypass our SHA-pin and
 checksum contract, and the supply-chain risk is not worth the
 convenience.
