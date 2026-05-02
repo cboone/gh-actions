@@ -207,6 +207,39 @@ jobs:
           npm ci --ignore-scripts --include=dev --no-audit --no-fund
           printf '%s\n' "${GITHUB_WORKSPACE}/node_modules/.bin" >> "${GITHUB_PATH}"
 
+      - name: Validate consumer-installed lint tools
+        if: >-
+          ${{ inputs.use-consumer-versions
+          && (inputs.run-markdownlint || inputs.run-prettier || inputs.run-cspell) }}
+        # When use-consumer-versions is true, npm ci installs only what
+        # the consumer's package-lock.json declares. If an enabled tool
+        # is missing from that lockfile, the run step would fail later
+        # with a generic 'command not found'. Surface a targeted
+        # ::error:: annotation here so the GitHub UI points the consumer
+        # at the actual fix (edit package.json, re-run npm install,
+        # commit the updated lockfile).
+        env:
+          RUN_MARKDOWNLINT: ${{ inputs.run-markdownlint }}
+          RUN_PRETTIER: ${{ inputs.run-prettier }}
+          RUN_CSPELL: ${{ inputs.run-cspell }}
+        run: |
+          missing=0
+          if [ "${RUN_MARKDOWNLINT}" = "true" ] && ! command -v markdownlint-cli2 >/dev/null 2>&1; then
+            echo "::error::markdownlint-cli2 is enabled but not installed; add it to devDependencies in package.json and commit the updated package-lock.json" >&2
+            missing=1
+          fi
+          if [ "${RUN_PRETTIER}" = "true" ] && ! command -v prettier >/dev/null 2>&1; then
+            echo "::error::prettier is enabled but not installed; add it to devDependencies in package.json and commit the updated package-lock.json" >&2
+            missing=1
+          fi
+          if [ "${RUN_CSPELL}" = "true" ] && ! command -v cspell >/dev/null 2>&1; then
+            echo "::error::cspell is enabled but not installed; add it to devDependencies in package.json and commit the updated package-lock.json" >&2
+            missing=1
+          fi
+          if [ "${missing}" -ne 0 ]; then
+            exit 1
+          fi
+
       - name: Run markdownlint
         if: inputs.run-markdownlint
         run: markdownlint-cli2 "**/*.md"
