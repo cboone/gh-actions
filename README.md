@@ -730,7 +730,8 @@ targets) since Zig projects idiomatically use `build.zig` as their build system.
 
 | Name                | Type    | Default         | Description                                          |
 | ------------------- | ------- | --------------- | ---------------------------------------------------- |
-| `zig-version`       | string  |                 | Zig version to install (required)                    |
+| `zig-version`       | string  | `""`            | Zig version to install (e.g., `"0.15.2"`)            |
+| `zig-version-file`  | string  | `""`            | Path to a `.zon` file with `.minimum_zig_version`    |
 | `runs-on`           | string  | `ubuntu-latest` | Runner label (Windows is not supported)              |
 | `run-test`          | boolean | `true`          | Run `zig build test`                                 |
 | `run-fmt`           | boolean | `true`          | Run `zig fmt --check src/ build.zig`                 |
@@ -750,7 +751,14 @@ Default `cross-targets`:
 x86_64-linux-gnu aarch64-linux-gnu x86_64-macos aarch64-macos x86_64-windows-gnu
 ```
 
+Specify exactly one of `zig-version` or `zig-version-file`. If both are
+set, `zig-version` takes precedence. If neither is set, `mlugg/setup-zig`
+falls back to its own auto-detection (reads `minimum_zig_version` from
+`build.zig.zon`, or installs `latest` if no `build.zig.zon` is present).
+
 #### Usage
+
+With an explicit version:
 
 ```yaml
 jobs:
@@ -761,6 +769,17 @@ jobs:
       run-cross-compile: true
 ```
 
+Reading the version from `build.zig.zon`:
+
+```yaml
+jobs:
+  ci:
+    uses: cboone/gh-actions/.github/workflows/zig-ci.yml@v2.1.4
+    with:
+      zig-version-file: build.zig.zon
+      run-cross-compile: true
+```
+
 With scrut CLI tests:
 
 ```yaml
@@ -768,7 +787,7 @@ jobs:
   ci:
     uses: cboone/gh-actions/.github/workflows/zig-ci.yml@v2.1.4
     with:
-      zig-version: "0.14.1"
+      zig-version-file: build.zig.zon
       run-scrut: true
       scrut-build-cmd: "zig build"
       scrut-env: |
@@ -785,20 +804,25 @@ cross-compilation from a single runner (no matrix, no macOS runners).
 
 #### Inputs
 
-| Name              | Type   | Default         | Description                          |
-| ----------------- | ------ | --------------- | ------------------------------------ |
-| `zig-version`     | string |                 | Zig version to install (required)    |
-| `binary-name`     | string |                 | Name of the binary (required)        |
-| `targets`         | string | (see below)     | Space-separated Zig target triples   |
-| `optimize`        | string | `ReleaseSafe`   | Zig optimization level               |
-| `runs-on`         | string | `ubuntu-latest` | Runner label (Windows not supported) |
-| `timeout-minutes` | number | `30`            | Job timeout in minutes               |
+| Name               | Type   | Default         | Description                                       |
+| ------------------ | ------ | --------------- | ------------------------------------------------- |
+| `zig-version`      | string | `""`            | Zig version to install (e.g., `"0.15.2"`)         |
+| `zig-version-file` | string | `""`            | Path to a `.zon` file with `.minimum_zig_version` |
+| `binary-name`      | string |                 | Name of the binary (required)                     |
+| `targets`          | string | (see below)     | Space-separated Zig target triples                |
+| `optimize`         | string | `ReleaseSafe`   | Zig optimization level                            |
+| `runs-on`          | string | `ubuntu-latest` | Runner label (Windows not supported)              |
+| `timeout-minutes`  | number | `30`            | Job timeout in minutes                            |
 
 Default `targets`:
 
 ```text
 x86_64-linux-gnu aarch64-linux-gnu x86_64-macos aarch64-macos x86_64-windows-gnu
 ```
+
+`zig-version` and `zig-version-file` follow the same precedence rules as
+in `zig-ci.yml`: `zig-version` wins if both are set, and if neither is
+set `mlugg/setup-zig` falls back to its own auto-detection.
 
 #### Usage
 
@@ -807,7 +831,7 @@ jobs:
   release:
     uses: cboone/gh-actions/.github/workflows/zig-release.yml@v2.1.4
     with:
-      zig-version: "0.14.1"
+      zig-version-file: build.zig.zon
       binary-name: "my-tool"
 ```
 

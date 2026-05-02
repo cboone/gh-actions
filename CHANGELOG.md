@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `zig-version-file` input on `zig-ci.yml` and `zig-release.yml`,
+  mirroring `node-version-file` / `go-version-file` /
+  `ruby-version-file` in upstream setup actions. Callers can now point
+  the workflow at a `.zon` file (typically `build.zig.zon`) and the
+  workflow reads `.minimum_zig_version` from it instead of requiring a
+  literal version string. `zig-version` is now optional (default
+  `""`); when both inputs are set, `zig-version` takes precedence.
+  When neither is set, `mlugg/setup-zig` falls back to its own
+  auto-detection (#41)
 - Dependabot config (`.github/dependabot.yml`) covering both
   `github-actions` (workflows + composite actions with external `uses:`)
   and `npm` (devDependencies). Minor/patch updates are grouped weekly;

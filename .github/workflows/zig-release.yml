@@ -4,9 +4,19 @@ on:
   workflow_call:
     inputs:
       zig-version:
-        description: Zig version to install (e.g., "0.15.2").
+        description: >-
+          Zig version to install (e.g., "0.15.2"). Takes precedence over
+          zig-version-file. Leave empty to use zig-version-file or to
+          fall back to mlugg/setup-zig's own auto-detection of
+          minimum_zig_version in build.zig.zon.
         type: string
-        required: true
+        default: ""
+      zig-version-file:
+        description: >-
+          Path to a .zon file from which .minimum_zig_version is read
+          (e.g., "build.zig.zon"). Used only when zig-version is empty.
+        type: string
+        default: ""
       binary-name:
         description: Name of the binary to build and package (e.g., "seine").
         type: string
@@ -46,9 +56,34 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Resolve Zig version
+        id: resolve-zig-version
+        shell: bash
+        env:
+          ZIG_VERSION: ${{ inputs.zig-version }}
+          ZIG_VERSION_FILE: ${{ inputs.zig-version-file }}
+        run: |
+          if [ -n "${ZIG_VERSION}" ]; then
+            version="${ZIG_VERSION}"
+          elif [ -n "${ZIG_VERSION_FILE}" ]; then
+            if [ ! -f "${ZIG_VERSION_FILE}" ]; then
+              echo "::error::zig-version-file does not exist: ${ZIG_VERSION_FILE}" >&2
+              exit 1
+            fi
+            zon_pattern='s/^[[:space:]]*\.minimum_zig_version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p'
+            version="$(sed -nE "${zon_pattern}" "${ZIG_VERSION_FILE}" | head -n 1)"
+            if [ -z "${version}" ]; then
+              echo "::error::Could not parse .minimum_zig_version from ${ZIG_VERSION_FILE}" >&2
+              exit 1
+            fi
+          else
+            version=""
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
         with:
-          version: ${{ inputs.zig-version }}
+          version: ${{ steps.resolve-zig-version.outputs.version }}
 
       - name: Build and package
         shell: bash
