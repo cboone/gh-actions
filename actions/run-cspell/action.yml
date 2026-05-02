@@ -1,0 +1,85 @@
+name: Run cspell
+description: >-
+  Run cspell with inline pull-request annotations. Replaces
+  streetsidesoftware/cspell-action with a thin wrapper that installs
+  cspell from this repo's sha512-pinned package-lock.json and registers
+  a problem matcher so cspell's default `path:line:col - Unknown word`
+  output is surfaced as PR annotations. Node.js must be available on
+  the runner; pair with `actions/setup-node` if it is not already
+  installed.
+
+inputs:
+  files:
+    description: >-
+      Glob(s) passed to cspell. Newline-delimited; each line becomes a
+      separate positional argument. Defaults to `.` (scan everything
+      cspell's config matches).
+    required: false
+    default: "."
+  config:
+    description: >-
+      Path to a cspell config file. When empty, cspell auto-discovers
+      `cspell.json` / `.cspell.json` / `cspell.config.*` from the
+      working tree.
+    required: false
+    default: ""
+  args:
+    description: >-
+      Extra arguments to pass to cspell, one per line. Use this for
+      flags like `--no-must-find-files` or `--quiet`.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Install cspell (sha512-verified via gh-actions lockfile)
+      shell: bash
+      env:
+        # `${{ github.action_path }}` points at this action's directory
+        # inside the gh-actions repo checkout that the runner makes when
+        # loading the composite action. The repo root (which holds
+        # package.json + package-lock.json) is two levels up. `npm ci`
+        # there enforces per-package sha512 integrity, so a tampered
+        # registry response cannot slip past the install.
+        GH_ACTIONS_ROOT: ${{ github.action_path }}/../..
+      run: |
+        if [ ! -f "${GH_ACTIONS_ROOT}/package-lock.json" ]; then
+          echo "::error::package-lock.json not found at ${GH_ACTIONS_ROOT}." >&2
+          exit 1
+        fi
+        (cd "${GH_ACTIONS_ROOT}" && npm ci --ignore-scripts --no-audit --no-fund)
+        printf '%s\n' "${GH_ACTIONS_ROOT}/node_modules/.bin" >> "${GITHUB_PATH}"
+
+    - name: Register cspell problem matcher
+      shell: bash
+      env:
+        MATCHER_PATH: ${{ github.action_path }}/cspell-matcher.json
+      run: |
+        echo "::add-matcher::${MATCHER_PATH}"
+
+    - name: Run cspell
+      shell: bash
+      env:
+        CSPELL_FILES: ${{ inputs.files }}
+        CSPELL_CONFIG: ${{ inputs.config }}
+        CSPELL_ARGS: ${{ inputs.args }}
+      run: |
+        args=(--no-progress)
+        if [ -n "${CSPELL_CONFIG}" ]; then
+          args+=(--config "${CSPELL_CONFIG}")
+        fi
+        while IFS= read -r line; do
+          [ -n "${line}" ] && args+=("${line}")
+        done <<< "${CSPELL_ARGS}"
+        files=()
+        while IFS= read -r line; do
+          [ -n "${line}" ] && files+=("${line}")
+        done <<< "${CSPELL_FILES}"
+        cspell "${args[@]}" "${files[@]}"
+
+    - name: Remove cspell problem matcher
+      if: always()
+      shell: bash
+      run: |
+        echo "::remove-matcher owner=cspell::"

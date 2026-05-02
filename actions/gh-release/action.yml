@@ -1,0 +1,162 @@
+name: gh-release
+description: >-
+  Create a GitHub Release with `gh release create`. Thin wrapper that
+  replaces softprops/action-gh-release for callers that just need files,
+  auto-generated release notes, and draft/prerelease flags. The `gh` CLI
+  is preinstalled on every GitHub-hosted runner, so this action does not
+  download or pin a binary.
+
+inputs:
+  tag-name:
+    description: >-
+      Git tag for the release. Defaults to `github.ref_name`, which is
+      the tag that triggered the workflow when run on a tag push.
+    required: false
+    default: ${{ github.ref_name }}
+  name:
+    description: >-
+      Release title. Defaults to the tag name when empty.
+    required: false
+    default: ""
+  body:
+    description: >-
+      Inline release notes. Mutually exclusive with `body-path` and
+      `generate-release-notes`.
+    required: false
+    default: ""
+  body-path:
+    description: >-
+      Path to a file containing release notes. Mutually exclusive with
+      `body` and `generate-release-notes`.
+    required: false
+    default: ""
+  generate-release-notes:
+    description: >-
+      Auto-generate release notes from merged pull requests. Mutually
+      exclusive with `body` and `body-path`.
+    required: false
+    default: "false"
+  files:
+    description: >-
+      Newline-delimited list of file paths to attach to the release.
+      Each line is passed verbatim to `gh release create`; glob
+      expansion is performed by the shell, so unmatched globs are
+      passed through unchanged.
+    required: false
+    default: ""
+  draft:
+    description: Create the release as a draft.
+    required: false
+    default: "false"
+  prerelease:
+    description: Mark the release as a prerelease.
+    required: false
+    default: "false"
+  target-commitish:
+    description: >-
+      Commit SHA, branch, or tag to point the release at when the tag
+      does not yet exist. Forwarded to `gh release create --target`.
+    required: false
+    default: ""
+  token:
+    description: >-
+      GitHub token used by `gh release create`. Defaults to
+      `${{ github.token }}`. Must have `contents: write` permission.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  url:
+    description: URL of the created release.
+    value: ${{ steps.release.outputs.url }}
+
+runs:
+  using: composite
+  steps:
+    - id: release
+      name: Create GitHub Release
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        TAG: ${{ inputs.tag-name }}
+        RELEASE_NAME: ${{ inputs.name }}
+        BODY: ${{ inputs.body }}
+        BODY_PATH: ${{ inputs.body-path }}
+        GENERATE_NOTES: ${{ inputs.generate-release-notes }}
+        FILES: ${{ inputs.files }}
+        DRAFT: ${{ inputs.draft }}
+        PRERELEASE: ${{ inputs.prerelease }}
+        TARGET_COMMITISH: ${{ inputs.target-commitish }}
+      run: |
+        if [ -z "${TAG}" ]; then
+          echo "::error::tag-name is empty; pass a tag explicitly or run on a tag push." >&2
+          exit 1
+        fi
+
+        notes_inputs=0
+        [ -n "${BODY}" ] && notes_inputs=$((notes_inputs + 1))
+        [ -n "${BODY_PATH}" ] && notes_inputs=$((notes_inputs + 1))
+        [ "${GENERATE_NOTES}" = "true" ] && notes_inputs=$((notes_inputs + 1))
+        if [ "${notes_inputs}" -gt 1 ]; then
+          echo "::error::body, body-path, and generate-release-notes are mutually exclusive." >&2
+          exit 1
+        fi
+
+        args=(gh release create "${TAG}")
+
+        if [ -n "${RELEASE_NAME}" ]; then
+          args+=(--title "${RELEASE_NAME}")
+        fi
+
+        if [ -n "${BODY}" ]; then
+          notes_file="${RUNNER_TEMP}/gh-release-notes.md"
+          printf '%s\n' "${BODY}" > "${notes_file}"
+          args+=(--notes-file "${notes_file}")
+        elif [ -n "${BODY_PATH}" ]; then
+          if [ ! -f "${BODY_PATH}" ]; then
+            echo "::error::body-path file not found: ${BODY_PATH}" >&2
+            exit 1
+          fi
+          args+=(--notes-file "${BODY_PATH}")
+        elif [ "${GENERATE_NOTES}" = "true" ]; then
+          args+=(--generate-notes)
+        else
+          args+=(--notes "")
+        fi
+
+        if [ "${DRAFT}" = "true" ]; then
+          args+=(--draft)
+        fi
+        if [ "${PRERELEASE}" = "true" ]; then
+          args+=(--prerelease)
+        fi
+        if [ -n "${TARGET_COMMITISH}" ]; then
+          args+=(--target "${TARGET_COMMITISH}")
+        fi
+
+        files=()
+        while IFS= read -r line; do
+          [ -z "${line}" ] && continue
+          # Expand globs; if no match, pass the literal pattern through
+          # so `gh release create` produces a clear "file not found"
+          # error rather than silently skipping. SC2206 is intentional
+          # here: word splitting and glob expansion are exactly what we
+          # want for a user-supplied pattern.
+          shopt -s nullglob
+          # shellcheck disable=SC2206
+          matches=(${line})
+          shopt -u nullglob
+          if [ "${#matches[@]}" -eq 0 ]; then
+            files+=("${line}")
+          else
+            files+=("${matches[@]}")
+          fi
+        done <<< "${FILES}"
+
+        if [ "${#files[@]}" -gt 0 ]; then
+          args+=("${files[@]}")
+        fi
+
+        url="$("${args[@]}")"
+        printf 'url=%s\n' "${url}" >> "${GITHUB_OUTPUT}"
+        echo "Created release: ${url}"
