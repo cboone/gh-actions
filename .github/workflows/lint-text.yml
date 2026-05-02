@@ -76,14 +76,15 @@ jobs:
 
       # Fetch preset configs from this repo at the workflow's own SHA
       # (same supply-chain model as the npm and yamllint installs below).
-      # The preset configs are written into the workspace only when the
-      # consumer does not already ship a markdownlint or cspell config,
-      # so a local config always wins. Auto-discovery picks up the
+      # Each preset config is written into the workspace only when the
+      # corresponding tool is enabled and the consumer does not already
+      # ship a local config, so a local config always wins and disabled
+      # tools never trigger a fetch. Auto-discovery picks up the
       # dropped-in file naturally; this keeps relative paths in the
       # preset config (e.g. `./cspell-words.txt`, `references/**`)
       # resolving against the workspace.
-      - name: Apply preset configs
-        if: inputs.preset != ''
+      - name: Apply markdownlint preset
+        if: inputs.preset != '' && inputs.run-markdownlint
         env:
           PRESET: ${{ inputs.preset }}
           REQ_SHA: ${{ github.job_workflow_sha }}
@@ -112,6 +113,18 @@ jobs:
           else
             echo "Local markdownlint config detected; skipping preset."
           fi
+
+      - name: Apply cspell preset
+        if: inputs.preset != '' && inputs.run-cspell
+        env:
+          PRESET: ${{ inputs.preset }}
+          REQ_SHA: ${{ github.job_workflow_sha }}
+        run: |
+          if [ -z "${REQ_SHA}" ]; then
+            echo "::error::github.job_workflow_sha is empty; this workflow must be called via workflow_call." >&2
+            exit 1
+          fi
+          base="https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}/presets/${PRESET}"
 
           has_local_cspell=0
           for f in cspell.json cspell.jsonc \
