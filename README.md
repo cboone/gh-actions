@@ -68,6 +68,66 @@ usage examples.
 | [deploy-to-pages](docs/workflows/deploy-to-pages.md)       | workflow | build a static site and deploy to GitHub Pages            |
 | [run-markscribe](actions/run-markscribe/README.md)         | action   | generate a file from a Go template (e.g. README rendering) |
 
+## Quick start
+
+A typical Go project's CI and release pipelines, assembled from the
+building blocks above.
+
+`.github/workflows/ci.yml`:
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  github-actions:
+    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v3.0.0
+
+  text:
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.0.0
+    with:
+      run-cspell: true
+      run-yamllint: true
+
+  shell:
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v3.0.0
+
+  go:
+    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@v3.0.0
+    with:
+      run-format-check: true
+      run-build: true
+
+  secrets:
+    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v3.0.0
+    with:
+      tool: both
+```
+
+`.github/workflows/release.yml`:
+
+```yaml
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    uses: cboone/gh-actions/.github/workflows/release-go-binaries.yml@v3.0.0
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+```
+
+The Go CI workflow expects a Makefile in the consuming repo with `vet`,
+`test`, `lint`, `build`, and `fmt` targets, where `fmt` is a format check
+(see [run-go-ci](docs/workflows/run-go-ci.md) for details).
+
 ## Migration
 
 See [docs/migrations/v3.md](docs/migrations/v3.md) for the v3 path renames.
