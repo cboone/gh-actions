@@ -224,16 +224,18 @@ jobs:
           RUN_CSPELL: ${{ inputs.run-cspell }}
         run: |
           missing=0
+          fix="add it to devDependencies in package.json"
+          fix="${fix} and commit the updated package-lock.json"
           if [ "${RUN_MARKDOWNLINT}" = "true" ] && ! command -v markdownlint-cli2 >/dev/null 2>&1; then
-            echo "::error::markdownlint-cli2 is enabled but not installed; add it to devDependencies in package.json and commit the updated package-lock.json" >&2
+            echo "::error::markdownlint-cli2 is enabled but not installed; ${fix}" >&2
             missing=1
           fi
           if [ "${RUN_PRETTIER}" = "true" ] && ! command -v prettier >/dev/null 2>&1; then
-            echo "::error::prettier is enabled but not installed; add it to devDependencies in package.json and commit the updated package-lock.json" >&2
+            echo "::error::prettier is enabled but not installed; ${fix}" >&2
             missing=1
           fi
           if [ "${RUN_CSPELL}" = "true" ] && ! command -v cspell >/dev/null 2>&1; then
-            echo "::error::cspell is enabled but not installed; add it to devDependencies in package.json and commit the updated package-lock.json" >&2
+            echo "::error::cspell is enabled but not installed; ${fix}" >&2
             missing=1
           fi
           if [ "${missing}" -ne 0 ]; then
