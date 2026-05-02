@@ -156,9 +156,12 @@ runs:
         done <<< "${FILES}"
 
         if [ "${#files[@]}" -gt 0 ]; then
+          # `--` so a file path starting with `-` is not parsed as a flag.
+          args+=(--)
           args+=("${files[@]}")
         fi
 
-        url="$("${args[@]}")"
+        "${args[@]}"
+        url="$(gh release view "${TAG}" --json url --jq .url)"
         printf 'url=%s\n' "${url}" >> "${GITHUB_OUTPUT}"
         echo "Created release: ${url}"
