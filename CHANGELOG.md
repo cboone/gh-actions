@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** Renamed public composite action paths and reusable workflow
+  filenames to use imperative phrasing, including `setup-*` action paths to
+  `set-up-*` and `gh-release` to `create-gh-release`. Consumers upgrading to
+  the first release with this change must update `uses:` strings. See the
+  README migration table for the complete old-to-new path mapping. Old paths
+  remain available only on older release tags that predate the rename.
+
 ## [2.2.0] - 2026-05-01
 
 ### Added
