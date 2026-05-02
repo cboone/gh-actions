@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `lint-text.yml` `use-consumer-versions` input (boolean, default
+  `false`): opt-in to install markdownlint-cli2, Prettier, and cspell
+  from the consumer repo's own `package.json` + `package-lock.json`
+  via `npm ci` in the workspace, instead of the versions pinned in
+  this gh-actions repo. npm still enforces per-package sha512
+  integrity, so the trust boundary becomes the consumer's reviewed
+  lockfile. Use this when local linting and CI must agree on tool
+  versions (e.g. when a consumer pins `cspell ^8` locally but the
+  pinned default is v10, and dictionary differences across major
+  versions cause divergent results). yamllint is unaffected (#34)
 - `lint-text.yml` `preset` input with a `lean-math` value: opt-in
   Pandoc-flavored academic Markdown config bundle. When set and the
   consumer doesn't ship a local markdownlint or cspell config, the
