@@ -34,6 +34,20 @@ on:
           ignores).
         type: string
         default: ""
+      use-consumer-versions:
+        description: |
+          When true, install markdownlint-cli2, Prettier, and cspell
+          from the consumer repo's own package.json + package-lock.json
+          (via `npm ci` in the workspace) instead of the versions
+          pinned in this gh-actions repo. Use this when local linting
+          and CI must agree on tool versions. The consumer is then
+          responsible for their lockfile's integrity: a committed
+          package-lock.json with sha512 integrity hashes is required,
+          and every enabled tool must be present in package-lock.json
+          (typically declared as a devDependency in package.json).
+          yamllint is unaffected (Python, not npm).
+        type: boolean
+        default: false
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -146,6 +160,9 @@ jobs:
           fi
 
       - name: Install lint tools (sha512-verified via gh-actions lockfile)
+        if: >-
+          ${{ !inputs.use-consumer-versions
+          && (inputs.run-markdownlint || inputs.run-prettier || inputs.run-cspell) }}
         env:
           # Pin package.json + package-lock.json to the same SHA as this
           # workflow so a tampered registry response cannot slip past npm
@@ -164,8 +181,31 @@ jobs:
           base="https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}"
           curl -sSfL "${base}/package.json"      -o "${install_dir}/package.json"
           curl -sSfL "${base}/package-lock.json" -o "${install_dir}/package-lock.json"
-          (cd "${install_dir}" && npm ci --ignore-scripts --no-audit --no-fund)
+          (cd "${install_dir}" && npm ci --ignore-scripts --include=dev --no-audit --no-fund)
           printf '%s\n' "${install_dir}/node_modules/.bin" >> "${GITHUB_PATH}"
+
+      - name: Install lint tools (consumer's package-lock.json)
+        if: ${{ inputs.use-consumer-versions && (inputs.run-markdownlint || inputs.run-prettier || inputs.run-cspell) }}
+        # Install from the consumer's own committed package-lock.json
+        # rather than this repo's lockfile. npm ci still enforces
+        # per-package sha512 integrity, so the trust boundary becomes
+        # the consumer's reviewed lockfile rather than this gh-actions
+        # repo. The consumer is responsible for committing
+        # package-lock.json with every enabled tool present (typically
+        # as a devDependency in package.json).
+        run: |
+          if [ ! -f package.json ]; then
+            echo "::error::use-consumer-versions=true but package.json is missing in the consumer repo." >&2
+            exit 1
+          fi
+          if [ ! -f package-lock.json ]; then
+            msg="use-consumer-versions=true but package-lock.json is missing in the consumer repo."
+            msg="${msg} Run 'npm install' locally and commit the lockfile."
+            echo "::error::${msg}" >&2
+            exit 1
+          fi
+          npm ci --ignore-scripts --include=dev --no-audit --no-fund
+          printf '%s\n' "${GITHUB_WORKSPACE}/node_modules/.bin" >> "${GITHUB_PATH}"
 
       - name: Run markdownlint
         if: inputs.run-markdownlint
