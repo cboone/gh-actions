@@ -139,20 +139,24 @@ runs:
         files=()
         while IFS= read -r line; do
           [ -z "${line}" ] && continue
-          # Expand globs; if no match, pass the literal pattern through
-          # so `gh release create` produces a clear "file not found"
-          # error rather than silently skipping. SC2206 is intentional
-          # here: word splitting and glob expansion are exactly what we
-          # want for a user-supplied pattern.
-          shopt -s nullglob
-          # shellcheck disable=SC2206
-          matches=(${line})
-          shopt -u nullglob
-          if [ "${#matches[@]}" -eq 0 ]; then
-            files+=("${line}")
-          else
-            files+=("${matches[@]}")
-          fi
+          # Word-split each line into tokens (no glob expansion yet),
+          # then expand globs per-token. Globbing the whole line at
+          # once with `nullglob` would silently drop unmatched tokens
+          # that share a line with matched ones, so an unmatched glob
+          # in a partially-matching line wouldn't surface as a
+          # "file not found" error from `gh release create`.
+          read -r -a tokens <<< "${line}"
+          for token in "${tokens[@]}"; do
+            shopt -s nullglob
+            # shellcheck disable=SC2206
+            matches=(${token})
+            shopt -u nullglob
+            if [ "${#matches[@]}" -eq 0 ]; then
+              files+=("${token}")
+            else
+              files+=("${matches[@]}")
+            fi
+          done
         done <<< "${FILES}"
 
         if [ "${#files[@]}" -gt 0 ]; then
