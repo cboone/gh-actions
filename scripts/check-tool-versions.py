@@ -139,6 +139,8 @@ TOOLS: list[Tool] = [
     ),
     Tool("yamllint", "1.38.0", lambda: pypi_latest("yamllint"),
          "requirements/yamllint.txt must be regenerated with `uv pip compile --generate-hashes`."),
+    Tool("reuse", "5.0.2", lambda: pypi_latest("reuse"),
+         "requirements/reuse.txt must be regenerated with `uv pip compile --generate-hashes`."),
     Tool("Node.js LTS (24)", "24.15.0", lambda: nodejs_lts_latest(24)),
 ]
 
