@@ -17,7 +17,7 @@ workflow fails fast.
 | Name                    | Type    | Default               | Description                                                  |
 | ----------------------- | ------- | --------------------- | ------------------------------------------------------------ |
 | `targets`               | string  |                       | JSON array of `{"target","runner"}` objects (required)       |
-| `binary-name`           | string  | `""`                  | Binary name (extracted from Cargo.toml if empty)             |
+| `binary-name`           | string  | `""`                  | Binary name (extracted from Cargo.toml if empty; required when `update-homebrew` is `true`) |
 | `rust-version`          | string  | `""`                  | Rust toolchain version to install (overrides file)           |
 | `rust-toolchain-file`   | string  | `rust-toolchain.toml` | Path to a `rust-toolchain.toml` in the consumer repo         |
 | `build-args`            | string  | `""`                  | Additional arguments for cargo build                         |
@@ -64,6 +64,7 @@ jobs:
           {"target": "aarch64-apple-darwin", "runner": "macos-latest"},
           {"target": "x86_64-unknown-linux-gnu", "runner": "ubuntu-latest"}
         ]
+      binary-name: mytool
       update-homebrew: true
       homebrew-tap: myuser/homebrew-tap
       homebrew-formula-path: Formula/mytool.rb
@@ -116,6 +117,7 @@ jobs:
           {"target": "aarch64-apple-darwin", "runner": "macos-latest"},
           {"target": "x86_64-apple-darwin", "runner": "macos-latest"}
         ]
+      binary-name: mytool
       update-homebrew: true
       homebrew-tap: myuser/homebrew-tap
       homebrew-formula-path: Formula/mytool.rb
