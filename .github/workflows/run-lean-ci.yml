@@ -1,0 +1,66 @@
+name: Run Lean CI
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: >-
+          Runner label (ubuntu-latest or macos-latest recommended;
+          Windows is not supported).
+        type: string
+        default: ubuntu-latest
+      run-build:
+        description: Run lake build via lean-action.
+        type: boolean
+        default: true
+      run-lint:
+        description: Run lake lint after the build.
+        type: boolean
+        default: true
+      run-test:
+        description: Run lake test after the build.
+        type: boolean
+        default: true
+      use-mathlib-cache:
+        description: >-
+          Controls lean-action's `lake exe cache get` step for the
+          Mathlib build cache. Allowed values: "auto", "true", "false".
+          "auto" lets lean-action detect a Mathlib dependency.
+        type: string
+        default: auto
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+
+jobs:
+  lean:
+    name: Lean
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Cache elan toolchain
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.elan
+          key: elan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}
+
+      - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1.5.0
+        with:
+          build: ${{ inputs.run-build && 'true' || 'false' }}
+          test: "false"
+          lint: "false"
+          use-mathlib-cache: ${{ inputs.use-mathlib-cache }}
+
+      - name: Run lake lint
+        if: inputs.run-lint
+        run: lake lint
+
+      - name: Run lake test
+        if: inputs.run-test
+        run: lake test

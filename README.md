@@ -34,6 +34,7 @@ usage examples.
 | Component                                                  | Type     | What it does                                              |
 | ---------------------------------------------------------- | -------- | --------------------------------------------------------- |
 | [run-go-ci](docs/workflows/run-go-ci.md)                   | workflow | Go test, lint, build, scrut, format check                 |
+| [run-lean-ci](docs/workflows/run-lean-ci.md)               | workflow | Lean lake build, lake lint, lake test                     |
 | [run-rust-ci](docs/workflows/run-rust-ci.md)               | workflow | Rust test, clippy, fmt, deny, audit, typos                |
 | [run-zig-ci](docs/workflows/run-zig-ci.md)                 | workflow | Zig test, format, build, cross-compile, scrut             |
 | [run-scrut-tests](docs/workflows/run-scrut-tests.md)       | workflow | scrut CLI snapshot tests for non-Go projects              |

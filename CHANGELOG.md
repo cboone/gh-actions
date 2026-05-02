@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `homebrew-desc` input on `release-rust-binaries.yml` for setting the
   generated Homebrew formula's `desc` field. Defaults to the binary
   name when empty, preserving prior behavior (#30)
+- Reusable workflow `run-lean-ci.yml` for Lean Lake projects using
+  `leanprover/lean-action`. Builds via lean-action (with elan toolchain
+  caching and pass-through control over the Mathlib build cache), then
+  runs `lake lint` and `lake test` directly so consumers' own Lake
+  targets are exercised. Replaces the duplicated single-file Lean CI
+  configurations in downstream Lean repos (#36)
 
 ## [3.0.0] - 2026-05-02
 
