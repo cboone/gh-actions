@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `homebrew-desc` input on `release-rust-binaries.yml` for setting the
   generated Homebrew formula's `desc` field. Defaults to the binary
   name when empty, preserving prior behavior (#30)
+- `homebrew-depends-on` input on `release-rust-binaries.yml` for
+  declaring Homebrew formula dependencies. Each non-empty line of the
+  newline-delimited value becomes a separate `depends_on` statement in
+  the generated formula: lines starting with `:` are emitted as Ruby
+  symbols (e.g. `:macos`), other lines are emitted as quoted strings
+  (e.g. `openssl`). Needed for macOS-only tools and tools with
+  library dependencies (#31)
 - Reusable workflow `run-lean-ci.yml` for Lean Lake projects using
   `leanprover/lean-action`. Builds via lean-action (with elan toolchain
   caching and pass-through control over the Mathlib build cache), then
