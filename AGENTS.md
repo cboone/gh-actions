@@ -44,8 +44,15 @@ actions/
     scan-for-secrets-with-gitleaks.yml      # Self-hosting: runs scan-for-secrets with gitleaks
     scan-for-secrets-with-trufflehog.yml    # Self-hosting: runs scan-for-secrets with trufflehog
   copilot-instructions.md
-docs/plans/              # Plan documents (todo/ and done/)
+docs/
+  migrations/            # Major-version migration guides (vN.md)
+  plans/                 # Plan documents (todo/ and done/)
+  workflows/             # Per-reusable-workflow reference docs (<name>.md)
 ```
+
+Each composite action also has a `README.md` next to its `action.yml`
+(e.g. `actions/run-cspell/README.md`); see "Documentation layout" below
+for details.
 
 ## Key Conventions
 
@@ -72,6 +79,9 @@ this repo's pinning model; their checksums are hardcoded in the workflow
 files.
 
 ### Pinning Policy and Trust Model
+
+A condensed summary lives in [README.md](README.md#trust-model-and-pinning).
+This section is the canonical longer form.
 
 The repo applies the strongest available pin to each kind of dependency
 and refuses to fall back on third-party registry integrity alone for
@@ -169,6 +179,86 @@ check (exit non-zero on unformatted code), not a write operation.
 - Inputs are passed to shell steps via `env:` mappings, not inline expressions.
 - Tools are installed to `RUNNER_TEMP` and added to `GITHUB_PATH`.
 
+## Documentation layout
+
+The repository's user-facing and agent-facing docs are organized as follows.
+Keep this layout intact when adding or editing documentation.
+
+- `README.md` (root) is the canonical source for orientation, the
+  per-component Quick Reference, the quickstart, the trust model summary,
+  supported platforms, versioning policy, and local development. It does
+  not carry per-component reference tables.
+- `actions/<name>/README.md` is the canonical source for each composite
+  action's full reference (description, caveats, inputs, outputs, usage
+  examples). GitHub renders this README when a visitor browses into the
+  action's directory.
+- `docs/workflows/<name>.md` is the canonical source for each reusable
+  workflow's full reference. Reusable workflows do not have their own
+  directory under `.github/workflows/` (only `.yml` files live there), so
+  workflow docs live in `docs/workflows/`, parallel to `docs/migrations/`.
+- `docs/migrations/vN.md` is the canonical source for each major-version
+  migration guide (path renames, breaking input changes, removed
+  components).
+- `AGENTS.md` (this file, with `CLAUDE.md` symlinked to it) is the
+  canonical source for repository conventions, agent guidance, and
+  contributor procedures. The trust model long form lives here; the
+  README has a condensed summary that links back.
+- `.github/copilot-instructions.md` is the canonical source for PR-review
+  anti-patterns and Copilot-specific guidance.
+
+### Per-component doc template
+
+Use this template when creating a new `actions/<name>/README.md` or
+`docs/workflows/<name>.md`. Sections that do not apply to a given
+component (no outputs, no secrets) are omitted entirely rather than left
+empty.
+
+````markdown
+# <name>
+
+<1 to 3 sentence description of what the action or workflow does.>
+
+<Caveats, if any. For example: Makefile-targets requirement, pinned-version
+requirement, GITHUB_TOKEN requirement, changelog-format requirement.>
+
+## Inputs
+
+| Name      | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `example` | ...  | ...     | ...         |
+
+## Outputs
+
+| Name      | Description |
+| --------- | ----------- |
+| `example` | ...         |
+
+## Secrets
+
+| Name      | Required | Description |
+| --------- | -------- | ----------- |
+| `EXAMPLE` | ...      | ...         |
+
+## Usage
+
+```yaml
+- uses: cboone/gh-actions/actions/<name>@v3.0.0
+  with:
+    example: value
+```
+````
+
+For reusable workflows, the Usage example uses the `jobs:` form:
+
+```yaml
+jobs:
+  example:
+    uses: cboone/gh-actions/.github/workflows/<name>.yml@v3.0.0
+```
+
+All Usage examples pin to the current released tag (currently `@v3.0.0`),
+per the existing rule in `.github/copilot-instructions.md`.
+
 ## Adding a New Action
 
 1. Create `actions/<name>/action.yml` with `using: composite`.
@@ -177,6 +267,13 @@ check (exit non-zero on unformatted code), not a write operation.
 1. Download the tool, verify SHA-256 checksum, install to `RUNNER_TEMP`.
 1. Append the install directory to `GITHUB_PATH`.
 1. For `run-*` actions, add a second step that executes the tool.
+1. Create `actions/<name>/README.md` from the per-component template
+   documented under "Documentation layout" above. GitHub renders this
+   README when a visitor browses into the action's directory.
+1. Add a row to the Quick Reference table in the root `README.md`, under
+   the appropriate group (Linting and formatting, Testing and CI,
+   Releasing and publishing, Security and supply chain, or Repository
+   chores), linking to the new `actions/<name>/README.md`.
 
 ## Adding a New Workflow
 
@@ -184,14 +281,25 @@ check (exit non-zero on unformatted code), not a write operation.
 1. Define inputs with types and defaults; keep permissions minimal.
 1. Inline tool installation (do not reference local composite actions).
 1. Follow the same checksum verification pattern used by existing workflows.
+1. Create `docs/workflows/<name>.md` from the per-component template
+   documented under "Documentation layout" above. Reusable workflows do
+   not have their own directory under `.github/workflows/`, so workflow
+   docs live in `docs/workflows/`.
+1. Add a row to the Quick Reference table in the root `README.md`, under
+   the appropriate group, linking to the new `docs/workflows/<name>.md`.
 
 ## Releasing
 
-This repository has no GoReleaser config or release workflow for itself. Releases
-are pure Git tags. Use the `/release` skill, which analyzes conventional commits,
-recommends a version bump, updates CHANGELOG.md, creates a release commit, and
-tags it locally. Then push the commit and tag. See the README Versioning section
-for full details.
+This repository has no GoReleaser config or release workflow for itself.
+Releases are pure Git tags. Use the `/release` skill, which analyzes
+conventional commits, recommends a version bump, updates CHANGELOG.md,
+creates a release commit, and tags it locally. Then push the commit and
+tag. See the README Versioning section for full details.
+
+When a release introduces breaking changes (path renames, removed inputs,
+removed components), document them in `docs/migrations/vN.md` (parallel to
+`docs/migrations/v3.md`) and link the new migration guide from the README
+Migration section.
 
 ## Testing
 
