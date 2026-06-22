@@ -149,7 +149,7 @@ jobs:
           fi
           echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
+      - uses: dtolnay/rust-toolchain@67ef31d5b988238dd797d409d6f9574278e20537 # master @ 2026-03-27
         with:
           toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
           components: ${{ inputs.coverage && 'llvm-tools-preview' || '' }}
@@ -409,7 +409,7 @@ jobs:
           fi
           echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
+      - uses: dtolnay/rust-toolchain@67ef31d5b988238dd797d409d6f9574278e20537 # master @ 2026-03-27
         with:
           toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
           components: clippy
@@ -466,7 +466,7 @@ jobs:
           fi
           echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
+      - uses: dtolnay/rust-toolchain@67ef31d5b988238dd797d409d6f9574278e20537 # master @ 2026-03-27
         with:
           toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
           components: rustfmt
@@ -507,7 +507,7 @@ jobs:
           fi
           echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
+      - uses: dtolnay/rust-toolchain@67ef31d5b988238dd797d409d6f9574278e20537 # master @ 2026-03-27
         with:
           toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
 
@@ -609,7 +609,7 @@ jobs:
           fi
           echo "toolchain=${toolchain}" >> "${GITHUB_OUTPUT}"
 
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master @ 2026-03-27
+      - uses: dtolnay/rust-toolchain@67ef31d5b988238dd797d409d6f9574278e20537 # master @ 2026-03-27
         with:
           toolchain: ${{ steps.rust-toolchain.outputs.toolchain }}
 
