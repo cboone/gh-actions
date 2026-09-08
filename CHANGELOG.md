@@ -112,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the scheduled check. Hardcodes the current pinned versions and notes
   which bumps require regenerating SHA-256 checksums or hash files
 - `requirements/yamllint.txt`: hash-pinned (`uv pip compile
-  --generate-hashes`) requirements for yamllint and its transitive
+--generate-hashes`) requirements for yamllint and its transitive
   dependencies
 - `.github/actionlint.yaml`: ignore-pattern for the
   `github.job_workflow_sha` context property, which actionlint v1.7.12
@@ -128,15 +128,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the scrut / cargo-audit / shfmt pattern; new `llvm-cov-version`
   input. Eliminates the registry-only trust path for coverage runs.
 - **Hardening** yamllint in `text-lint.yml` and the local `make
-  lint-yaml`: switch from `uv tool run --from "yamllint==X.Y.Z"`
+lint-yaml`: switch from `uv tool run --from "yamllint==X.Y.Z"`
   (PyPI-registry-only trust) to `uv pip install --require-hashes -r
-  requirements/yamllint.txt` against a hash-pinned manifest. The
+requirements/yamllint.txt` against a hash-pinned manifest. The
   workflow downloads the manifest from this repo at the workflow's own
   SHA (`github.job_workflow_sha`), so a tampered registry response
   cannot pass the per-package hash check. Every transitive dep of
   yamllint is hash-pinned.
 - **Hardening** npm tool installs in `text-lint.yml`: replace `npm
-  install --global "<pkg>@<version>"` (no integrity check) with `npm ci`
+install --global "<pkg>@<version>"` (no integrity check) with `npm ci`
   against this repo's checked-in `package-lock.json`, fetched at the
   workflow's own SHA. Per-package sha512 integrity is now enforced for
   markdownlint-cli2, prettier, and cspell.
