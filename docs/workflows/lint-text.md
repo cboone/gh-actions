@@ -109,11 +109,13 @@ Two limitations follow from it:
   manifests; use `use-consumer-versions: true` there as well, and ship
   local markdownlint and cspell configs instead of a preset.
 
-Consumers on `@v3.0.0` or `@v3.1.0` hit an unconditional failure here:
-those releases read `github.job_workflow_sha`, which is not a real
-context property and is always empty
-([#83](https://github.com/cboone/gh-actions/issues/83)). Upgrade to
-`@v3.1.1` or later.
+Consumers on `@v3.0.0` or `@v3.1.0` fail here on default inputs: those
+releases read `github.job_workflow_sha`, which is not a real context
+property and is always empty
+([#83](https://github.com/cboone/gh-actions/issues/83)). On `@v3.0.0`
+the failure is unconditional. On `@v3.1.0` the only configuration that
+avoids it is `use-consumer-versions: true` with `preset: ""` and
+`run-yamllint: false`. Upgrade to `@v3.1.1` or later.
 
 ## Usage
 

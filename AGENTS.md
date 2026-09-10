@@ -107,11 +107,12 @@ anything that runs in CI.
   cspell): installed via `npm ci` against the workflow repository's
   `package-lock.json`, fetched at the same `job.workflow_repository`
   and `job.workflow_sha`. Per-package sha512 integrity is enforced.
-  `lint-text.yml` exposes a `use-consumer-versions: true` opt-in that runs `npm ci`
-  against the consumer's own committed `package-lock.json` instead;
-  npm still enforces sha512 integrity, but the trust boundary becomes
-  the consumer's reviewed lockfile rather than this repo. Use this
-  when CI must agree with the versions a consumer pins locally.
+  `lint-text.yml` exposes a `use-consumer-versions: true` opt-in that
+  runs `npm ci` against the consumer's own committed
+  `package-lock.json` instead; npm still enforces sha512 integrity,
+  but the trust boundary becomes the consumer's reviewed lockfile
+  rather than this repo. Use this when CI must agree with the versions
+  a consumer pins locally.
 - **Rust tooling** (cargo-deny, cargo-nextest, cargo-audit,
   cargo-llvm-cov): installed from binary release tarballs with SHA-256
   verification, never via `cargo install` (which would trust crates.io
