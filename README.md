@@ -142,10 +142,10 @@ integrity check available for its ecosystem.
   cargo-llvm-cov).
 - **Python tools**: installed via `uv pip install --require-hashes`
   against a manifest with hash-pinned transitive deps, fetched at the
-  workflow's own SHA.
-- **npm tools**: installed via `npm ci` against this repo's
-  `package-lock.json` (per-package sha512 integrity), fetched at the
-  workflow's own SHA.
+  workflow's own repository and commit.
+- **npm tools**: installed via `npm ci` against the workflow
+  repository's `package-lock.json` (per-package sha512 integrity),
+  fetched at the workflow's own repository and commit.
 - **Rust tooling**: installed from binary release tarballs with SHA-256
   verification, never via `cargo install` (which would trust crates.io
   alone).

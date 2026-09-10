@@ -1,22 +1,16 @@
 name: Run CI
 
+# Self-hosts this repo's own reusable workflows, so they are integration
+# tested on every change. `text` in particular exercises the fetch path
+# that reads `job.workflow_repository` / `job.workflow_sha`; no
+# `paths-ignore` filter here, because the linters it runs cover every
+# file in the repo, Markdown and docs included.
+
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "LICENSE"
-      - ".editorconfig"
-      - ".claude/**"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "LICENSE"
-      - ".editorconfig"
-      - ".claude/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,3 +19,9 @@ concurrency:
 jobs:
   actionlint:
     uses: ./.github/workflows/lint-github-actions.yml
+
+  text:
+    uses: ./.github/workflows/lint-text.yml
+    with:
+      run-cspell: true
+      run-yamllint: true
