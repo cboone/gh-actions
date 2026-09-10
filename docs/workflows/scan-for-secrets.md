@@ -22,7 +22,7 @@ full-history and working-tree scan scopes.
 ```yaml
 jobs:
   scan:
-    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v3.0.0
+    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v3.1.0
     with:
       tool: both
 ```

@@ -12,5 +12,5 @@ Install trufflehog binary and run a scan.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-trufflehog@v3.0.0
+- uses: cboone/gh-actions/actions/run-trufflehog@v3.1.0
 ```

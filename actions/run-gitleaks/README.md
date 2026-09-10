@@ -12,5 +12,5 @@ Install gitleaks binary and run a scan.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-gitleaks@v3.0.0
+- uses: cboone/gh-actions/actions/run-gitleaks@v3.1.0
 ```

@@ -24,7 +24,7 @@ specified directory.
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.0.0
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.1.0
 ```
 
 With a custom shell and environment variables:
@@ -32,7 +32,7 @@ With a custom shell and environment variables:
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.0.0
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.1.0
     with:
       scrut-shell: zsh
       scrut-env: |

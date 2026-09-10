@@ -11,6 +11,6 @@ Install actionlint binary with a pinned version.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-actionlint@v3.0.0
+- uses: cboone/gh-actions/actions/set-up-actionlint@v3.1.0
 - run: actionlint
 ```

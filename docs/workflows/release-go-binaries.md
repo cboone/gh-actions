@@ -25,7 +25,7 @@ Run GoReleaser to build and publish a Go release.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-go-binaries.yml@v3.0.0
+    uses: cboone/gh-actions/.github/workflows/release-go-binaries.yml@v3.1.0
     with:
       goreleaser-version: "2.15.4"
     secrets:

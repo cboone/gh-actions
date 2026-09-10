@@ -42,7 +42,7 @@ workflow fails fast.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.0.0
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.1.0
     with:
       targets: >-
         [
@@ -57,7 +57,7 @@ With Homebrew formula updates:
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.0.0
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.1.0
     with:
       targets: >-
         [
@@ -85,7 +85,7 @@ To assert against the binary's output instead, pass `homebrew-test`:
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.0.0
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.1.0
     with:
       targets: >-
         [
@@ -111,7 +111,7 @@ tool that also links against `openssl`):
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.0.0
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v3.1.0
     with:
       targets: >-
         [

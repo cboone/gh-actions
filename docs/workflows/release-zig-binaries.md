@@ -33,7 +33,7 @@ x86_64-linux-gnu aarch64-linux-gnu x86_64-macos aarch64-macos x86_64-windows-gnu
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-zig-binaries.yml@v3.0.0
+    uses: cboone/gh-actions/.github/workflows/release-zig-binaries.yml@v3.1.0
     with:
       zig-version-file: build.zig.zon
       binary-name: "my-tool"

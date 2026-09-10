@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-10
+
 ### Added
 
 - `lint-text.yml` `use-consumer-versions` input (boolean, default
@@ -50,6 +52,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runs `lake lint` and `lake test` directly so consumers' own Lake
   targets are exercised. Replaces the duplicated single-file Lean CI
   configurations in downstream Lean repos (#36)
+- `homebrew-test` input on `release-rust-binaries.yml` for supplying
+  custom Ruby code to the generated formula's `test do ... end` block.
+  Defaults to `system bin/"<binary>", "--version"` when empty (#55)
+- Explicit validation of consumer-installed lint tools in
+  `lint-text.yml` when `use-consumer-versions` is true. Each enabled
+  tool missing from the consumer's lockfile now fails with a targeted
+  `::error::` annotation naming the fix, instead of a bare
+  `command not found` later in the run (#60)
+
+### Fixed
+
+- `lint-text.yml` runs `npm ci` only when at least one npm-backed tool
+  is enabled, and forces dev dependencies so tools resolve when the
+  consumer's environment sets `NODE_ENV=production` (#57)
+- `lint-text.yml` applies a preset only for tools the caller actually
+  enabled, so a `preset` with `run-cspell: false` no longer fetches a
+  cspell config the run never uses (#51)
+- `release-rust-binaries.yml` escapes `homebrew-desc` for Ruby
+  double-quoted strings, so a description containing a quote or
+  backslash no longer produces a formula Ruby cannot parse (#53)
+- `run-lean-ci.yml` drops the `lean-toolchain-file` input, which
+  suggested control it never had: lean-action reads `lean-toolchain`
+  from the repository root regardless (#52)
+- Prettier formats Markdown again. The `*.md` exclusion in
+  `.prettierignore` rested on markdownlint-cli2 `--fix` handling table
+  alignment, which it does not: MD060 has no auto-fix at any version.
+  Nothing was aligning tables and the linter could only complain.
+  `docs/plans/done/` stays excluded, since reformatting historical
+  records can mangle template syntax inside fenced blocks (#84)
+
+### Changed
+
+- Updated the pinned npm lint toolchain: cspell 10.0.0 to 10.3.0,
+  markdownlint-cli2 0.22.1 to 0.23.2, Prettier 3.8.3 to 3.9.6 (#90)
+- Updated pinned GitHub Actions: `actions/checkout` to v7.0.0 (#70),
+  `actions/cache` to v6.1.0 (#74), `github/codeql-action` to v4.37.1,
+  `softprops/action-gh-release` to v3.0.2, `crate-ci/typos` to v1.48.0
+  (#78), and `dtolnay/rust-toolchain` to its 2026-06-30 master commit
+  (#76)
+
+  Three of these change behavior consumers can observe:
+
+  - `actions/checkout` v7 refuses to check out a fork's pull request
+    under `pull_request_target` or `workflow_run`. Callers that invoke
+    these reusable workflows from either trigger against a fork PR will
+    need to restructure those jobs.
+  - markdownlint-cli2 0.23 drops support for end-of-life Node 20.
+    Callers overriding `lint-text.yml`'s `node-version` to 20 must move
+    to 22 or later; the default is unaffected.
+  - `crate-ci/typos` v1.48 carries new dictionaries, so `run-typos`
+    jobs may flag words that previously passed.
+
+### Security
+
+- Cleared every open npm advisory in the pinned lint toolchain, from
+  four high and one moderate down to zero. markdownlint-cli2 0.23.2
+  resolves the `js-yaml`, `markdown-it` and `linkify-it` findings
+  through its own pinned dependencies; a `smol-toml` override scoped to
+  `markdownlint-cli2` covers GHSA-7w5x-hrqm-74c2, which its exact pin
+  leaves npm no room to resolve. The override is deliberately scoped
+  rather than repo-wide, so cspell keeps resolving inside its own
+  declared `^1.8.0` range (#90)
 
 ## [3.0.0] - 2026-05-02
 
@@ -359,7 +423,8 @@ install --global "<pkg>@<version>"` (no integrity check) with `npm ci`
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v3.0.0...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/cboone/gh-actions/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/cboone/gh-actions/compare/v2.2.0...v3.0.0
 [2.2.0]: https://github.com/cboone/gh-actions/compare/v2.1.4...v2.2.0
 [2.1.4]: https://github.com/cboone/gh-actions/compare/v2.1.3...v2.1.4
