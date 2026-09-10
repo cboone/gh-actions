@@ -119,6 +119,12 @@ anything that runs in CI.
 - **`package.json` devDependencies**: exact versions (no `^`/`~`); the
   `package-lock.json` provides per-package sha512 integrity for any
   fresh `npm ci`.
+- **npm `overrides`**: `smol-toml` is forced to a patched release.
+  markdownlint-cli2 pins `smol-toml` to an exact version that carries a
+  DoS advisory (GHSA-7w5x-hrqm-74c2, patched in 1.7.1), and an exact
+  pin leaves no room for npm to resolve the fix on its own. The
+  override is still integrity-pinned in `package-lock.json`. Remove it
+  once markdownlint-cli2 pins a patched `smol-toml` itself.
 
 The general principle: **never let an upstream registry (npm, PyPI,
 crates.io) be the sole integrity boundary for anything that runs in
