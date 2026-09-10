@@ -307,11 +307,17 @@ per the existing rule in `.github/copilot-instructions.md`.
 
 ## Releasing
 
-This repository has no GoReleaser config or release workflow for itself.
-Releases are pure Git tags. Use the `/release` skill, which analyzes
-conventional commits, recommends a version bump, updates CHANGELOG.md,
-creates a release commit, and tags it locally. Then push the commit and
-tag. See the README Versioning section for full details.
+This repository has no GoReleaser config; releases are plain Git tags.
+Use the `/release` skill, which analyzes conventional commits,
+recommends a version bump, updates CHANGELOG.md, creates a release
+commit, and tags it locally. Then push the commit and tag.
+
+Pushing a `v*.*.*` tag triggers `create-gh-release-on-tag.yml`, which
+calls `create-gh-release-from-changelog.yml` to publish the GitHub
+Release. That workflow reads the notes out of the `## [VERSION]`
+section of CHANGELOG.md, so the section must exist before the tag is
+pushed or the release job fails. Do not create the GitHub Release by
+hand. See the README Versioning section for full details.
 
 When a release introduces breaking changes (path renames, removed inputs,
 removed components), document them in `docs/migrations/vN.md` (parallel to
