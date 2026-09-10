@@ -7,16 +7,16 @@ and yamllint YAML validation. Each tool can be toggled independently.
 
 ## Inputs
 
-| Name                    | Type    | Default     | Description                                                                  |
-| ----------------------- | ------- | ----------- | ---------------------------------------------------------------------------- |
-| `node-version`          | string  | `"24.15.0"` | Node.js version to install                                                   |
-| `run-markdownlint`      | boolean | `true`      | Run markdownlint-cli2                                                        |
-| `run-prettier`          | boolean | `true`      | Run Prettier format check                                                    |
-| `run-cspell`            | boolean | `false`     | Run cspell spell checker                                                     |
-| `run-yamllint`          | boolean | `false`     | Run yamllint                                                                 |
-| `preset`                | string  | `""`        | Optional preset config bundle (see below)                                    |
-| `use-consumer-versions` | boolean | `false`     | Install npm-based lint tools from the consumer's own lockfile (see below)    |
-| `timeout-minutes`       | number  | `10`        | Job timeout in minutes                                                       |
+| Name                    | Type    | Default     | Description                                                               |
+| ----------------------- | ------- | ----------- | ------------------------------------------------------------------------- |
+| `node-version`          | string  | `"24.15.0"` | Node.js version to install                                                |
+| `run-markdownlint`      | boolean | `true`      | Run markdownlint-cli2                                                     |
+| `run-prettier`          | boolean | `true`      | Run Prettier format check                                                 |
+| `run-cspell`            | boolean | `false`     | Run cspell spell checker                                                  |
+| `run-yamllint`          | boolean | `false`     | Run yamllint                                                              |
+| `preset`                | string  | `""`        | Optional preset config bundle (see below)                                 |
+| `use-consumer-versions` | boolean | `false`     | Install npm-based lint tools from the consumer's own lockfile (see below) |
+| `timeout-minutes`       | number  | `10`        | Job timeout in minutes                                                    |
 
 ### Preset configs
 

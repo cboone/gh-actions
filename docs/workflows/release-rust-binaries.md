@@ -14,22 +14,22 @@ workflow fails fast.
 
 ## Inputs
 
-| Name                    | Type    | Default               | Description                                                  |
-| ----------------------- | ------- | --------------------- | ------------------------------------------------------------ |
-| `targets`               | string  |                       | JSON array of `{"target","runner"}` objects (required)       |
+| Name                    | Type    | Default               | Description                                                                                 |
+| ----------------------- | ------- | --------------------- | ------------------------------------------------------------------------------------------- |
+| `targets`               | string  |                       | JSON array of `{"target","runner"}` objects (required)                                      |
 | `binary-name`           | string  | `""`                  | Binary name (extracted from Cargo.toml if empty; required when `update-homebrew` is `true`) |
-| `rust-version`          | string  | `""`                  | Rust toolchain version to install (overrides file)           |
-| `rust-toolchain-file`   | string  | `rust-toolchain.toml` | Path to a `rust-toolchain.toml` in the consumer repo         |
-| `build-args`            | string  | `""`                  | Additional arguments for cargo build                         |
-| `archive-prefix`        | string  | `""`                  | Override archive prefix (default: {binary}-{version})        |
-| `update-homebrew`       | boolean | `false`               | Update a Homebrew formula after releasing                    |
-| `homebrew-tap`          | string  | `""`                  | Homebrew tap repository (e.g. user/homebrew-tap)             |
-| `homebrew-formula-path` | string  | `""`                  | Path to the formula in the tap repo (e.g. Formula/mytool.rb) |
-| `homebrew-license`      | string  | `"MIT"`               | SPDX license identifier for the Homebrew formula             |
-| `homebrew-test`         | string  | `""`                  | Custom Ruby body for the formula `test do` block             |
-| `homebrew-desc`         | string  | `""`                  | Description for the Homebrew formula (defaults to binary)    |
-| `homebrew-depends-on`   | string  | `""`                  | Newline-delimited Homebrew `depends_on` declarations         |
-| `timeout-minutes`       | number  | `30`                  | Job timeout in minutes                                       |
+| `rust-version`          | string  | `""`                  | Rust toolchain version to install (overrides file)                                          |
+| `rust-toolchain-file`   | string  | `rust-toolchain.toml` | Path to a `rust-toolchain.toml` in the consumer repo                                        |
+| `build-args`            | string  | `""`                  | Additional arguments for cargo build                                                        |
+| `archive-prefix`        | string  | `""`                  | Override archive prefix (default: {binary}-{version})                                       |
+| `update-homebrew`       | boolean | `false`               | Update a Homebrew formula after releasing                                                   |
+| `homebrew-tap`          | string  | `""`                  | Homebrew tap repository (e.g. user/homebrew-tap)                                            |
+| `homebrew-formula-path` | string  | `""`                  | Path to the formula in the tap repo (e.g. Formula/mytool.rb)                                |
+| `homebrew-license`      | string  | `"MIT"`               | SPDX license identifier for the Homebrew formula                                            |
+| `homebrew-test`         | string  | `""`                  | Custom Ruby body for the formula `test do` block                                            |
+| `homebrew-desc`         | string  | `""`                  | Description for the Homebrew formula (defaults to binary)                                   |
+| `homebrew-depends-on`   | string  | `""`                  | Newline-delimited Homebrew `depends_on` declarations                                        |
+| `timeout-minutes`       | number  | `30`                  | Job timeout in minutes                                                                      |
 
 ## Secrets
 
