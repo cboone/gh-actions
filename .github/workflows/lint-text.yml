@@ -122,10 +122,10 @@ jobs:
             exit 0
           fi
           if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
-            msg="job.workflow_sha is unavailable, so the ${PRESET} preset"
-            msg="${msg} cannot be fetched. It is not populated on GitHub"
-            msg="${msg} Enterprise Server; ship a local markdownlint config"
-            msg="${msg} instead."
+            msg="job.workflow_repository or job.workflow_sha is unavailable,"
+            msg="${msg} so the ${PRESET} preset cannot be fetched. Neither is"
+            msg="${msg} populated on GitHub Enterprise Server; ship a local"
+            msg="${msg} markdownlint config instead."
             echo "::error::${msg}" >&2
             exit 1
           fi
@@ -160,10 +160,10 @@ jobs:
             exit 0
           fi
           if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
-            msg="job.workflow_sha is unavailable, so the ${PRESET} preset"
-            msg="${msg} cannot be fetched. It is not populated on GitHub"
-            msg="${msg} Enterprise Server; ship a local cspell config"
-            msg="${msg} instead."
+            msg="job.workflow_repository or job.workflow_sha is unavailable,"
+            msg="${msg} so the ${PRESET} preset cannot be fetched. Neither is"
+            msg="${msg} populated on GitHub Enterprise Server; ship a local"
+            msg="${msg} cspell config instead."
             echo "::error::${msg}" >&2
             exit 1
           fi
@@ -191,11 +191,11 @@ jobs:
           REQ_SHA: ${{ job.workflow_sha }}
         run: |
           if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
-            msg="job.workflow_sha is unavailable, so this workflow cannot"
-            msg="${msg} fetch its own pinned manifests. It is not populated"
-            msg="${msg} on GitHub Enterprise Server. Set"
-            msg="${msg} use-consumer-versions: true to install from your"
-            msg="${msg} own committed package-lock.json instead."
+            msg="job.workflow_repository or job.workflow_sha is unavailable,"
+            msg="${msg} so this workflow cannot fetch its own pinned"
+            msg="${msg} manifests. Neither is populated on GitHub Enterprise"
+            msg="${msg} Server. Set use-consumer-versions: true to install"
+            msg="${msg} from your own committed package-lock.json instead."
             echo "::error::${msg}" >&2
             exit 1
           fi
@@ -313,10 +313,10 @@ jobs:
           REQ_SHA: ${{ job.workflow_sha }}
         run: |
           if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
-            msg="job.workflow_sha is unavailable, so the hash-pinned"
-            msg="${msg} yamllint requirements cannot be fetched. It is not"
-            msg="${msg} populated on GitHub Enterprise Server; set"
-            msg="${msg} run-yamllint: false there."
+            msg="job.workflow_repository or job.workflow_sha is unavailable,"
+            msg="${msg} so the hash-pinned yamllint requirements cannot be"
+            msg="${msg} fetched. Neither is populated on GitHub Enterprise"
+            msg="${msg} Server; set run-yamllint: false there."
             echo "::error::${msg}" >&2
             exit 1
           fi
