@@ -88,27 +88,24 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
 
-      # Fetch preset configs from this repo at the workflow's own SHA
-      # (same supply-chain model as the npm and yamllint installs below).
-      # Each preset config is written into the workspace only when the
-      # corresponding tool is enabled and the consumer does not already
-      # ship a local config, so a local config always wins and disabled
-      # tools never trigger a fetch. Auto-discovery picks up the
+      # Fetch preset configs from the workflow's own repository and
+      # commit (same supply-chain model as the npm and yamllint installs
+      # below). Each preset config is written into the workspace only
+      # when the corresponding tool is enabled and the consumer does not
+      # already ship a local config, so a local config always wins and
+      # disabled tools never trigger a fetch. Auto-discovery picks up the
       # dropped-in file naturally; this keeps relative paths in the
       # preset config (e.g. `./cspell-words.txt`, `references/**`)
-      # resolving against the workspace.
+      # resolving against the workspace. The local-config check runs
+      # before the job-context check so a consumer that ships its own
+      # config never depends on a value it does not need.
       - name: Apply markdownlint preset
         if: inputs.preset != '' && inputs.run-markdownlint
         env:
           PRESET: ${{ inputs.preset }}
-          REQ_SHA: ${{ github.job_workflow_sha }}
+          REQ_REPO: ${{ job.workflow_repository }}
+          REQ_SHA: ${{ job.workflow_sha }}
         run: |
-          if [ -z "${REQ_SHA}" ]; then
-            echo "::error::github.job_workflow_sha is empty; this workflow must be called via workflow_call." >&2
-            exit 1
-          fi
-          base="https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}/presets/${PRESET}"
-
           has_local_md=0
           for f in .markdownlint-cli2.jsonc .markdownlint-cli2.yaml \
                    .markdownlint-cli2.cjs .markdownlint-cli2.mjs \
@@ -120,26 +117,32 @@ jobs:
               break
             fi
           done
-          if [ "${has_local_md}" -eq 0 ]; then
-            curl -sSfL "${base}/.markdownlint-cli2.jsonc" \
-              -o ".markdownlint-cli2.jsonc"
-            echo "Applied ${PRESET} markdownlint preset."
-          else
+          if [ "${has_local_md}" -ne 0 ]; then
             echo "Local markdownlint config detected; skipping preset."
+            exit 0
           fi
+          if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
+            msg="job.workflow_sha is unavailable, so the ${PRESET} preset"
+            msg="${msg} cannot be fetched. It is not populated on GitHub"
+            msg="${msg} Enterprise Server; ship a local markdownlint config"
+            msg="${msg} instead."
+            echo "::error::${msg}" >&2
+            exit 1
+          fi
+          base="https://raw.githubusercontent.com/${REQ_REPO}/${REQ_SHA}/presets/${PRESET}"
+          echo "Fetching from ${base}"
+          curl -sSfL --retry 3 --retry-delay 5 --retry-all-errors \
+            "${base}/.markdownlint-cli2.jsonc" \
+            -o ".markdownlint-cli2.jsonc"
+          echo "Applied ${PRESET} markdownlint preset."
 
       - name: Apply cspell preset
         if: inputs.preset != '' && inputs.run-cspell
         env:
           PRESET: ${{ inputs.preset }}
-          REQ_SHA: ${{ github.job_workflow_sha }}
+          REQ_REPO: ${{ job.workflow_repository }}
+          REQ_SHA: ${{ job.workflow_sha }}
         run: |
-          if [ -z "${REQ_SHA}" ]; then
-            echo "::error::github.job_workflow_sha is empty; this workflow must be called via workflow_call." >&2
-            exit 1
-          fi
-          base="https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}/presets/${PRESET}"
-
           has_local_cspell=0
           for f in cspell.json cspell.jsonc \
                    cspell.config.json cspell.config.jsonc \
@@ -152,35 +155,58 @@ jobs:
               break
             fi
           done
-          if [ "${has_local_cspell}" -eq 0 ]; then
-            curl -sSfL "${base}/cspell.jsonc" -o "cspell.jsonc"
-            echo "Applied ${PRESET} cspell preset."
-          else
+          if [ "${has_local_cspell}" -ne 0 ]; then
             echo "Local cspell config detected; skipping preset."
+            exit 0
           fi
+          if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
+            msg="job.workflow_sha is unavailable, so the ${PRESET} preset"
+            msg="${msg} cannot be fetched. It is not populated on GitHub"
+            msg="${msg} Enterprise Server; ship a local cspell config"
+            msg="${msg} instead."
+            echo "::error::${msg}" >&2
+            exit 1
+          fi
+          base="https://raw.githubusercontent.com/${REQ_REPO}/${REQ_SHA}/presets/${PRESET}"
+          echo "Fetching from ${base}"
+          curl -sSfL --retry 3 --retry-delay 5 --retry-all-errors \
+            "${base}/cspell.jsonc" -o "cspell.jsonc"
+          echo "Applied ${PRESET} cspell preset."
 
       - name: Install lint tools (sha512-verified via gh-actions lockfile)
         if: >-
           ${{ !inputs.use-consumer-versions
           && (inputs.run-markdownlint || inputs.run-prettier || inputs.run-cspell) }}
         env:
-          # Pin package.json + package-lock.json to the same SHA as this
-          # workflow so a tampered registry response cannot slip past npm
-          # ci's per-package integrity check. job_workflow_sha is always
-          # set when a job comes from a reusable workflow; we fail fast
-          # rather than falling back to github.sha (the caller repo's
-          # commit, which would 404 on raw.githubusercontent.com).
-          REQ_SHA: ${{ github.job_workflow_sha }}
+          # Pin package.json + package-lock.json to the repository and
+          # commit this workflow file itself came from, so a tampered
+          # registry response cannot slip past npm ci's per-package
+          # integrity check. The `job` context carries that identity;
+          # `github.*` describes the caller, so github.sha would be the
+          # caller's commit and 404 on raw.githubusercontent.com. These
+          # two values cannot be hoisted into a job-level or
+          # workflow-level `env:` block: the `job` context is only
+          # available on steps.
+          REQ_REPO: ${{ job.workflow_repository }}
+          REQ_SHA: ${{ job.workflow_sha }}
         run: |
-          if [ -z "${REQ_SHA}" ]; then
-            echo "::error::github.job_workflow_sha is empty; this workflow must be called via workflow_call." >&2
+          if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
+            msg="job.workflow_sha is unavailable, so this workflow cannot"
+            msg="${msg} fetch its own pinned manifests. It is not populated"
+            msg="${msg} on GitHub Enterprise Server. Set"
+            msg="${msg} use-consumer-versions: true to install from your"
+            msg="${msg} own committed package-lock.json instead."
+            echo "::error::${msg}" >&2
             exit 1
           fi
           install_dir="${RUNNER_TEMP}/lint-text-tools"
           mkdir -p "${install_dir}"
-          base="https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}"
-          curl -sSfL "${base}/package.json"      -o "${install_dir}/package.json"
-          curl -sSfL "${base}/package-lock.json" -o "${install_dir}/package-lock.json"
+          base="https://raw.githubusercontent.com/${REQ_REPO}/${REQ_SHA}"
+          echo "Fetching from ${base}"
+          curl -sSfL --retry 3 --retry-delay 5 --retry-all-errors \
+            "${base}/package.json" -o "${install_dir}/package.json"
+          curl -sSfL --retry 3 --retry-delay 5 --retry-all-errors \
+            "${base}/package-lock.json" -o "${install_dir}/package-lock.json"
           (cd "${install_dir}" && npm ci --ignore-scripts --include=dev --no-audit --no-fund)
           printf '%s\n' "${install_dir}/node_modules/.bin" >> "${GITHUB_PATH}"
 
@@ -279,18 +305,26 @@ jobs:
       - name: Install yamllint with hash-pinned requirements
         if: inputs.run-yamllint
         env:
-          # Pin the requirements file to the same SHA as this workflow,
-          # so callers cannot pick up a tampered hash list. See the npm
-          # install step above for why we do not fall back to github.sha.
-          REQ_SHA: ${{ github.job_workflow_sha }}
+          # Pin the requirements file to the repository and commit this
+          # workflow file came from, so callers cannot pick up a tampered
+          # hash list. See the npm install step above for why the `job`
+          # context rather than `github.*` supplies these.
+          REQ_REPO: ${{ job.workflow_repository }}
+          REQ_SHA: ${{ job.workflow_sha }}
         run: |
-          if [ -z "${REQ_SHA}" ]; then
-            echo "::error::github.job_workflow_sha is empty; this workflow must be called via workflow_call." >&2
+          if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
+            msg="job.workflow_sha is unavailable, so the hash-pinned"
+            msg="${msg} yamllint requirements cannot be fetched. It is not"
+            msg="${msg} populated on GitHub Enterprise Server; set"
+            msg="${msg} run-yamllint: false there."
+            echo "::error::${msg}" >&2
             exit 1
           fi
-          curl -sSfL \
+          base="https://raw.githubusercontent.com/${REQ_REPO}/${REQ_SHA}"
+          echo "Fetching from ${base}"
+          curl -sSfL --retry 3 --retry-delay 5 --retry-all-errors \
             -o "${RUNNER_TEMP}/yamllint-requirements.txt" \
-            "https://raw.githubusercontent.com/cboone/gh-actions/${REQ_SHA}/requirements/yamllint.txt"
+            "${base}/requirements/yamllint.txt"
           uv venv "${RUNNER_TEMP}/yamllint-venv" --quiet
           uv pip install \
             --python "${RUNNER_TEMP}/yamllint-venv/bin/python" \

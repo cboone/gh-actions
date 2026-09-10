@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `lint-text.yml` reads the workflow's own repository and commit from
+  `job.workflow_repository` and `job.workflow_sha` instead of
+  `github.job_workflow_sha`, which is not a real context property and
+  always evaluates to the empty string. Every fetch of this repo's
+  pinned manifests failed its guard, so on default inputs the workflow
+  failed before any linter ran, in v3.0.0 (unconditionally) and v3.1.0
+  (unless `use-consumer-versions: true` and no preset and no yamllint).
+  The `job` context properties were added on 2026-09-03 (#83)
+- `lint-text.yml` builds fetch URLs from `job.workflow_repository`
+  rather than a hardcoded `cboone/gh-actions`, so a fork calling its own
+  copy fetches its own manifests instead of 404ing on SHAs that do not
+  exist upstream. A private fork cannot serve them over
+  `raw.githubusercontent.com`; use `use-consumer-versions: true` there
+- `lint-text.yml` checks for a local markdownlint or cspell config
+  before checking the job context, so a consumer that sets `preset` and
+  also ships its own config no longer fails on a value it never uses
+- `lint-text.yml` retries its manifest fetches and logs the URL it
+  fetches from, so a failure of this class is diagnosable from the run
+  log
+
 ## [3.1.0] - 2026-09-10
 
 ### Added
