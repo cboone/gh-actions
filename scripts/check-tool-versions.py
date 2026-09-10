@@ -99,7 +99,16 @@ def nodejs_lts_latest(major: int) -> str:
 # Hardcoded current pinned versions. Update these together with the
 # workflow / action / Makefile / requirements.txt files when bumping.
 TOOLS: list[Tool] = [
-    Tool("actionlint", "1.7.12", lambda: github_latest_release("rhysd/actionlint")),
+    Tool(
+        "actionlint",
+        "1.7.12",
+        lambda: github_latest_release("rhysd/actionlint"),
+        notes=(
+            "On bump, check whether it recognizes the `job.workflow_*` context "
+            "properties; if it does, delete `.github/actionlint.yaml`, which "
+            "exists only to suppress that false positive."
+        ),
+    ),
     Tool("golangci-lint", "2.11.4", lambda: github_latest_release("golangci/golangci-lint")),
     Tool("gitleaks", "8.30.1", lambda: github_latest_release("gitleaks/gitleaks")),
     Tool("trufflehog", "3.95.2", lambda: github_latest_release("trufflesecurity/trufflehog")),

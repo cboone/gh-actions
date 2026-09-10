@@ -85,6 +85,36 @@ lockfile rather than this gh-actions repo. Requirements when
 `uv pip install --require-hashes` from this repo's
 `requirements/yamllint.txt`).
 
+### How the workflow reaches its own manifests
+
+The preset configs, `package.json` + `package-lock.json`, and
+`requirements/yamllint.txt` all live in this repo, not the consumer's.
+The workflow fetches them over `raw.githubusercontent.com` from
+`${{ job.workflow_repository }}` at `${{ job.workflow_sha }}`: the
+repository and commit the workflow file itself came from, which is
+whatever ref the caller pinned. That is what keeps the manifests and the
+workflow logic on the same commit, so a tampered registry response
+cannot pass the per-package integrity check.
+
+Two limitations follow from it:
+
+- **GitHub Enterprise Server.** The `job.workflow_*` properties are not
+  available there, so any step that fetches fails with an `::error::`
+  naming the constraint. A fully working configuration on GHES is
+  `use-consumer-versions: true` with `preset: ""` and
+  `run-yamllint: false`: it fetches nothing and still gets per-package
+  sha512 integrity from the consumer's own lockfile.
+- **Private forks of this repo.** `raw.githubusercontent.com` serves
+  public repositories only. A private fork cannot supply its own
+  manifests; use `use-consumer-versions: true` there as well, and ship
+  local markdownlint and cspell configs instead of a preset.
+
+Consumers on `@v3.0.0` or `@v3.1.0` hit an unconditional failure here:
+those releases read `github.job_workflow_sha`, which is not a real
+context property and is always empty
+([#83](https://github.com/cboone/gh-actions/issues/83)). Upgrade to
+`@v3.1.1` or later.
+
 ## Usage
 
 ```yaml
