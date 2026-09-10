@@ -11,7 +11,7 @@ Install GoReleaser binary with a pinned version.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-goreleaser@v3.1.0
+- uses: cboone/gh-actions/actions/set-up-goreleaser@v3.1.1
   with:
     version: "2.15.4"
 - run: goreleaser release --clean

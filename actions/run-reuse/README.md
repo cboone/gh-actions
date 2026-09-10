@@ -16,5 +16,5 @@ dependency is sha256-pinned via `uv pip compile --generate-hashes`).
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-reuse@v3.1.0
+- uses: cboone/gh-actions/actions/run-reuse@v3.1.1
 ```

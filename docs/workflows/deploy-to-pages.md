@@ -23,7 +23,7 @@ and/or Node.js before running the build command.
 ```yaml
 jobs:
   pages:
-    uses: cboone/gh-actions/.github/workflows/deploy-to-pages.yml@v3.1.0
+    uses: cboone/gh-actions/.github/workflows/deploy-to-pages.yml@v3.1.1
     with:
       build-command: "npm run build"
       artifact-path: ./dist

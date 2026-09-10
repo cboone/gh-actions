@@ -24,7 +24,7 @@ between `npm ci` and `npm install`.
 ```yaml
 jobs:
   publish:
-    uses: cboone/gh-actions/.github/workflows/publish-to-npm.yml@v3.1.0
+    uses: cboone/gh-actions/.github/workflows/publish-to-npm.yml@v3.1.1
     secrets:
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```

@@ -23,5 +23,5 @@ updating the hardcoded SHA-256 checksums in
 ```yaml
 jobs:
   shell:
-    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v3.1.0
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v3.1.1
 ```

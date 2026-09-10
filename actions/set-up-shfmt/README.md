@@ -14,6 +14,6 @@ the hardcoded SHA-256 checksums in `actions/set-up-shfmt/action.yml` first.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-shfmt@v3.1.0
+- uses: cboone/gh-actions/actions/set-up-shfmt@v3.1.1
 - run: shfmt -d .
 ```

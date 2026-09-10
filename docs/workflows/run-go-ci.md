@@ -43,7 +43,7 @@ operation.
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@v3.1.0
+    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@v3.1.1
     with:
       run-lint: true
       run-format-check: true

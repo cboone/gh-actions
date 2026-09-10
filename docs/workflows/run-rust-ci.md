@@ -50,7 +50,7 @@ workflow fails fast.
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v3.1.0
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v3.1.1
     with:
       run-deny: true
       run-audit: true
@@ -62,7 +62,7 @@ With cargo-nextest and coverage:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v3.1.0
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v3.1.1
     with:
       use-nextest: true
       coverage: true

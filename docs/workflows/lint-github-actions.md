@@ -16,5 +16,5 @@ Run actionlint to validate GitHub Actions workflow files.
 ```yaml
 jobs:
   github:
-    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v3.1.0
+    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v3.1.1
 ```

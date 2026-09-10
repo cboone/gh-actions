@@ -115,15 +115,15 @@ property and is always empty
 ([#83](https://github.com/cboone/gh-actions/issues/83)). On `@v3.0.0`
 the failure is unconditional. On `@v3.1.0` the only configuration that
 avoids it is `use-consumer-versions: true` with `preset: ""` and
-`run-yamllint: false`. The fix ships in the first release tagged after
-`v3.1.0`; pin that tag or later.
+`run-yamllint: false`. The fix ships in `v3.1.1`; pin `@v3.1.1` or
+later.
 
 ## Usage
 
 ```yaml
 jobs:
   text:
-    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.1.0
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.1.1
     with:
       run-cspell: true
 ```
@@ -133,7 +133,7 @@ Academic Markdown repo with the `lean-math` preset:
 ```yaml
 jobs:
   text:
-    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.1.0
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.1.1
     with:
       run-cspell: true
       run-prettier: false
@@ -146,7 +146,7 @@ Repo that wants CI to use its own pinned tool versions from
 ```yaml
 jobs:
   text:
-    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.1.0
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.1.1
     with:
       run-cspell: true
       use-consumer-versions: true
