@@ -16,7 +16,9 @@ runs:
         # install-pinned-tool is a sibling of this action inside the
         # gh-actions checkout the runner makes when loading it, so both come
         # from the same commit. Unused installer variables are set empty so
-        # a caller's job-level env cannot reach the installer.
+        # a caller's job-level env cannot reach the installer. INSTALLER stays
+        # in `env:` because, for a job that sets `container:`, the runner
+        # translates host paths there but not in expressions in `run:`.
         INSTALLER: ${{ github.action_path }}/../install-pinned-tool/install-pinned-tool.sh
         TOOL: actionlint
         VERSION: ${{ inputs.version }}

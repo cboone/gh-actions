@@ -299,12 +299,14 @@ per the existing rule in `.github/copilot-instructions.md`.
 
 1. Create `actions/<name>/action.yml` with `using: composite`.
 1. Accept a `version` input with a pinned default.
-1. For a release binary, run
+1. For a release binary, bind
    `${{ github.action_path }}/../install-pinned-tool/install-pinned-tool.sh`
-   with the tool's URL template and checksum source, as
-   `actions/set-up-shfmt/action.yml` does, and set the installer variables
-   the tool does not use to `""` so a caller's job-level `env` cannot reach
-   them. The script detects OS and architecture, downloads, verifies the
+   to an `env:` variable and run it with the tool's URL template and
+   checksum source, as `actions/set-up-shfmt/action.yml` does. Keep the
+   path in `env:`: for a job that sets `container:`, the runner translates
+   host paths in `env:` values but not in an expression written into
+   `run:`. Set the installer variables the tool does not use to `""` so a
+   caller's job-level `env` cannot reach them. The script detects OS and architecture, downloads, verifies the
    SHA-256, installs to `RUNNER_TEMP`, and appends to `GITHUB_PATH`.
    Anything else detects OS and architecture with `uname -s` / `uname -m`
    case statements, verifies a SHA-256, installs to `RUNNER_TEMP`, and

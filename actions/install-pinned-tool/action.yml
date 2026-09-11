@@ -81,7 +81,10 @@ runs:
         # inside the gh-actions checkout the runner makes when loading the
         # composite action. The reusable workflows in this repo fetch the
         # same script at their own commit instead, because a `./` path in a
-        # reusable workflow resolves against the caller's checkout.
+        # reusable workflow resolves against the caller's checkout. Keep the
+        # path in `env:`: for a job that sets `container:`, the runner
+        # translates host paths in `env:` values, but not in an expression
+        # written into `run:`.
         INSTALLER: ${{ github.action_path }}/install-pinned-tool.sh
         TOOL: ${{ inputs.tool }}
         VERSION: ${{ inputs.version }}
