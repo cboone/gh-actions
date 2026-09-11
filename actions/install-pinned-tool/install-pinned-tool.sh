@@ -64,7 +64,26 @@ readonly SHA256_PATTERN='^[0-9a-f]{64}$'
 # Staging directory for downloads and extraction, removed on exit.
 WORK_DIR=""
 
-# Emit an ::error:: annotation, then exit.
+# Encode text as workflow-command data, as @actions/core's escapeData does:
+# % becomes %25, CR %0D and LF %0A, so the text stays on one line and can
+# neither end a command early nor start another.
+# Arguments:
+#   $1 - text
+function escape_data() {
+  local text="${1}"
+  local percent='%'
+  local cr=$'\r'
+  local lf=$'\n'
+  text="${text//"${percent}"/%25}"
+  text="${text//"${cr}"/%0D}"
+  text="${text//"${lf}"/%0A}"
+  printf '%s' "${text}"
+}
+
+# Emit an ::error:: annotation, then exit. The headline and the detail lines
+# can repeat caller input, so each is encoded with escape_data. A detail line
+# must also begin with fixed text: the runner reads any output line that
+# starts with "::", after trimming leading whitespace, as a workflow command.
 # Arguments:
 #   $1 - exit code
 #   $2 - headline for the annotation
@@ -73,10 +92,10 @@ function fail() {
   local exit_code="${1}"
   local headline="${2}"
   shift 2
-  echo "::error::${headline}" >&2
+  printf '::error::%s\n' "$(escape_data "${headline}")" >&2
   local line
   for line in "$@"; do
-    echo "${line}" >&2
+    printf '%s\n' "$(escape_data "${line}")" >&2
   done
   exit "${exit_code}"
 }
@@ -242,9 +261,10 @@ function lookup_checksum() {
   if [[ -z "${matches}" ]]; then
     fail "${E_CHECKSUM}" "No checksum entry for ${asset_name} in ${source_label}."
   fi
-  if [[ "${matches}" == *$'\n'* ]]; then
+  local lf=$'\n'
+  if [[ "${matches}" == *"${lf}"* ]]; then
     fail "${E_CHECKSUM}" "Conflicting checksum entries for ${asset_name} in ${source_label}." \
-      "${matches}"
+      "Entries: ${matches//"${lf}"/, }"
   fi
   printf '%s' "${matches}"
 }
@@ -284,6 +304,18 @@ function main() {
   fi
   if [[ -n "${checksums_url_template}" && "${checksums_url_template}" != https://* ]]; then
     fail "${E_USAGE}" "checksums-url-template for ${tool} must be an https:// URL, got '${checksums_url_template}'."
+  fi
+  # The URLs and the archive member reach curl, tar and the log, so none may
+  # carry a line break or other control character, and a URL may not contain
+  # whitespace at all.
+  if [[ "${url_template}" == *[[:space:][:cntrl:]]* ]]; then
+    fail "${E_USAGE}" "url-template for ${tool} must not contain whitespace or control characters."
+  fi
+  if [[ "${checksums_url_template}" == *[[:space:][:cntrl:]]* ]]; then
+    fail "${E_USAGE}" "checksums-url-template for ${tool} must not contain whitespace or control characters."
+  fi
+  if [[ "${archive_member}" == *[[:cntrl:]]* ]]; then
+    fail "${E_USAGE}" "archive-member for ${tool} must not contain control characters."
   fi
 
   local -i source_count=0
@@ -368,8 +400,13 @@ function main() {
     # packed beside the binary never land on disk. tar detects the
     # compression itself on both GNU tar and bsdtar, and `--` ends its
     # options so the member is never parsed as one.
-    if ! tar -x -f "${asset_path}" -C "${WORK_DIR}/extract" -- "${member}"; then
+    # tar's own messages can begin with the member name, so they are captured
+    # and reported behind fixed text instead of reaching the log directly.
+    local tar_output
+    local lf=$'\n'
+    if ! tar_output="$(tar -x -f "${asset_path}" -C "${WORK_DIR}/extract" -- "${member}" 2>&1)"; then
       fail "${E_MEMBER}" "Could not extract ${member} from ${asset_name}." \
+        "tar reported: ${tar_output//"${lf}"/ | }" \
         "Spell archive-member exactly as 'tar -tf' lists it: GNU tar (Linux) treats" \
         "./NAME and NAME as different members, where bsdtar (macOS) accepts either."
     fi
