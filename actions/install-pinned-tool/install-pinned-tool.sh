@@ -203,9 +203,11 @@ function download() {
   local url="${1}"
   local destination="${2}"
   echo "Downloading ${url}" >&2
-  # --retry-all-errors is what makes --retry cover the HTTP errors that
-  # --fail reports, such as a CDN answering 404 briefly after a release.
-  if ! curl --silent --show-error --fail --location \
+  # --proto '=https' also governs every redirect --location follows, so a
+  # redirect cannot downgrade the transfer to plain http. --retry-all-errors
+  # is what makes --retry cover the HTTP errors that --fail reports, such as
+  # a CDN answering 404 briefly after a release.
+  if ! curl --silent --show-error --fail --location --proto '=https' \
     --retry "${DOWNLOAD_RETRIES}" --retry-delay "${DOWNLOAD_RETRY_DELAY}" \
     --retry-all-errors --output "${destination}" "${url}"; then
     fail "${E_DOWNLOAD}" "Download failed: ${url}"
@@ -360,7 +362,9 @@ function main() {
     # packed beside the binary never land on disk. tar detects the
     # compression itself on both GNU tar and bsdtar.
     if ! tar -x -f "${asset_path}" -C "${WORK_DIR}/extract" "${member}"; then
-      fail "${E_MEMBER}" "Could not extract ${member} from ${asset_name}."
+      fail "${E_MEMBER}" "Could not extract ${member} from ${asset_name}." \
+        "Spell archive-member exactly as 'tar -tf' lists it: GNU tar (Linux) treats" \
+        "./NAME and NAME as different members, where bsdtar (macOS) accepts either."
     fi
     if [[ ! -f "${WORK_DIR}/extract/${member}" ]]; then
       fail "${E_MEMBER}" "${member} in ${asset_name} is not a regular file."

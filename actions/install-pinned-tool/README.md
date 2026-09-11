@@ -45,12 +45,15 @@ a path relative to their own directory.
   ```
 
 - **Archives.** `archive-member` names the binary inside a tar archive; tar
-  detects gzip, xz and bzip2 compression itself. Only that member is
+  detects gzip, xz and bzip2 compression itself. Spell it exactly as
+  `tar -tf` lists it: GNU tar on Linux runners treats `./typos` and `typos`
+  as different members, while bsdtar on macOS accepts either, so a spelling
+  that works on one platform can fail on the other. Only that member is
   extracted, so documentation and man pages packed beside the binary never
   land on disk. Leave it empty when the asset is the binary itself.
 - **Install location.** The binary is installed as `<install-dir>/<tool>`,
   where `install-dir` is `$RUNNER_TEMP/<tool>-bin`. Downloads use `https://`
-  only.
+  only, and a redirect to plain `http://` fails the step.
 
 ## Inputs
 

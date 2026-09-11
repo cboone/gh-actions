@@ -17,8 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `checksums` (per-platform `sha256sum` lines keyed by asset name) and
   `checksums-url-template` (an upstream checksum file); and
   `archive-member` extracts a single member from a tar archive. The
-  asset is downloaded to a file and verified before anything reads it.
-  Linux and macOS runners, amd64 and arm64 (#87)
+  asset is downloaded over https only, redirects included, to a file
+  and verified before anything reads it. Linux and macOS runners, amd64
+  and arm64 (#87)
 - `set-up-shfmt` `checksums` input: `sha256sum`-format lines for the
   shfmt release binaries, defaulting to v3.13.1 on four platforms.
   Overriding `version` together with `checksums` installs any shfmt

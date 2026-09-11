@@ -46,8 +46,9 @@ inputs:
   archive-member:
     description: >-
       Path of the binary inside a tar archive, with the same placeholders
-      as `url-template`. Only that member is extracted. Leave empty when
-      the asset is the binary itself.
+      as `url-template`, spelled exactly as `tar -tf` lists it: GNU tar on
+      Linux treats `./name` and `name` as different members. Only that
+      member is extracted. Leave empty when the asset is the binary itself.
     required: false
     default: ""
   os-names:
