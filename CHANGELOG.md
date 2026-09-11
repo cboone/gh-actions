@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Overriding `version` together with `checksums` installs any shfmt
   release, where the action used to refuse every version but 3.13.1
   (#87)
+- `lint-shell.yml` `shfmt-checksums` input: `sha256sum`-format lines
+  for the shfmt release binaries, defaulting to v3.13.1's. Overriding
+  `shfmt-version` together with `shfmt-checksums` lints with any shfmt
+  release, where the workflow used to refuse every version but 3.13.1
+  (#87)
 
 ### Changed
 
@@ -31,6 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `install-pinned-tool`'s script instead of their own inline copies.
   Their inputs, defaults, and checksum sources are unchanged apart from
   `set-up-shfmt`'s new `checksums` input (#87)
+- `lint-shell.yml` and `lint-github-actions.yml` install shfmt and
+  actionlint by fetching `install-pinned-tool`'s script from
+  `job.workflow_repository` at `job.workflow_sha`, the model
+  `lint-text.yml` uses for its manifests, instead of carrying inline
+  installers. Both now depend on those `job` context properties, which
+  GitHub Enterprise Server does not populate: there, `lint-shell.yml`
+  needs `run-shfmt: false`, and `lint-github-actions.yml` is not
+  supported (run `set-up-actionlint` in your own job instead). A
+  private fork of this repo cannot serve the script either (#87)
 
 ## [3.1.1] - 2026-09-10
 

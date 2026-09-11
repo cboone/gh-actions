@@ -12,9 +12,25 @@ on:
         type: boolean
         default: true
       shfmt-version:
-        description: shfmt version to install.
+        description: >-
+          shfmt version to install. When overriding it, pass that version's
+          checksums in shfmt-checksums too.
         type: string
         default: "3.13.1"
+      shfmt-checksums:
+        description: >-
+          SHA-256 of each shfmt release binary, one
+          `<sha256>  <asset file name>` line per platform, as sha256sum
+          prints them. shfmt releases from v3.13.0 on ship no checksum file
+          (mvdan/sh#1283, mvdan/sh#1309), so these are committed here. The
+          job runs on ubuntu-latest, so an override needs at least the
+          linux_amd64 line.
+        type: string
+        default: |
+          fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1  shfmt_v3.13.1_linux_amd64
+          32d92acaa5cd8abb29fc49dac123dc412442d5713967819d8af2c29f1b3857c7  shfmt_v3.13.1_linux_arm64
+          6feedafc72915794163114f512348e2437d080d0047ef8b8fa2ec63b575f12af  shfmt_v3.13.1_darwin_amd64
+          9680526be4a66ea1ffe988ed08af58e1400fe1e4f4aef5bd88b20bb9b3da33f8  shfmt_v3.13.1_darwin_arm64
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -65,74 +81,47 @@ jobs:
         run: |
           echo "${SHELL_SCRIPTS}" | tr '\n' '\0' | xargs -0 shellcheck
 
+      # Fetch the installer from the repository and commit this workflow
+      # file came from, the supply-chain model lint-text.yml uses for its
+      # manifests, so the script and this workflow always share a commit. A
+      # `./` action path would resolve against the caller's checkout
+      # instead. The `job` context is only available on steps, so the two
+      # values are bound here rather than at job or workflow level. The
+      # step carries the shfmt install's condition, so a job that installs
+      # nothing never reads the job context.
+      - name: Fetch install-pinned-tool
+        if: >-
+          inputs.run-shfmt
+          && steps.find-scripts.outputs.found == 'true'
+        env:
+          REQ_REPO: ${{ job.workflow_repository }}
+          REQ_SHA: ${{ job.workflow_sha }}
+        run: |
+          if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
+            msg="job.workflow_repository or job.workflow_sha is unavailable,"
+            msg="${msg} so this workflow cannot fetch its pinned installer."
+            msg="${msg} Neither is populated on GitHub Enterprise Server; set"
+            msg="${msg} run-shfmt: false there, or install shfmt in your own"
+            msg="${msg} job with the set-up-shfmt action."
+            echo "::error::${msg}" >&2
+            exit 1
+          fi
+          base="https://raw.githubusercontent.com/${REQ_REPO}/${REQ_SHA}"
+          echo "Fetching from ${base}"
+          curl -sSfL --retry 3 --retry-delay 5 --retry-all-errors \
+            "${base}/actions/install-pinned-tool/install-pinned-tool.sh" \
+            -o "${RUNNER_TEMP}/install-pinned-tool.sh"
+
       - name: Install shfmt
         if: >-
           inputs.run-shfmt
           && steps.find-scripts.outputs.found == 'true'
-        shell: bash
         env:
+          TOOL: shfmt
           VERSION: ${{ inputs.shfmt-version }}
-        run: |
-          case "$(uname -s)" in
-            Linux) os="linux" ;;
-            Darwin) os="darwin" ;;
-            *)
-              echo "Unsupported operating system: $(uname -s)" >&2
-              exit 1
-              ;;
-          esac
-
-          case "$(uname -m)" in
-            x86_64) arch="amd64" ;;
-            arm64|aarch64) arch="arm64" ;;
-            *)
-              echo "Unsupported architecture: $(uname -m)" >&2
-              exit 1
-              ;;
-          esac
-
-          # Hardcoded SHA-256 checksums for shfmt v3.13.1 release binaries.
-          # shfmt upstream stopped publishing sha256sums.txt starting with
-          # v3.13.0 (mvdan/sh#1283, mvdan/sh#1309), so checksums are
-          # embedded here and must be updated when VERSION changes.
-          supported_version="3.13.1"
-          if [ "${VERSION}" != "${supported_version}" ]; then
-            echo "Unsupported shfmt version: ${VERSION}" >&2
-            echo "Checksums are only available for v${supported_version}." >&2
-            echo "To use a different version, update the checksums in this workflow." >&2
-            exit 1
-          fi
-
-          case "${os}-${arch}" in
-            linux-amd64)  expected="fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1" ;;
-            linux-arm64)  expected="32d92acaa5cd8abb29fc49dac123dc412442d5713967819d8af2c29f1b3857c7" ;;
-            darwin-amd64) expected="6feedafc72915794163114f512348e2437d080d0047ef8b8fa2ec63b575f12af" ;;
-            darwin-arm64) expected="9680526be4a66ea1ffe988ed08af58e1400fe1e4f4aef5bd88b20bb9b3da33f8" ;;
-            *)
-              echo "No checksum available for ${os}-${arch}" >&2
-              exit 1
-              ;;
-          esac
-
-          install_dir="${RUNNER_TEMP}/shfmt-bin"
-          mkdir -p "${install_dir}"
-          binary_name="shfmt_v${VERSION}_${os}_${arch}"
-          binary_path="${install_dir}/shfmt"
-          base="https://github.com/mvdan/sh/releases/download/v${VERSION}"
-          curl -sSfL "${base}/${binary_name}" -o "${binary_path}"
-          if command -v sha256sum >/dev/null 2>&1; then
-            actual="$(sha256sum "${binary_path}" | awk '{print $1}')"
-          else
-            actual="$(shasum -a 256 "${binary_path}" | awk '{print $1}')"
-          fi
-          if [ "${expected}" != "${actual}" ]; then
-            echo "Checksum verification failed for ${binary_name}" >&2
-            echo "Expected: ${expected}" >&2
-            echo "Actual:   ${actual}" >&2
-            exit 1
-          fi
-          chmod +x "${binary_path}"
-          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+          URL_TEMPLATE: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
+          CHECKSUMS: ${{ inputs.shfmt-checksums }}
+        run: bash "${RUNNER_TEMP}/install-pinned-tool.sh"
 
       - name: Run shfmt check
         if: >-

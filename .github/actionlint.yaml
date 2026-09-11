@@ -1,9 +1,9 @@
 # actionlint v1.7.12 predates the `job` context properties GitHub shipped on
 # 2026-09-03 (`job.workflow_ref`, `job.workflow_sha`, `job.workflow_repository`,
-# `job.workflow_file_path`), so it reports them as undefined. `lint-text.yml`
-# uses `job.workflow_repository` and `job.workflow_sha` to pin its
-# raw.githubusercontent.com fetches to the repository and commit the workflow
-# file itself came from.
+# `job.workflow_file_path`), so it reports them as undefined. `lint-text.yml`,
+# `lint-shell.yml` and `lint-github-actions.yml` use `job.workflow_repository`
+# and `job.workflow_sha` to pin their raw.githubusercontent.com fetches to the
+# repository and commit the workflow file itself came from.
 #
 # The pattern is anchored on `{check_run_id:`, which opens the `job` object
 # type, so a genuinely misspelled `workflow_sha` on any other object still
