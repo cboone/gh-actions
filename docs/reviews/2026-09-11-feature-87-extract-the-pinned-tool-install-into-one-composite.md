@@ -56,10 +56,10 @@ GitHub Enterprise Server workaround, retried `curl` into `RUNNER_TEMP`) and an
 ### CI self-hosting
 
 A matrix job runs the action on `ubuntu-latest`, `ubuntu-24.04-arm` and
-`macos-latest`: three direct installs covering each checksum source and
-archive shape, the two wrappers after clearing the direct installs, and three
-must-fail cases with an outcome assertion. A new `shell` job self-hosts
-`lint-shell.yml`.
+`macos-latest`: four direct installs covering each checksum source and
+archive shape, the two wrappers after clearing the direct installs, and four
+rejection cases that run the script under `/bin/bash` and assert each exit
+code and message. A new `shell` job self-hosts `lint-shell.yml`.
 
 - `.github/workflows/run-ci.yml`
 
@@ -81,7 +81,7 @@ must-fail cases with an outcome assertion. A new `shell` job self-hosts
 - `cspell.json`: `bsdtar`, `fosforo`, `tolower`.
 - `scripts/check-tool-versions.py`: the shfmt note names both checksum
   defaults.
-- `docs/plans/todo/2026-09-11-extract-pinned-tool-install-action.md`: the plan.
+- `docs/plans/done/2026-09-11-extract-pinned-tool-install-action.md`: the plan.
 
 ## File Inventory
 
@@ -90,7 +90,7 @@ must-fail cases with an outcome assertion. A new `shell` job self-hosts
 - `actions/install-pinned-tool/README.md`
 - `actions/install-pinned-tool/action.yml`
 - `actions/install-pinned-tool/install-pinned-tool.sh`
-- `docs/plans/todo/2026-09-11-extract-pinned-tool-install-action.md`
+- `docs/plans/done/2026-09-11-extract-pinned-tool-install-action.md`
 
 **Modified (16):** `.github/actionlint.yaml`, `.github/copilot-instructions.md`,
 `.github/workflows/lint-github-actions.yml`, `.github/workflows/lint-shell.yml`,
@@ -121,7 +121,7 @@ must-fail cases with an outcome assertion. A new `shell` job self-hosts
 
 ## Plan Compliance
 
-Plan: `docs/plans/todo/2026-09-11-extract-pinned-tool-install-action.md`
+Plan: `docs/plans/done/2026-09-11-extract-pinned-tool-install-action.md`
 
 **Verdict: good compliance.** Every planned change is implemented as designed,
 and every local verification step was run. The only items outstanding are
