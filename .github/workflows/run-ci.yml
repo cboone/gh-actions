@@ -4,7 +4,9 @@ name: Run CI
 # tested on every change. `text` in particular exercises the fetch path
 # that reads `job.workflow_repository` / `job.workflow_sha`; no
 # `paths-ignore` filter here, because the linters it runs cover every
-# file in the repo, Markdown and docs included.
+# file in the repo, Markdown and docs included. `install-pinned-tool`
+# runs that composite action from this checkout on Linux amd64, Linux
+# arm64 and macOS arm64, including inputs it must reject.
 
 on:
   push:
@@ -25,3 +27,133 @@ jobs:
     with:
       run-cspell: true
       run-yamllint: true
+
+  install-pinned-tool:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install shfmt (bare binary, committed checksums)
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: shfmt
+          version: 3.13.1
+          url-template: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
+          checksums: |
+            fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1  shfmt_v3.13.1_linux_amd64
+            32d92acaa5cd8abb29fc49dac123dc412442d5713967819d8af2c29f1b3857c7  shfmt_v3.13.1_linux_arm64
+            6feedafc72915794163114f512348e2437d080d0047ef8b8fa2ec63b575f12af  shfmt_v3.13.1_darwin_amd64
+            9680526be4a66ea1ffe988ed08af58e1400fe1e4f4aef5bd88b20bb9b3da33f8  shfmt_v3.13.1_darwin_arm64
+
+      - name: Install actionlint (archive, upstream checksum file)
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: actionlint
+          version: 1.7.12
+          url-template: https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_{os}_{arch}.tar.gz
+          checksums-url-template: https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_checksums.txt
+          archive-member: actionlint
+
+      - name: Install uv (target triples, nested member, per-asset .sha256)
+        id: uv
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: uv
+          version: 0.11.8
+          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+          os-names: linux=unknown-linux-gnu darwin=apple-darwin
+          arch-names: amd64=x86_64 arm64=aarch64
+          archive-member: uv-{arch}-{os}/uv
+
+      # Each binary must resolve to the pinned install rather than a copy
+      # the runner image ships, and must report the pinned version.
+      - name: Check the installed binaries
+        env:
+          UV_INSTALL_DIR: ${{ steps.uv.outputs.install-dir }}
+        run: |
+          status=0
+          for spec in "shfmt 3.13.1 --version" "actionlint 1.7.12 -version" "uv 0.11.8 --version"; do
+            read -r tool want flag <<< "${spec}"
+            resolved="$(command -v "${tool}" || true)"
+            if [ "${resolved}" != "${RUNNER_TEMP}/${tool}-bin/${tool}" ]; then
+              echo "::error::${tool} resolves to '${resolved}', not ${RUNNER_TEMP}/${tool}-bin/${tool}" >&2
+              status=1
+              continue
+            fi
+            reported="$("${tool}" "${flag}" 2>&1)"
+            reported="${reported%%$'\n'*}"
+            echo "${tool}: ${reported}"
+            case "${reported}" in
+              *"${want}"*) ;;
+              *)
+                echo "::error::${tool} reports '${reported}', expected ${want}" >&2
+                status=1
+                ;;
+            esac
+          done
+          if [ "${UV_INSTALL_DIR}" != "${RUNNER_TEMP}/uv-bin" ]; then
+            echo "::error::install-dir output is '${UV_INSTALL_DIR}', expected ${RUNNER_TEMP}/uv-bin" >&2
+            status=1
+          fi
+          exit "${status}"
+
+      # The next three steps must fail. Their ::error:: annotations are
+      # expected; the step after them turns any success into a job failure.
+      - name: Reject a wrong checksum (expected to fail)
+        id: wrong-checksum
+        continue-on-error: true
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: shfmt
+          version: 3.13.1
+          url-template: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
+          checksum: "0000000000000000000000000000000000000000000000000000000000000000"
+
+      - name: Reject a version bumped without its checksums (expected to fail)
+        id: missing-entry
+        continue-on-error: true
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: shfmt
+          version: 3.14.1
+          url-template: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
+          checksums: |
+            fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1  shfmt_v3.13.1_linux_amd64
+            32d92acaa5cd8abb29fc49dac123dc412442d5713967819d8af2c29f1b3857c7  shfmt_v3.13.1_linux_arm64
+            6feedafc72915794163114f512348e2437d080d0047ef8b8fa2ec63b575f12af  shfmt_v3.13.1_darwin_amd64
+            9680526be4a66ea1ffe988ed08af58e1400fe1e4f4aef5bd88b20bb9b3da33f8  shfmt_v3.13.1_darwin_arm64
+
+      - name: Reject a missing checksum source (expected to fail)
+        id: no-source
+        continue-on-error: true
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: shfmt
+          version: 3.13.1
+          url-template: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
+
+      - name: Check the rejections
+        env:
+          WRONG_CHECKSUM: ${{ steps.wrong-checksum.outcome }}
+          MISSING_ENTRY: ${{ steps.missing-entry.outcome }}
+          NO_SOURCE: ${{ steps.no-source.outcome }}
+        run: |
+          status=0
+          for result in "wrong-checksum=${WRONG_CHECKSUM}" "missing-entry=${MISSING_ENTRY}" "no-source=${NO_SOURCE}"; do
+            if [ "${result#*=}" != "failure" ]; then
+              echo "::error::${result%%=*} should have failed; its outcome is '${result#*=}'" >&2
+              status=1
+            fi
+          done
+          exit "${status}"
