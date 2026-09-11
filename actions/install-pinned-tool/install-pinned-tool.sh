@@ -41,7 +41,7 @@
 #   0  - Installed
 #   64 - Invalid or missing input
 #   65 - Checksum entry missing, malformed, conflicting, or mismatched
-#   66 - Archive member missing from the downloaded archive
+#   66 - Archive member missing from the archive, or not a regular file
 #   69 - Download failed
 #   71 - Unsupported operating system or architecture
 
@@ -316,8 +316,10 @@ function main() {
   local member=""
   if [[ -n "${archive_member}" ]]; then
     member="$(render "${archive_member}" 'archive-member' "${version}" "${os}" "${arch}")"
-    if [[ "${member}" == /* || "/${member}/" == */../* ]]; then
-      fail "${E_USAGE}" "archive-member for ${tool} must be a relative path without '..', got '${member}'."
+    # A leading '-' would reach tar as an option rather than a member name,
+    # and GNU tar has options that run commands.
+    if [[ "${member}" == /* || "${member}" == -* || "/${member}/" == */../* ]]; then
+      fail "${E_USAGE}" "archive-member for ${tool} must be a relative path that neither starts with '-' nor contains '..', got '${member}'."
     fi
   fi
 
@@ -360,13 +362,16 @@ function main() {
   if [[ -n "${member}" ]]; then
     # Only the named member is extracted, so documentation and man pages
     # packed beside the binary never land on disk. tar detects the
-    # compression itself on both GNU tar and bsdtar.
-    if ! tar -x -f "${asset_path}" -C "${WORK_DIR}/extract" "${member}"; then
+    # compression itself on both GNU tar and bsdtar, and `--` ends its
+    # options so the member is never parsed as one.
+    if ! tar -x -f "${asset_path}" -C "${WORK_DIR}/extract" -- "${member}"; then
       fail "${E_MEMBER}" "Could not extract ${member} from ${asset_name}." \
         "Spell archive-member exactly as 'tar -tf' lists it: GNU tar (Linux) treats" \
         "./NAME and NAME as different members, where bsdtar (macOS) accepts either."
     fi
-    if [[ ! -f "${WORK_DIR}/extract/${member}" ]]; then
+    # -f follows symlinks, so a link is rejected first: the installed file
+    # must be the verified member itself, not whatever a link points at.
+    if [[ -L "${WORK_DIR}/extract/${member}" || ! -f "${WORK_DIR}/extract/${member}" ]]; then
       fail "${E_MEMBER}" "${member} in ${asset_name} is not a regular file."
     fi
     install -m 0755 "${WORK_DIR}/extract/${member}" "${install_dir}/${tool}"
