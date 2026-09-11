@@ -369,9 +369,10 @@ function main() {
         "Spell archive-member exactly as 'tar -tf' lists it: GNU tar (Linux) treats" \
         "./NAME and NAME as different members, where bsdtar (macOS) accepts either."
     fi
-    # -f follows symlinks, so a link is rejected first: the installed file
-    # must be the verified member itself, not whatever a link points at.
-    if [[ -L "${WORK_DIR}/extract/${member}" || ! -f "${WORK_DIR}/extract/${member}" ]]; then
+    # The installed file must be the verified member itself, never what a
+    # link inside the archive points at. find's -type f does not follow
+    # symlinks, and -links 1 rules out a hard link to any other file.
+    if [[ -z "$(find "${WORK_DIR}/extract/${member}" -prune -type f -links 1 2>/dev/null)" ]]; then
       fail "${E_MEMBER}" "${member} in ${asset_name} is not a regular file."
     fi
     install -m 0755 "${WORK_DIR}/extract/${member}" "${install_dir}/${tool}"

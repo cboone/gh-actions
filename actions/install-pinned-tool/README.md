@@ -50,8 +50,8 @@ a path relative to their own directory.
   `tar -tf` lists it: GNU tar on Linux runners treats `./typos` and `typos`
   as different members, while bsdtar on macOS accepts either, so a spelling
   that works on one platform can fail on the other. The member must be a
-  regular file, not a symlink, named by a relative path that neither starts
-  with `-` nor contains `..`. Only that member is
+  regular file, not a symlink or a hard link, named by a relative path that
+  neither starts with `-` nor contains `..`. Only that member is
   extracted, so documentation and man pages packed beside the binary never
   land on disk. Leave it empty when the asset is the binary itself.
 - **Install location.** The binary is installed as `<install-dir>/<tool>`,
