@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `install-pinned-tool` composite action: installs a release binary
+  pinned to an exact version and SHA-256 and adds it to `PATH`. The
+  asset URL is a template over `{version}`, `{os}` and `{arch}`, with
+  `os-names` and `arch-names` for upstreams that spell platforms
+  differently; the expected digest comes from exactly one of `checksum`,
+  `checksums` (per-platform `sha256sum` lines keyed by asset name) and
+  `checksums-url-template` (an upstream checksum file); and
+  `archive-member` extracts a single member from a tar archive. The
+  asset is downloaded to a file and verified before anything reads it.
+  Linux and macOS runners, amd64 and arm64 (#87)
+
 ## [3.1.1] - 2026-09-10
 
 ### Fixed
