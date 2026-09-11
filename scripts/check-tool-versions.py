@@ -132,7 +132,8 @@ TOOLS: list[Tool] = [
         "shfmt",
         "3.13.1",
         lambda: github_latest_release("mvdan/sh"),
-        "Hardcoded SHA-256 checksums must be regenerated on bump.",
+        "Committed SHA-256 lines must be regenerated on bump: the `checksums` "
+        "default in actions/set-up-shfmt and `shfmt-checksums` in lint-shell.yml.",
     ),
     Tool(
         "cargo-audit",
