@@ -28,8 +28,8 @@
 # a stale one.
 #
 # RUNNER_TEMP, GITHUB_PATH and GITHUB_OUTPUT must be set, as they are on
-# every Actions runner. The install directory is appended to GITHUB_PATH
-# and written to GITHUB_OUTPUT as install-dir.
+# every Actions runner. The install directory, recreated on every run, is
+# appended to GITHUB_PATH and written to GITHUB_OUTPUT as install-dir.
 #
 # Compatible with bash 3.2, the /bin/bash on macOS: no associative arrays,
 # no ${var,,}, no mapfile, and positional parameters are expanded as "$@",
@@ -357,8 +357,12 @@ function main() {
   fi
   echo "Verified SHA-256 ${actual} for ${asset_name}" >&2
 
+  # A fresh directory every time, so neither a directory nor a link already at
+  # this path is followed when the binary is installed. tool is validated
+  # above, so this is always a direct child of RUNNER_TEMP.
   local install_dir="${RUNNER_TEMP}/${tool}-bin"
-  mkdir -p "${install_dir}"
+  rm -rf "${install_dir}"
+  mkdir "${install_dir}"
   if [[ -n "${member}" ]]; then
     # Only the named member is extracted, so documentation and man pages
     # packed beside the binary never land on disk. tar detects the

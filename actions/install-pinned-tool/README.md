@@ -55,8 +55,9 @@ a path relative to their own directory.
   extracted, so documentation and man pages packed beside the binary never
   land on disk. Leave it empty when the asset is the binary itself.
 - **Install location.** The binary is installed as `<install-dir>/<tool>`,
-  where `install-dir` is `$RUNNER_TEMP/<tool>-bin`. Downloads use `https://`
-  only, and a redirect to plain `http://` fails the step.
+  where `install-dir` is `$RUNNER_TEMP/<tool>-bin`, recreated on every run.
+  Downloads use `https://` only, and a redirect to plain `http://` fails the
+  step.
 
 ## Inputs
 
