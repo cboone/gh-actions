@@ -36,12 +36,13 @@ a path relative to their own directory.
   serves at install time; a release whose asset and checksum file were both
   replaced still passes. Prefer committed checksums where upstream allows it.
 - **Producing checksums.** Run `shasum -a 256` on each downloaded asset, or
-  read the digests GitHub records for release assets (they print as
-  `sha256:<hex>`; drop the prefix):
+  read the digests GitHub records for release assets. Those print as
+  `sha256:<hex>`, so this command strips the prefix and emits
+  `sha256sum`-format lines ready to paste into `checksums`:
 
   ```bash
   gh api repos/mvdan/sh/releases/tags/v3.13.1 \
-    --jq '.assets[] | "\(.digest) \(.name)"'
+    --jq '.assets[] | "\(.digest | sub("^sha256:"; ""))  \(.name)"'
   ```
 
 - **Archives.** `archive-member` names the binary inside a tar archive; tar
