@@ -9,7 +9,10 @@ The logic lives in `install-pinned-tool.sh` next to this file, configured
 through environment variables named after the inputs (`url-template` is
 `URL_TEMPLATE`). A reusable workflow cannot reach this action through a `./`
 path, which resolves against the caller's checkout, so it can fetch the script
-at its own commit and run it with those variables instead.
+at its own commit and run it with those variables instead. The
+[set-up-actionlint](../set-up-actionlint/README.md) and
+[set-up-shfmt](../set-up-shfmt/README.md) actions run the same script through
+a path relative to their own directory.
 
 - **Platforms.** Linux and macOS runners, amd64 and arm64. Any other OS or
   architecture fails the step.

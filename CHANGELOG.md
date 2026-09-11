@@ -19,6 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `archive-member` extracts a single member from a tar archive. The
   asset is downloaded to a file and verified before anything reads it.
   Linux and macOS runners, amd64 and arm64 (#87)
+- `set-up-shfmt` `checksums` input: `sha256sum`-format lines for the
+  shfmt release binaries, defaulting to v3.13.1 on four platforms.
+  Overriding `version` together with `checksums` installs any shfmt
+  release, where the action used to refuse every version but 3.13.1
+  (#87)
+
+### Changed
+
+- `set-up-actionlint` and `set-up-shfmt` install through
+  `install-pinned-tool`'s script instead of their own inline copies.
+  Their inputs, defaults, and checksum sources are unchanged apart from
+  `set-up-shfmt`'s new `checksums` input (#87)
 
 ## [3.1.1] - 2026-09-10
 

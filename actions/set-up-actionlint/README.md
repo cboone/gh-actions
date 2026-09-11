@@ -2,6 +2,10 @@
 
 Install actionlint binary with a pinned version.
 
+The release archive is verified against the `checksums.txt` actionlint
+publishes with each release. Built on
+[install-pinned-tool](../install-pinned-tool/README.md).
+
 ## Inputs
 
 | Name      | Type   | Default  | Description                   |
