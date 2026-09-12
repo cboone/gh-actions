@@ -30,6 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `shfmt-version` together with `shfmt-checksums` lints with any shfmt
   release, where the workflow used to refuse every version but 3.13.1
   (#87)
+- `set-up-shellcheck` composite action: installs shellcheck pinned to
+  `version` (default 0.11.0) and verified against `checksums`, whose
+  default covers v0.11.0 on Linux and macOS, amd64 and arm64. shellcheck
+  publishes no checksum file and no digests in its release notes, so
+  overriding `version` needs `checksums` with it. Built on
+  `install-pinned-tool` (#85)
+- `lint-shell.yml` and `lint-github-actions.yml` `shellcheck-version`
+  and `shellcheck-checksums` inputs, with the same defaults (#85)
 
 ### Changed
 
@@ -46,6 +54,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   needs `run-shfmt: false`, and `lint-github-actions.yml` is not
   supported (run `set-up-actionlint` in your own job instead). A
   private fork of this repo cannot serve the script either (#87)
+
+### Fixed
+
+- `lint-github-actions.yml` installs a pinned, checksum-verified
+  shellcheck and reports both tool versions before running actionlint,
+  instead of leaving shellcheck to the runner image. actionlint shells
+  out to shellcheck for every `run:` block, which is the only thing in
+  that workflow that lints embedded shell, and with no shellcheck on
+  `PATH` it skips all of them and still exits 0: a planted `SC2086`
+  passed. On a runner image without ShellCheck, or a `runs-on` that
+  lacks it, the job stayed green and silently stopped linting embedded
+  shell (#85)
+- `lint-shell.yml` lints with a pinned, checksum-verified shellcheck
+  instead of the runner image's, so a runner image update no longer
+  changes what it reports with no change to any version a consumer
+  pinned, and it lints with the same shellcheck actionlint gets. The
+  installer fetch now carries both tools' conditions, so on GitHub
+  Enterprise Server the workaround is `set-up-shellcheck` plus
+  `set-up-shfmt` in your own job rather than `run-shfmt: false` (#85)
 
 ## [3.1.1] - 2026-09-10
 
