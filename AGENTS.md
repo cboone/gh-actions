@@ -19,6 +19,7 @@ actions/
   run-reuse/             # Install and run REUSE compliance checker
   run-trufflehog/        # Install and run trufflehog secret scanner
   set-up-actionlint/     # Install actionlint
+  set-up-clap-validator/ # Build clap-validator from a pinned commit
   set-up-golangci-lint/  # Install golangci-lint
   set-up-goreleaser/     # Install GoReleaser
   set-up-scrut/          # Install scrut CLI test runner
@@ -133,6 +134,18 @@ anything that runs in CI.
   verification, never via `cargo install` (which would trust crates.io
   alone). cargo-llvm-cov in particular was migrated off `cargo install
 --locked` for this reason.
+- **clap-validator** (`set-up-clap-validator`): built from source with
+  `cargo install --git <repo> --rev <40-char sha> --locked`. This is a
+  different trust path from the `cargo install <crate>` the bullet above
+  refuses, not an exception to it: the source is pinned to a commit, which
+  no upstream can move, where a crates.io version resolves through the
+  index at install time, and `--locked` pins the dependency tree to that
+  commit's own `Cargo.lock`. `install-pinned-tool` cannot reach this
+  upstream, which publishes nothing to crates.io and whose release assets
+  cover neither Linux arm64 nor a file name derivable from a version
+  string. The action rejects a `validator-rev` that is not a full
+  40-character lowercase SHA, so a tag, which can be moved, cannot stand in
+  for the commit.
 - **`package.json` devDependencies**: exact versions (no `^`/`~`); the
   `package-lock.json` provides per-package sha512 integrity for any
   fresh `npm ci`.
@@ -167,6 +180,16 @@ together so the consumer repo controls pinning.
   channel is `"stable"`, it floats with rustup; if it is `"1.84.0"`
   (or similar), it is fully pinned.
 - The workflow fails fast if neither input resolves to a value.
+
+`set-up-clap-validator` is a second, narrower exception. Its
+`rust-version` and `validator-rev` are both required with no default, so
+the caller owns both pins and a caller that forgets one is rejected rather
+than defaulted; that is deliberate, and it overrides the "Accept a
+`version` input with a pinned default" step under "Adding a New Action"
+below. Neither belongs in `scripts/check-tool-versions.py`, because this
+repo ships no value for either. The `VALIDATOR_REV` and `RUST_VERSION` in
+`run-ci.yml` are test fixtures for the self-test job, in the same category
+as its shfmt 3.13.1 fixtures.
 
 `node-version` defaults to a specific Node 24 LTS release
 (`"24.15.0"`) in `lint-text.yml`, `publish-to-npm.yml`, and
@@ -362,8 +385,10 @@ The repository self-hosts its own workflows as integration tests. The `run-ci.ym
 `scan-for-secrets-with-trufflehog.yml` files call the reusable workflows from
 this same repository. `run-ci.yml` also runs `actions/install-pinned-tool`,
 and the `set-up-*` actions built on it, from the checkout on Linux amd64,
-Linux arm64 and macOS arm64, including inputs it must reject. There is no
-unit test framework.
+Linux arm64 and macOS arm64, including inputs it must reject. It runs
+`actions/set-up-clap-validator` on those same three runners, covering the
+cold-cache build, the cache-hit path, and the pins `check-pins.sh` must
+reject. There is no unit test framework.
 
 ## Local Development
 

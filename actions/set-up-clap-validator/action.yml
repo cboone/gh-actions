@@ -1,0 +1,110 @@
+name: Set up clap-validator
+description: >-
+  Build clap-validator from a pinned commit, cache the result, and add it
+  to PATH. The commit is the pin, because a tag can be moved to another
+  commit, and `--locked` extends that pin to the dependency tree. Running
+  the validator is left to the calling job. Linux and macOS runners only.
+
+inputs:
+  validator-rev:
+    description: >-
+      The clap-validator commit to build, as a full 40-character lowercase
+      SHA. A tag can move; a commit cannot.
+    required: true
+  rust-version:
+    description: >-
+      The exact Rust toolchain to build it with. clap-validator 0.4.1
+      declares MSRV 1.95.0 and is edition 2024, which the runner image's
+      preinstalled Rust may or may not satisfy from one refresh to the
+      next.
+    required: true
+
+# Neither input is defaulted, and GitHub does not enforce `required:` for a
+# composite action's inputs, so `Check the pins` below rejects an omitted
+# one itself. A caller that forgets should fail loudly rather than quietly
+# validate against a different validator than the job it is paired with.
+
+outputs:
+  install-dir:
+    description: Directory holding the clap-validator binary, already on PATH.
+    value: ${{ steps.pins.outputs.install-dir }}
+  cache-hit:
+    description: >-
+      `true` when the pinned build came from the cache, in which case no
+      Rust toolchain was installed and nothing was compiled.
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    # check-pins.sh is a sibling of this action inside the gh-actions
+    # checkout the runner makes when loading it, so both come from the same
+    # commit. CHECKER stays in `env:` because, for a job that sets
+    # `container:`, the runner translates host paths there but not in
+    # expressions written into `run:`. The script also derives the cache
+    # key, `clap-validator-<os>-<arch>-<rev>-rust<rust version>`: naming it
+    # in one place is what stops the restore and save keys from drifting,
+    # and it keeps the key expression inside this file's line limit.
+    - name: Check the pins
+      id: pins
+      shell: bash
+      env:
+        CHECKER: ${{ github.action_path }}/check-pins.sh
+        VALIDATOR_REV: ${{ inputs.validator-rev }}
+        RUST_VERSION: ${{ inputs.rust-version }}
+      run: bash "${CHECKER}"
+
+    # Restore and save are split rather than combined so the save is an
+    # explicit step on the success path. Installing into a directory this
+    # action owns, rather than the runner's ~/.cargo/bin, keeps the cached
+    # path to exactly what was built here. No restore-keys: a partial match
+    # would silently run a validator built from a different commit, which
+    # is the failure the pinning exists to prevent.
+    - name: Restore the cached validator
+      id: cache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/clap-validator
+        key: ${{ steps.pins.outputs.cache-key }}
+
+    # `--locked` builds against the committed Cargo.lock, so a new release
+    # of a transitive dependency cannot change what gets built. `--root`
+    # keeps the binary out of the runner's ~/.cargo/bin, so the cached path
+    # holds exactly what this built. The toolchain is installed here rather
+    # than in a step of its own, so a cache hit installs no Rust at all.
+    - name: Build clap-validator
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VALIDATOR_REV: ${{ inputs.validator-rev }}
+        RUST_VERSION: ${{ inputs.rust-version }}
+      run: |
+        rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update
+        cargo "+${RUST_VERSION}" install \
+          --git https://github.com/free-audio/clap-validator \
+          --rev "${VALIDATOR_REV}" \
+          --locked \
+          --root "${RUNNER_TEMP}/clap-validator"
+
+    # Reuses cache-primary-key so the restore and save keys cannot drift.
+    # On a cold cache two jobs can race to reserve the same key; the loser's
+    # save logs a warning and does not fail, so the job stays green.
+    - name: Cache the built validator
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/clap-validator
+        key: ${{ steps.cache.outputs.cache-primary-key }}
+
+    - name: Put clap-validator on PATH
+      shell: bash
+      env:
+        INSTALL_DIR: ${{ steps.pins.outputs.install-dir }}
+      run: printf '%s\n' "${INSTALL_DIR}" >> "${GITHUB_PATH}"
+
+    # A check that the binary runs, not a check of the pin: the reported
+    # version names the release the commit sits on, so two commits on the
+    # same release report the same string. That is why the pin is a commit.
+    - name: Report clap-validator version
+      shell: bash
+      run: clap-validator --version

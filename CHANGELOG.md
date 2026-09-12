@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `set-up-clap-validator` composite action: builds
+  [clap-validator](https://github.com/free-audio/clap-validator), the
+  conformance checker for CLAP audio plugins, from the commit given in
+  `validator-rev` using the toolchain given in `rust-version`, caches the
+  result, and adds it to `PATH`. Both inputs are required and have no
+  defaults, and `validator-rev` must be a full 40-character lowercase
+  commit SHA, since a tag can be moved to another commit. The cache key
+  names the runner OS and architecture and both pins, with no
+  `restore-keys`, so a partial match cannot supply a validator built from
+  a different commit; a cache hit installs no Rust toolchain and compiles
+  nothing. Running `clap-validator validate` is left to the calling job.
+  Outputs `install-dir` and `cache-hit`. Linux and macOS runners (#88)
 - `install-pinned-tool` composite action: installs a release binary
   pinned to an exact version and SHA-256 and adds it to `PATH`. The
   asset URL is a template over `{version}`, `{os}` and `{arch}`, with

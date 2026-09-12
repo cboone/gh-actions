@@ -31,14 +31,15 @@ usage examples.
 
 ### Testing and CI
 
-| Component                                            | Type     | What it does                                  |
-| ---------------------------------------------------- | -------- | --------------------------------------------- |
-| [run-go-ci](docs/workflows/run-go-ci.md)             | workflow | Go test, lint, build, scrut, format check     |
-| [run-lean-ci](docs/workflows/run-lean-ci.md)         | workflow | Lean lake build, lake lint, lake test         |
-| [run-rust-ci](docs/workflows/run-rust-ci.md)         | workflow | Rust test, clippy, fmt, deny, audit, typos    |
-| [run-zig-ci](docs/workflows/run-zig-ci.md)           | workflow | Zig test, format, build, cross-compile, scrut |
-| [run-scrut-tests](docs/workflows/run-scrut-tests.md) | workflow | scrut CLI snapshot tests for non-Go projects  |
-| [set-up-scrut](actions/set-up-scrut/README.md)       | action   | install scrut CLI test runner                 |
+| Component                                                        | Type     | What it does                                                           |
+| ---------------------------------------------------------------- | -------- | ---------------------------------------------------------------------- |
+| [run-go-ci](docs/workflows/run-go-ci.md)                         | workflow | Go test, lint, build, scrut, format check                              |
+| [run-lean-ci](docs/workflows/run-lean-ci.md)                     | workflow | Lean lake build, lake lint, lake test                                  |
+| [run-rust-ci](docs/workflows/run-rust-ci.md)                     | workflow | Rust test, clippy, fmt, deny, audit, typos                             |
+| [run-zig-ci](docs/workflows/run-zig-ci.md)                       | workflow | Zig test, format, build, cross-compile, scrut                          |
+| [run-scrut-tests](docs/workflows/run-scrut-tests.md)             | workflow | scrut CLI snapshot tests for non-Go projects                           |
+| [set-up-scrut](actions/set-up-scrut/README.md)                   | action   | install scrut CLI test runner                                          |
+| [set-up-clap-validator](actions/set-up-clap-validator/README.md) | action   | build the clap-validator CLAP conformance checker from a pinned commit |
 
 ### Releasing and publishing
 
@@ -152,6 +153,12 @@ integrity check available for its ecosystem.
 - **Rust tooling**: installed from binary release tarballs with SHA-256
   verification, never via `cargo install` (which would trust crates.io
   alone).
+- **clap-validator**: the one tool built from source, with
+  `cargo install --git --rev <40-char sha> --locked`, because upstream
+  publishes no crate and no release asset this repo can pin. The commit
+  pins the source and the lockfile pins its dependency tree, so this is a
+  different trust path from `cargo install <crate>` rather than an
+  exception to the rule above.
 - **`package.json` devDependencies**: exact versions; `package-lock.json`
   enforces sha512 integrity on every fresh install.
 
