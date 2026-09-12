@@ -4,11 +4,23 @@ description: Install shfmt binary with a pinned version.
 inputs:
   version:
     description: >-
-      shfmt version to install. Only the version with pinned checksums
-      is supported; update the checksums in this action to use a
-      different version.
+      shfmt version to install. When overriding it, pass that version's
+      checksums in `checksums` too.
     required: false
     default: "3.13.1"
+  checksums:
+    description: >-
+      SHA-256 of each shfmt release binary, one
+      `<sha256>  <asset file name>` line per platform, as `sha256sum`
+      prints them. shfmt releases from v3.13.0 on ship no checksum file
+      (mvdan/sh#1283, mvdan/sh#1309), so these are committed here. The
+      default covers v3.13.1 on Linux and macOS, amd64 and arm64.
+    required: false
+    default: |
+      fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1  shfmt_v3.13.1_linux_amd64
+      32d92acaa5cd8abb29fc49dac123dc412442d5713967819d8af2c29f1b3857c7  shfmt_v3.13.1_linux_arm64
+      6feedafc72915794163114f512348e2437d080d0047ef8b8fa2ec63b575f12af  shfmt_v3.13.1_darwin_amd64
+      9680526be4a66ea1ffe988ed08af58e1400fe1e4f4aef5bd88b20bb9b3da33f8  shfmt_v3.13.1_darwin_arm64
 
 runs:
   using: composite
@@ -16,66 +28,24 @@ runs:
     - name: Install shfmt
       shell: bash
       env:
+        # install-pinned-tool is a sibling of this action inside the
+        # gh-actions checkout the runner makes when loading it, so both come
+        # from the same commit. Unused installer variables are set empty so
+        # a caller's job-level env cannot reach the installer. INSTALLER stays
+        # in `env:` because, for a job that sets `container:`, the runner
+        # translates host paths there but not in expressions in `run:`.
+        INSTALLER: ${{ github.action_path }}/../install-pinned-tool/install-pinned-tool.sh
+        TOOL: shfmt
         VERSION: ${{ inputs.version }}
-      run: |
-        case "$(uname -s)" in
-          Linux) os="linux" ;;
-          Darwin) os="darwin" ;;
-          *)
-            echo "Unsupported operating system: $(uname -s)" >&2
-            exit 1
-            ;;
-        esac
+        URL_TEMPLATE: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
+        CHECKSUM: ""
+        CHECKSUMS: ${{ inputs.checksums }}
+        CHECKSUMS_URL_TEMPLATE: ""
+        ARCHIVE_MEMBER: ""
+        OS_NAMES: ""
+        ARCH_NAMES: ""
+      run: bash "${INSTALLER}"
 
-        case "$(uname -m)" in
-          x86_64) arch="amd64" ;;
-          arm64|aarch64) arch="arm64" ;;
-          *)
-            echo "Unsupported architecture: $(uname -m)" >&2
-            exit 1
-            ;;
-        esac
-
-        # Hardcoded SHA-256 checksums for shfmt v3.13.1 release binaries.
-        # shfmt upstream stopped publishing sha256sums.txt starting with
-        # v3.13.0 (mvdan/sh#1283, mvdan/sh#1309), so checksums are
-        # embedded here and must be updated when VERSION changes.
-        supported_version="3.13.1"
-        if [ "${VERSION}" != "${supported_version}" ]; then
-          echo "Unsupported shfmt version: ${VERSION}" >&2
-          echo "Checksums are only available for v${supported_version}." >&2
-          echo "To use a different version, update the checksums in this action." >&2
-          exit 1
-        fi
-
-        case "${os}-${arch}" in
-          linux-amd64)  expected="fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1" ;;
-          linux-arm64)  expected="32d92acaa5cd8abb29fc49dac123dc412442d5713967819d8af2c29f1b3857c7" ;;
-          darwin-amd64) expected="6feedafc72915794163114f512348e2437d080d0047ef8b8fa2ec63b575f12af" ;;
-          darwin-arm64) expected="9680526be4a66ea1ffe988ed08af58e1400fe1e4f4aef5bd88b20bb9b3da33f8" ;;
-          *)
-            echo "No checksum available for ${os}-${arch}" >&2
-            exit 1
-            ;;
-        esac
-
-        install_dir="${RUNNER_TEMP}/shfmt-bin"
-        mkdir -p "${install_dir}"
-        binary_name="shfmt_v${VERSION}_${os}_${arch}"
-        binary_path="${install_dir}/shfmt"
-        base="https://github.com/mvdan/sh/releases/download/v${VERSION}"
-        curl -sSfL "${base}/${binary_name}" -o "${binary_path}"
-        if command -v sha256sum >/dev/null 2>&1; then
-          actual="$(sha256sum "${binary_path}" | awk '{print $1}')"
-        else
-          actual="$(shasum -a 256 "${binary_path}" | awk '{print $1}')"
-        fi
-        if [ "${expected}" != "${actual}" ]; then
-          echo "Checksum verification failed for ${binary_name}" >&2
-          echo "Expected: ${expected}" >&2
-          echo "Actual:   ${actual}" >&2
-          exit 1
-        fi
-        chmod +x "${binary_path}"
-        printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
-        "${install_dir}/shfmt" --version
+    - name: Report shfmt version
+      shell: bash
+      run: shfmt --version

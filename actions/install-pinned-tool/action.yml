@@ -1,0 +1,98 @@
+name: Install pinned tool
+description: >-
+  Install a release binary pinned to an exact version and SHA-256, and add
+  it to PATH. The asset is downloaded to a file and verified against a
+  committed checksum or an upstream checksum file before anything reads
+  it. Linux and macOS runners only.
+
+inputs:
+  tool:
+    description: >-
+      Binary name. It is installed as `<install-dir>/<tool>` and names the
+      tool in every message.
+    required: true
+  version:
+    description: >-
+      Exact version to install, substituted for `{version}`. There is no
+      default.
+    required: true
+  url-template:
+    description: >-
+      `https://` URL of the release asset, with `{version}`, `{os}` and
+      `{arch}` placeholders.
+    required: true
+  checksum:
+    description: >-
+      Expected SHA-256 of the asset. It applies on every platform, so use
+      it when every job runs on one OS and architecture. Set exactly one of
+      `checksum`, `checksums` and `checksums-url-template`.
+    required: false
+    default: ""
+  checksums:
+    description: >-
+      Expected SHA-256 of each platform's asset, one
+      `<sha256>  <asset file name>` line per platform, as `sha256sum`
+      prints them. Names are matched literally, so a version bumped without
+      its checksums fails instead of matching a stale entry.
+    required: false
+    default: ""
+  checksums-url-template:
+    description: >-
+      `https://` URL of an upstream checksum file in `sha256sum` format,
+      with the same placeholders as `url-template`. The asset's entry is
+      looked up by file name.
+    required: false
+    default: ""
+  archive-member:
+    description: >-
+      Path of the binary inside a tar archive, with the same placeholders
+      as `url-template`, spelled exactly as `tar -tf` lists it: GNU tar on
+      Linux treats `./name` and `name` as different members. Only that
+      member is extracted. Leave empty when the asset is the binary itself.
+    required: false
+    default: ""
+  os-names:
+    description: >-
+      Renames for `{os}`, which is `linux` or `darwin` by default, as
+      whitespace-separated `key=value` pairs (e.g. `darwin=macos`).
+    required: false
+    default: ""
+  arch-names:
+    description: >-
+      Renames for `{arch}`, which is `amd64` or `arm64` by default, as
+      whitespace-separated `key=value` pairs (e.g.
+      `amd64=x86_64 arm64=aarch64`).
+    required: false
+    default: ""
+
+outputs:
+  install-dir:
+    description: Directory holding the installed binary, already on PATH.
+    value: ${{ steps.install.outputs.install-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install pinned tool
+      id: install
+      shell: bash
+      env:
+        # `${{ github.action_path }}` points at this action's directory
+        # inside the gh-actions checkout the runner makes when loading the
+        # composite action. The reusable workflows in this repo fetch the
+        # same script at their own commit instead, because a `./` path in a
+        # reusable workflow resolves against the caller's checkout. Keep the
+        # path in `env:`: for a job that sets `container:`, the runner
+        # translates host paths in `env:` values, but not in an expression
+        # written into `run:`.
+        INSTALLER: ${{ github.action_path }}/install-pinned-tool.sh
+        TOOL: ${{ inputs.tool }}
+        VERSION: ${{ inputs.version }}
+        URL_TEMPLATE: ${{ inputs.url-template }}
+        CHECKSUM: ${{ inputs.checksum }}
+        CHECKSUMS: ${{ inputs.checksums }}
+        CHECKSUMS_URL_TEMPLATE: ${{ inputs.checksums-url-template }}
+        ARCHIVE_MEMBER: ${{ inputs.archive-member }}
+        OS_NAMES: ${{ inputs.os-names }}
+        ARCH_NAMES: ${{ inputs.arch-names }}
+      run: bash "${INSTALLER}"

@@ -106,7 +106,8 @@ TOOLS: list[Tool] = [
         notes=(
             "On bump, check whether it recognizes the `job.workflow_*` context "
             "properties; if it does, delete `.github/actionlint.yaml`, which "
-            "exists only to suppress that false positive."
+            "exists only to suppress that false positive. run-ci.yml's wrapper "
+            "check asserts the set-up-actionlint default version; bump it too."
         ),
     ),
     Tool("golangci-lint", "2.11.4", lambda: github_latest_release("golangci/golangci-lint")),
@@ -132,7 +133,10 @@ TOOLS: list[Tool] = [
         "shfmt",
         "3.13.1",
         lambda: github_latest_release("mvdan/sh"),
-        "Hardcoded SHA-256 checksums must be regenerated on bump.",
+        "Committed SHA-256 lines must be regenerated on bump: the `checksums` "
+        "default in actions/set-up-shfmt and `shfmt-checksums` in lint-shell.yml. "
+        "run-ci.yml's wrapper check asserts the set-up-shfmt default version; "
+        "bump it too. Its other shfmt 3.13.1 lines are test fixtures and can stay.",
     ),
     Tool(
         "cargo-audit",

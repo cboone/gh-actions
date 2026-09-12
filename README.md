@@ -54,12 +54,13 @@ usage examples.
 
 ### Security and supply chain
 
-| Component                                                    | Type     | What it does                        |
-| ------------------------------------------------------------ | -------- | ----------------------------------- |
-| [scan-for-secrets](docs/workflows/scan-for-secrets.md)       | workflow | gitleaks and/or trufflehog scanning |
-| [run-gitleaks](actions/run-gitleaks/README.md)               | action   | install gitleaks and run a scan     |
-| [run-trufflehog](actions/run-trufflehog/README.md)           | action   | install trufflehog and run a scan   |
-| [analyze-with-codeql](docs/workflows/analyze-with-codeql.md) | workflow | GitHub CodeQL security analysis     |
+| Component                                                    | Type     | What it does                                             |
+| ------------------------------------------------------------ | -------- | -------------------------------------------------------- |
+| [scan-for-secrets](docs/workflows/scan-for-secrets.md)       | workflow | gitleaks and/or trufflehog scanning                      |
+| [run-gitleaks](actions/run-gitleaks/README.md)               | action   | install gitleaks and run a scan                          |
+| [run-trufflehog](actions/run-trufflehog/README.md)           | action   | install trufflehog and run a scan                        |
+| [analyze-with-codeql](docs/workflows/analyze-with-codeql.md) | workflow | GitHub CodeQL security analysis                          |
+| [install-pinned-tool](actions/install-pinned-tool/README.md) | action   | install a release binary pinned to a version and SHA-256 |
 
 ### Repository chores
 
@@ -139,7 +140,9 @@ integrity check available for its ecosystem.
 - **Binary downloads via `curl`**: SHA-256 verified against an upstream
   checksum file, or against hardcoded checksums in this repo where
   upstream does not publish one (currently scrut, shfmt, cargo-audit,
-  cargo-llvm-cov).
+  cargo-llvm-cov). [install-pinned-tool](actions/install-pinned-tool/README.md)
+  implements the same download, verify, and install steps for any
+  release binary.
 - **Python tools**: installed via `uv pip install --require-hashes`
   against a manifest with hash-pinned transitive deps, fetched at the
   workflow's own repository and commit.

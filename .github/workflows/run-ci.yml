@@ -1,10 +1,15 @@
 name: Run CI
 
 # Self-hosts this repo's own reusable workflows, so they are integration
-# tested on every change. `text` in particular exercises the fetch path
-# that reads `job.workflow_repository` / `job.workflow_sha`; no
-# `paths-ignore` filter here, because the linters it runs cover every
-# file in the repo, Markdown and docs included.
+# tested on every change. `text`, `shell` and `actionlint` exercise the
+# fetch path that reads `job.workflow_repository` / `job.workflow_sha`,
+# and `shell` lints install-pinned-tool.sh with the shfmt that script
+# installs; no `paths-ignore` filter here, because the linters these run
+# cover every file in the repo, Markdown and docs included (cspell skips
+# dot-paths such as `.github/`; #93 tracks that).
+# `install-pinned-tool` runs that composite action, and the set-up-*
+# actions built on it, from this checkout on Linux amd64, Linux arm64 and
+# macOS arm64, including inputs it must reject.
 
 on:
   push:
@@ -25,3 +30,190 @@ jobs:
     with:
       run-cspell: true
       run-yamllint: true
+
+  shell:
+    uses: ./.github/workflows/lint-shell.yml
+
+  install-pinned-tool:
+    name: install-pinned-tool (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # shfmt-sha256 is the v3.13.1 binary's digest on that runner's
+        # platform, for the single-checksum install and the rejection cases.
+        include:
+          - runner: ubuntu-latest
+            shfmt-sha256: fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1
+          - runner: ubuntu-24.04-arm
+            shfmt-sha256: 32d92acaa5cd8abb29fc49dac123dc412442d5713967819d8af2c29f1b3857c7
+          - runner: macos-latest
+            shfmt-sha256: 9680526be4a66ea1ffe988ed08af58e1400fe1e4f4aef5bd88b20bb9b3da33f8
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install shfmt (bare binary, committed checksums)
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: shfmt
+          version: 3.13.1
+          url-template: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
+          checksums: |
+            fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1  shfmt_v3.13.1_linux_amd64
+            32d92acaa5cd8abb29fc49dac123dc412442d5713967819d8af2c29f1b3857c7  shfmt_v3.13.1_linux_arm64
+            6feedafc72915794163114f512348e2437d080d0047ef8b8fa2ec63b575f12af  shfmt_v3.13.1_darwin_amd64
+            9680526be4a66ea1ffe988ed08af58e1400fe1e4f4aef5bd88b20bb9b3da33f8  shfmt_v3.13.1_darwin_arm64
+
+      # Installed under another name so the check below can tell it apart
+      # from the checksums-table install above.
+      - name: Install shfmt as shfmt-single (bare binary, one committed checksum)
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: shfmt-single
+          version: 3.13.1
+          url-template: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
+          checksum: ${{ matrix.shfmt-sha256 }}
+
+      - name: Install actionlint (archive, upstream checksum file)
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: actionlint
+          version: 1.7.12
+          url-template: https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_{os}_{arch}.tar.gz
+          checksums-url-template: https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_checksums.txt
+          archive-member: actionlint
+
+      - name: Install uv (target triples, nested member, per-asset .sha256)
+        id: uv
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: uv
+          version: 0.11.8
+          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+          os-names: linux=unknown-linux-gnu darwin=apple-darwin
+          arch-names: amd64=x86_64 arm64=aarch64
+          archive-member: uv-{arch}-{os}/uv
+
+      # Each binary must resolve to the pinned install rather than a copy
+      # the runner image ships, and must report the pinned version.
+      - name: Check the installed binaries
+        env:
+          UV_INSTALL_DIR: ${{ steps.uv.outputs.install-dir }}
+        run: |
+          status=0
+          for spec in "shfmt 3.13.1 --version" "shfmt-single 3.13.1 --version" \
+            "actionlint 1.7.12 -version" "uv 0.11.8 --version"; do
+            read -r tool want flag <<< "${spec}"
+            resolved="$(command -v "${tool}" || true)"
+            if [ "${resolved}" != "${RUNNER_TEMP}/${tool}-bin/${tool}" ]; then
+              echo "::error::${tool} resolves to '${resolved}', not ${RUNNER_TEMP}/${tool}-bin/${tool}" >&2
+              status=1
+              continue
+            fi
+            reported="$("${tool}" "${flag}" 2>&1)"
+            reported="${reported%%$'\n'*}"
+            echo "${tool}: ${reported}"
+            case "${reported}" in
+              *"${want}"*) ;;
+              *)
+                echo "::error::${tool} reports '${reported}', expected ${want}" >&2
+                status=1
+                ;;
+            esac
+          done
+          if [ "${UV_INSTALL_DIR}" != "${RUNNER_TEMP}/uv-bin" ]; then
+            echo "::error::install-dir output is '${UV_INSTALL_DIR}', expected ${RUNNER_TEMP}/uv-bin" >&2
+            status=1
+          fi
+          exit "${status}"
+
+      # The set-up-* wrappers install into the same directories, so clear
+      # them first; otherwise the next check would pass on the binaries the
+      # direct installs left behind.
+      - name: Remove the direct shfmt and actionlint installs
+        run: rm -rf "${RUNNER_TEMP}/shfmt-bin" "${RUNNER_TEMP}/actionlint-bin"
+
+      - name: Set up shfmt through the wrapper
+        uses: ./actions/set-up-shfmt
+
+      - name: Set up actionlint through the wrapper
+        uses: ./actions/set-up-actionlint
+
+      - name: Check the wrapper installs
+        run: |
+          status=0
+          for spec in "shfmt 3.13.1 --version" "actionlint 1.7.12 -version"; do
+            read -r tool want flag <<< "${spec}"
+            resolved="$(command -v "${tool}" || true)"
+            if [ "${resolved}" != "${RUNNER_TEMP}/${tool}-bin/${tool}" ]; then
+              echo "::error::${tool} resolves to '${resolved}', not ${RUNNER_TEMP}/${tool}-bin/${tool}" >&2
+              status=1
+              continue
+            fi
+            reported="$("${tool}" "${flag}" 2>&1)"
+            reported="${reported%%$'\n'*}"
+            echo "${tool}: ${reported}"
+            case "${reported}" in
+              *"${want}"*) ;;
+              *)
+                echo "::error::${tool} reports '${reported}', expected ${want}" >&2
+                status=1
+                ;;
+            esac
+          done
+          exit "${status}"
+
+      # The rejection cases run the script directly under /bin/bash, which
+      # is bash 3.2 on macOS, so each case can assert its exit code and
+      # message rather than only that it failed. Output is captured and its
+      # ::error:: prefixes rewritten, so the expected failures raise no
+      # annotations.
+      - name: Check the rejections
+        env:
+          SHFMT_URL: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
+          SHFMT_SHA256: ${{ matrix.shfmt-sha256 }}
+        run: |
+          status=0
+          # Arguments: case name, expected exit code, expected message, then
+          # KEY=VALUE environment for the installer.
+          check_rejection() {
+            local name="$1" want_code="$2" want_message="$3"
+            shift 3
+            local output code
+            if output="$(env -i PATH="${PATH}" RUNNER_TEMP="${RUNNER_TEMP}" \
+              GITHUB_PATH=/dev/null GITHUB_OUTPUT=/dev/null "$@" \
+              /bin/bash actions/install-pinned-tool/install-pinned-tool.sh 2>&1)"; then
+              code=0
+            else
+              code=$?
+            fi
+            printf '%s\n' "${output}" | sed -e 's/^::error::/error: /' -e "s/^/  ${name} | /"
+            if [ "${code}" != "${want_code}" ]; then
+              echo "::error::${name} exited ${code}, expected ${want_code}" >&2
+              status=1
+            elif [[ "${output}" != *"${want_message}"* ]]; then
+              echo "::error::${name} did not report '${want_message}'" >&2
+              status=1
+            else
+              echo "${name}: rejected with exit ${code}, as expected"
+            fi
+          }
+          check_rejection wrong-checksum 65 "Checksum verification failed for shfmt_v3.13.1_" \
+            TOOL=shfmt VERSION=3.13.1 "URL_TEMPLATE=${SHFMT_URL}" \
+            CHECKSUM=0000000000000000000000000000000000000000000000000000000000000000
+          check_rejection version-bumped-without-checksums 65 "No checksum entry for shfmt_v3.14.1_" \
+            TOOL=shfmt VERSION=3.14.1 "URL_TEMPLATE=${SHFMT_URL}" \
+            "CHECKSUMS=${SHFMT_SHA256}  shfmt_v3.13.1_linux_amd64"
+          check_rejection no-checksum-source 64 "Set exactly one of checksum, checksums and checksums-url-template" \
+            TOOL=shfmt VERSION=3.13.1 "URL_TEMPLATE=${SHFMT_URL}"
+          check_rejection plain-http-url 64 "must be an https:// URL" \
+            TOOL=shfmt VERSION=3.13.1 "CHECKSUM=${SHFMT_SHA256}" \
+            "URL_TEMPLATE=http://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}"
+          exit "${status}"

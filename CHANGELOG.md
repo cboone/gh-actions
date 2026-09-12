@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `install-pinned-tool` composite action: installs a release binary
+  pinned to an exact version and SHA-256 and adds it to `PATH`. The
+  asset URL is a template over `{version}`, `{os}` and `{arch}`, with
+  `os-names` and `arch-names` for upstreams that spell platforms
+  differently; the expected digest comes from exactly one of `checksum`,
+  `checksums` (per-platform `sha256sum` lines keyed by asset name) and
+  `checksums-url-template` (an upstream checksum file); and
+  `archive-member` extracts a single member from a tar archive. The
+  asset is downloaded over https only, redirects included, to a file
+  and verified before anything reads it. Linux and macOS runners, amd64
+  and arm64 (#87)
+- `set-up-shfmt` `checksums` input: `sha256sum`-format lines for the
+  shfmt release binaries, defaulting to v3.13.1 on four platforms.
+  Overriding `version` together with `checksums` installs any shfmt
+  release, where the action used to refuse every version but 3.13.1
+  (#87)
+- `lint-shell.yml` `shfmt-checksums` input: `sha256sum`-format lines
+  for the shfmt release binaries, defaulting to v3.13.1's. Overriding
+  `shfmt-version` together with `shfmt-checksums` lints with any shfmt
+  release, where the workflow used to refuse every version but 3.13.1
+  (#87)
+
+### Changed
+
+- `set-up-actionlint` and `set-up-shfmt` install through
+  `install-pinned-tool`'s script instead of their own inline copies.
+  Their inputs, defaults, and checksum sources are unchanged apart from
+  `set-up-shfmt`'s new `checksums` input (#87)
+- `lint-shell.yml` and `lint-github-actions.yml` install shfmt and
+  actionlint by fetching `install-pinned-tool`'s script from
+  `job.workflow_repository` at `job.workflow_sha`, the model
+  `lint-text.yml` uses for its manifests, instead of carrying inline
+  installers. Both now depend on those `job` context properties, which
+  GitHub Enterprise Server does not populate: there, `lint-shell.yml`
+  needs `run-shfmt: false`, and `lint-github-actions.yml` is not
+  supported (run `set-up-actionlint` in your own job instead). A
+  private fork of this repo cannot serve the script either (#87)
+
 ## [3.1.1] - 2026-09-10
 
 ### Fixed

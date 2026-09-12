@@ -23,55 +23,40 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Install actionlint
-        shell: bash
+      # Fetch the installer from the repository and commit this workflow
+      # file came from, the supply-chain model lint-text.yml uses for its
+      # manifests, so the script and this workflow always share a commit. A
+      # `./` action path would resolve against the caller's checkout
+      # instead. The `job` context is only available on steps, so the two
+      # values are bound here rather than at job or workflow level.
+      - name: Fetch install-pinned-tool
         env:
-          VERSION: ${{ inputs.actionlint-version }}
+          REQ_REPO: ${{ job.workflow_repository }}
+          REQ_SHA: ${{ job.workflow_sha }}
         run: |
-          case "$(uname -s)" in
-            Linux) os="linux" ;;
-            Darwin) os="darwin" ;;
-            *)
-              echo "Unsupported operating system: $(uname -s)" >&2
-              exit 1
-              ;;
-          esac
-
-          case "$(uname -m)" in
-            x86_64) arch="amd64" ;;
-            arm64|aarch64) arch="arm64" ;;
-            *)
-              echo "Unsupported architecture: $(uname -m)" >&2
-              exit 1
-              ;;
-          esac
-
-          archive="actionlint_${VERSION}_${os}_${arch}.tar.gz"
-          install_dir="${RUNNER_TEMP}/actionlint-bin"
-          mkdir -p "${install_dir}"
-          base="https://github.com/rhysd/actionlint/releases/download/v${VERSION}"
-          archive_path="${install_dir}/${archive}"
-          curl -sSfL "${base}/${archive}" -o "${archive_path}"
-          curl -sSfL "${base}/actionlint_${VERSION}_checksums.txt" \
-            -o "${install_dir}/checksums.txt"
-          expected="$(grep -F "${archive}" "${install_dir}/checksums.txt" | head -1 | awk '{print $1}')"
-          if [ -z "${expected}" ]; then
-            echo "Checksum entry not found for ${archive}" >&2
+          if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
+            msg="job.workflow_repository or job.workflow_sha is unavailable,"
+            msg="${msg} so this workflow cannot fetch its pinned installer."
+            msg="${msg} Neither is populated on GitHub Enterprise Server; run"
+            msg="${msg} actionlint in your own job with the set-up-actionlint"
+            msg="${msg} action there."
+            echo "::error::${msg}" >&2
             exit 1
           fi
-          if command -v sha256sum >/dev/null 2>&1; then
-            actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
-          else
-            actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
-          fi
-          if [ "${expected}" != "${actual}" ]; then
-            echo "Checksum verification failed for ${archive}" >&2
-            echo "Expected: ${expected}" >&2
-            echo "Actual:   ${actual}" >&2
-            exit 1
-          fi
-          tar -xz -C "${install_dir}" -f "${archive_path}" actionlint
-          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+          base="https://raw.githubusercontent.com/${REQ_REPO}/${REQ_SHA}"
+          echo "Fetching from ${base}"
+          curl -sSfL --proto '=https' --retry 3 --retry-delay 5 --retry-all-errors \
+            "${base}/actions/install-pinned-tool/install-pinned-tool.sh" \
+            -o "${RUNNER_TEMP}/install-pinned-tool.sh"
+
+      - name: Install actionlint
+        env:
+          TOOL: actionlint
+          VERSION: ${{ inputs.actionlint-version }}
+          URL_TEMPLATE: https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_{os}_{arch}.tar.gz
+          CHECKSUMS_URL_TEMPLATE: https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_checksums.txt
+          ARCHIVE_MEMBER: actionlint
+        run: bash "${RUNNER_TEMP}/install-pinned-tool.sh"
 
       - name: Run actionlint
         run: actionlint
