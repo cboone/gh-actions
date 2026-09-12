@@ -48,13 +48,13 @@ after `### Changed`, per Keep a Changelog ordering.
 
 ### Planning
 
-- `docs/plans/todo/2026-09-12-wire-timeout-minutes-to-unbounded-jobs.md`
+- `docs/plans/done/2026-09-12-wire-timeout-minutes-to-unbounded-jobs.md`
 
 ## File Inventory
 
 **Added (2):**
 
-- `docs/plans/todo/2026-09-12-wire-timeout-minutes-to-unbounded-jobs.md`
+- `docs/plans/done/2026-09-12-wire-timeout-minutes-to-unbounded-jobs.md`
 - `docs/reviews/2026-09-12-fix-81-two-jobs-set-no-timeout-minutes.md`
 
 **Modified (5):** `.github/copilot-instructions.md`,
