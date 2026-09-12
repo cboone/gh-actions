@@ -10,9 +10,9 @@ actionlint shells out to `shellcheck` for every `run:` block, which is the
 only thing that lints the embedded shell in a workflow file. With no
 `shellcheck` on `PATH` it skips all of them and still exits 0, so a job that
 installs only actionlint passes vacuously on any runner image without one.
-Install [set-up-shellcheck](../set-up-shellcheck/README.md) alongside this
-action, and report both versions, so the log shows actionlint had something to
-shell out to.
+Use [set-up-shellcheck](../set-up-shellcheck/README.md) alongside this action;
+each reports the version it installed, so the log shows actionlint had
+something to shell out to.
 
 ## Inputs
 

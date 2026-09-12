@@ -10,7 +10,7 @@ name: Run CI
 # `install-pinned-tool` runs that composite action, and the set-up-*
 # actions built on it, from this checkout on Linux amd64, Linux arm64 and
 # macOS arm64, including inputs it must reject. It also asserts that
-# actionlint really does shell out to shellcheck, which #85 was about.
+# actionlint really does shell out to shellcheck (#85).
 
 on:
   push:
@@ -195,10 +195,12 @@ jobs:
           exit "${status}"
 
       # actionlint shells out to shellcheck for every `run:` block, and with
-      # no shellcheck on PATH it skips all of them and still exits 0. That is
-      # what #85 was: lint-github-actions.yml passed vacuously on an image
-      # without one. So assert the integration is live rather than assumed,
-      # by linting a workflow with a planted SC2086 and requiring the report.
+      # no shellcheck on PATH it skips all of them and still exits 0, which
+      # makes lint-github-actions.yml a vacuous pass (#85). This keeps that
+      # integration proven rather than assumed: a planted SC2086 must be
+      # reported. It fails if actionlint stops finding shellcheck, or changes
+      # how it discovers one.
+      #
       # actionlint reads a workflow from stdin when the path is `-`, so the
       # fixture never lands in the checkout for lint-github-actions.yml to
       # find. It stays single-quoted so shellcheck reads it as a literal and

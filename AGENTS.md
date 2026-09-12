@@ -96,12 +96,13 @@ name: `checksums` in `actions/set-up-shellcheck/action.yml` and
 and `lint-github-actions.yml`, and `shfmt-checksums` in `lint-shell.yml`. The
 others sit in case statements in the files that install them.
 
-A tool this repo installs must never be left to the runner image, even one
-every supported image ships. `lint-github-actions.yml` did leave shellcheck
-to the image (#85), and actionlint skips every `run:` block and still exits 0
-when it cannot find one, so the job would have passed vacuously on an image
-without it. `run-ci.yml`'s `Check actionlint runs shellcheck` step guards
-that specific integration by linting a planted `SC2086`.
+A tool a workflow depends on is installed here, never left to the runner
+image, even one every supported image ships. Leaving it to the image floats
+its version and can fail open: actionlint is the sharp case, since it skips
+every `run:` block and still exits 0 when it cannot find shellcheck, so a job
+that does not install one passes vacuously (#85). `run-ci.yml`'s
+`Check actionlint runs shellcheck` step guards that integration by linting a
+planted `SC2086`.
 
 ### Pinning Policy and Trust Model
 
