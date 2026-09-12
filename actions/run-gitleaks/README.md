@@ -4,10 +4,18 @@ Install gitleaks binary and run a scan.
 
 ## Inputs
 
-| Name      | Type   | Default                   | Description                                 |
-| --------- | ------ | ------------------------- | ------------------------------------------- |
-| `version` | string | `8.30.1`                  | gitleaks version to install                 |
-| `args`    | string | `detect`, `--source`, `.` | Arguments to pass to gitleaks, one per line |
+| Name      | Type   | Default     | Description                                 |
+| --------- | ------ | ----------- | ------------------------------------------- |
+| `version` | string | `8.30.1`    | gitleaks version to install                 |
+| `args`    | string | (see below) | Arguments to pass to gitleaks, one per line |
+
+Default `args`:
+
+```text
+detect
+--source
+.
+```
 
 ## Usage
 
