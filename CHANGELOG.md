@@ -16,10 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   result, and adds it to `PATH`. Both inputs are required and have no
   defaults, and `validator-rev` must be a full 40-character lowercase
   commit SHA, since a tag can be moved to another commit. `rust-version`
-  refuses `stable`, `beta` and `nightly`, with or without a host triple,
-  for the same reason, since the key records only the channel name and
-  cannot follow where it moves; a dated nightly is one release and is
-  accepted. The cache key names the
+  must name one release for the same reason, so `stable`, `beta` and
+  `nightly` are refused, with or without a host triple, and so is a
+  partial version such as `1.97`, which rustup reads as the newest
+  `1.97.x`; a three-component version and a dated nightly are accepted. The cache key names the
   runner OS, architecture and image and both pins, with no
   `restore-keys`, so a partial match cannot supply a validator built from
   a different commit or against a different libc; a cache hit installs

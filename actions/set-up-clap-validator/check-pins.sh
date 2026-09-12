@@ -41,22 +41,27 @@
 # key, which is also what keeps a newline in either one from writing a
 # second, caller-controlled line to GITHUB_OUTPUT.
 #
-# <image> is ImageOS, such as ubuntu24 or macos15. RUNNER_OS and RUNNER_ARCH
-# do not separate ubuntu-22.04 from ubuntu-24.04, which are both Linux/X64
-# and carry different glibc versions, so without it a binary built on one
-# would be restored on the other and die at exec. A self-hosted runner sets
-# no ImageOS, so the OS release stands in for it: ID and VERSION_ID from
-# /etc/os-release on Linux, both required since an ID alone reads the same
-# for every release of a distribution, and the major product version on
-# macOS. A runner where neither can be determined is refused rather than
-# pooled with every other one, and can set ImageOS itself to say what it is.
+# <image> names the userspace the binary was built against, because
+# RUNNER_OS and RUNNER_ARCH do not: ubuntu-22.04 and ubuntu-24.04 are both
+# Linux/X64 and carry different glibc versions, so without it a binary built
+# on one would be restored on the other and die at exec. It comes from ID
+# and VERSION_ID in /etc/os-release on Linux, both required since an ID
+# alone reads the same for every release of a distribution, or the major
+# product version on macOS, and falls back to ImageOS only when neither can
+# be read. That order is deliberate: ImageOS names the host VM, so in a job
+# that sets `container:` it still says ubuntu24 while cargo builds against
+# the container's libc. An environment that cannot be identified is refused
+# rather than pooled with every other one, and can set ImageOS itself.
 #
-# rust-version must name one toolchain. `stable`, `beta` and `nightly` are
-# refused, with or without a host triple appended, because each moves to a
-# new compiler on its own schedule while the key records only the name, so
-# a hit would go on serving the binary the previous compiler built. That is
-# the same reason validator-rev refuses a tag. A dated nightly such as
-# nightly-2026-01-01 is one release and is accepted.
+# rust-version must name one release, because the key records what was
+# passed rather than what rustup resolved it to. `stable`, `beta` and
+# `nightly` are refused, with or without a host triple appended, since each
+# moves to a new compiler on its own schedule. So is a partial version:
+# rustup reads 1.97 as the newest 1.97.x, so a later patch would be built
+# under a key already naming an older compiler's binary. That is the same
+# reason validator-rev refuses a tag. A three-component version and a dated
+# nightly such as nightly-2026-01-01 each name one release and are
+# accepted.
 #
 # cache-root is what `cargo install --root` is given, and the directory the
 # cache stores; install-dir is cargo's own layout underneath it, since
@@ -86,6 +91,17 @@ readonly REV_PATTERN='^[0-9a-f]{40}$'
 # Deliberately no whitespace, so the value is a single argument to rustup
 # and cargo and a single line in the cache key.
 readonly RUST_VERSION_PATTERN='^[A-Za-z0-9][A-Za-z0-9._+-]*$'
+
+# A version naming one release: three components, optionally followed by a
+# host triple. Two components are not enough, since rustup reads 1.97 as
+# the newest patch in that line rather than as a release.
+readonly EXACT_VERSION_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9._+-]+)?$'
+
+# What may stand as the <image> component of the cache key. Checked rather
+# than stripped to: two labels that differ only in characters a strip would
+# remove, `ubuntu/22.04` and `ubuntu22.04`, would otherwise collide on one
+# key and trade binaries built against different libraries.
+readonly IMAGE_PATTERN='^[A-Za-z0-9][A-Za-z0-9._-]*$'
 
 # Emit an ::error:: annotation, then exit.
 # Arguments:
@@ -126,21 +142,22 @@ function main() {
   if [[ ! "${RUST_VERSION}" =~ ${RUST_VERSION_PATTERN} ]]; then
     fail "${E_USAGE}" "rust-version must be a rustup toolchain name with no spaces, such as 1.97.1."
   fi
-  # A channel moves to a new compiler on its own schedule, and the cache key
-  # can only record the name, so a hit would go on serving the binary the
-  # previous compiler built. Rejecting one is the same reason a tag is
-  # rejected for validator-rev. rustup also takes a channel with a host
-  # triple appended, `stable-x86_64-unknown-linux-gnu` and the like, which
-  # moves exactly as much, so the prefixes are rejected too. `nightly-` is
-  # the one that needs looking at rather than matching: nightly-2026-01-01
-  # names one release, where nightly-x86_64-unknown-linux-gnu floats.
+  # Anything rustup resolves at install time moves out from under the cache
+  # key, which records only what was passed. A channel is the obvious case,
+  # bare or with a host triple appended. `1.97` is the quiet one: rustup
+  # takes it and installs the newest 1.97.x, so a later patch release would
+  # be built under a key that already names an older compiler's binary.
+  # Rejecting both is the same reason validator-rev refuses a tag. Only a
+  # dated nightly and a three-component version name one release.
   case "${RUST_VERSION}" in
-  stable | beta | nightly | stable-* | beta-*)
+  nightly-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] | nightly-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*) ;;
+  stable | beta | nightly | stable-* | beta-* | nightly-*)
     fail "${E_USAGE}" "rust-version must not be a floating channel (stable, beta, nightly, with or without a host triple), because the cache key cannot follow where one moves; pass an exact version such as 1.97.1, or a dated nightly."
     ;;
-  nightly-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
-  nightly-*)
-    fail "${E_USAGE}" "rust-version must not be a floating channel; a nightly must name its date, as nightly-2026-01-01 does."
+  *)
+    if [[ ! "${RUST_VERSION}" =~ ${EXACT_VERSION_PATTERN} ]]; then
+      fail "${E_USAGE}" "rust-version must name one release, as 1.97.1 does; rustup resolves a partial version such as 1.97 to the newest patch in that line, which the cache key cannot follow."
+    fi
     ;;
   esac
 
@@ -151,37 +168,47 @@ function main() {
   *) fail "${E_PLATFORM}" "Unsupported operating system: ${kernel}. Linux and macOS runners only." ;;
   esac
 
-  # GitHub-hosted runners set ImageOS, such as ubuntu24 or macos15, and
-  # that is the discriminator that matters: RUNNER_OS and RUNNER_ARCH are
-  # the same on ubuntu-22.04 and ubuntu-24.04, whose glibc versions are
-  # not. A self-hosted runner sets none, so derive the OS release, which
-  # answers the same compatibility question. Keying on OS and architecture
-  # alone would let one host restore a binary another host built against a
-  # libc it does not have.
-  local image="${ImageOS:-}"
+  # RUNNER_OS and RUNNER_ARCH are the same on ubuntu-22.04 and ubuntu-24.04,
+  # whose glibc versions are not, so a third component has to say which
+  # userspace the binary was built against or one would be restored on the
+  # other and die at exec.
+  #
+  # The OS release is read first, and ImageOS is the fallback rather than
+  # the other way round, because ImageOS names the host VM: in a job that
+  # sets `container:` it still reads ubuntu24 while cargo builds against
+  # the container's libc, so two different container images on one runner
+  # would share a key. /etc/os-release and sw_vers describe whatever
+  # userspace the build actually runs in, container or not.
+  local image=""
+  case "${kernel}" in
+  Linux)
+    # Both fields or neither: VERSION_ID is optional in os-release, and an
+    # ID on its own says `ubuntu` for every Ubuntu release alike, which is
+    # the sharing this is here to stop.
+    if [[ -r /etc/os-release ]]; then
+      image="$(awk -F= '$1=="ID"{gsub(/"/,"",$2); id=$2} $1=="VERSION_ID"{gsub(/"/,"",$2); v=$2} END{if (id != "" && v != "") printf "%s%s", id, v}' /etc/os-release 2>/dev/null || true)"
+    fi
+    ;;
+  Darwin)
+    # Only with a version in hand: a bare `macos` would pass the pattern
+    # below and put every macOS release on one key, which is the sharing
+    # this component exists to prevent.
+    local macos_version
+    macos_version="$(sw_vers -productVersion 2>/dev/null | cut -d. -f1 || true)"
+    if [[ -n "${macos_version}" ]]; then
+      image="macos${macos_version}"
+    fi
+    ;;
+  esac
   if [[ -z "${image}" ]]; then
-    case "${kernel}" in
-    Linux)
-      # Both fields or neither: VERSION_ID is optional in os-release, and
-      # an ID on its own says `ubuntu` for every Ubuntu release alike,
-      # which is the sharing this is here to stop. Leaving it empty hands
-      # the decision to the check below.
-      if [[ -r /etc/os-release ]]; then
-        image="$(awk -F= '$1=="ID"{gsub(/"/,"",$2); id=$2} $1=="VERSION_ID"{gsub(/"/,"",$2); v=$2} END{if (id != "" && v != "") printf "%s%s", id, v}' /etc/os-release)"
-      fi
-      ;;
-    Darwin)
-      image="macos$(sw_vers -productVersion 2>/dev/null | cut -d. -f1)"
-      ;;
-    esac
+    image="${ImageOS:-}"
   fi
-  # Reduced to what a cache key can carry, then required to be non-empty.
-  # Keying on nothing is the shared-key case this exists to prevent, so an
-  # unidentifiable runner is refused rather than quietly pooled with every
-  # other one; a caller in that position can set ImageOS itself.
-  image="$(printf '%s' "${image}" | tr -cd '[:alnum:]._-')"
-  if [[ -z "${image}" ]]; then
-    fail "${E_PLATFORM}" "Could not identify the runner image, which the cache key needs to tell hosts with incompatible libraries apart. Set ImageOS to a label unique to this runner image."
+  # Keying on nothing, or on a label that collides with another after
+  # sanitizing, is the shared-key case this exists to prevent. Both are
+  # refused rather than patched over; a caller in that position can set
+  # ImageOS to a label unique to this environment.
+  if [[ ! "${image}" =~ ${IMAGE_PATTERN} ]]; then
+    fail "${E_PLATFORM}" "Could not identify the runner image, which the cache key needs to tell environments with incompatible libraries apart. Set ImageOS to a label unique to this one, matching [A-Za-z0-9][A-Za-z0-9._-]*."
   fi
 
   local cache_root="${RUNNER_TEMP}/clap-validator"

@@ -31,13 +31,15 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   `ubuntu24` or `macos15`: OS and architecture alone do not separate
   ubuntu-22.04 from ubuntu-24.04, which are both Linux and X64 and carry
   different glibc versions, so a matrix over both would otherwise restore a
-  binary that cannot exec. A self-hosted runner sets no `ImageOS`, so the OS
-  release stands in for it: `ID` and `VERSION_ID` from `/etc/os-release` on
-  Linux, both required since an `ID` alone reads the same for every release
-  of a distribution, and the major product version on macOS. A runner where
-  neither can be read is refused rather than pooled with every other one,
-  and can set `ImageOS` itself to say what it is. There are no
-  `restore-keys`: a partial match would silently supply a validator built
+  binary that cannot exec. It comes from `ID` and `VERSION_ID` in
+  `/etc/os-release` on Linux, both required since an `ID` alone reads the
+  same for every release of a distribution, or the major product version on
+  macOS, and falls back to `ImageOS` only when neither can be read. That
+  order matters for a job that sets `container:`, where `ImageOS` still
+  names the host VM while `cargo` builds against the container's libc. An
+  environment that cannot be identified is refused rather than pooled with
+  every other one, and can set `ImageOS` itself to say what it is. There are
+  no `restore-keys`: a partial match would silently supply a validator built
   from a different commit, which is the failure the pinning exists to
   prevent. Restore and save are separate steps, so the save happens
   explicitly on the success path. Two jobs racing a cold cache both build;
@@ -48,15 +50,17 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   Rust at all and compiles nothing: the restored binary is standalone. Pin
   it because clap-validator 0.4.1 declares MSRV 1.95.0 and is edition 2024,
   which the runner image's preinstalled Rust may or may not satisfy from one
-  refresh to the next. `stable`, `beta` and `nightly` are refused, with or
-  without a host triple appended: each moves to a new compiler on its own
-  schedule while the key records only the name, so a hit would go on
-  serving the binary the previous compiler built. That
-  is the same reason `validator-rev` refuses a tag, and it is why this input
-  is stricter than
+  refresh to the next. It must name one release, since the key records what
+  was passed rather than what rustup resolved it to. `stable`, `beta` and
+  `nightly` are refused, with or without a host triple appended, and so is a
+  partial version such as `1.97`, which rustup reads as the newest `1.97.x`.
+  Either way a hit would go on serving the binary an older compiler built.
+  That is the same reason `validator-rev` refuses a tag, and it is why this
+  input is stricter than
   [run-rust-ci](../../docs/workflows/run-rust-ci.md)'s, which caches no
-  compiled artifact against the toolchain name. A dated nightly such as
-  `nightly-2026-01-01` names one release and is accepted.
+  compiled artifact against the toolchain name. A three-component version and
+  a dated nightly such as `nightly-2026-01-01` each name one release and are
+  accepted.
 - **Install location.** The binary is installed as
   `$RUNNER_TEMP/clap-validator/bin/clap-validator`, which is `cargo install
 --root`'s own layout rather than the `$RUNNER_TEMP/<tool>-bin/<tool>` the
@@ -72,7 +76,7 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
 | Name            | Type   | Default  | Description                                                          |
 | --------------- | ------ | -------- | -------------------------------------------------------------------- |
 | `validator-rev` | string | required | clap-validator commit to build, as a full 40-character lowercase SHA |
-| `rust-version`  | string | required | Exact Rust toolchain to build it with, such as `1.97.1`              |
+| `rust-version`  | string | required | Rust toolchain naming one release, such as `1.97.1`                  |
 
 ## Outputs
 

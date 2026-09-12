@@ -16,9 +16,10 @@ inputs:
       The exact Rust toolchain to build it with. clap-validator 0.4.1
       declares MSRV 1.95.0 and is edition 2024, which the runner image's
       preinstalled Rust may or may not satisfy from one refresh to the
-      next. `stable`, `beta` and `nightly` are refused, with or without a
-      host triple, since the cache key cannot follow where a channel
-      moves; a dated nightly is one release and is accepted.
+      next. It must name one release: `stable`, `beta` and `nightly` are
+      refused, with or without a host triple, and so is a partial version
+      such as `1.97`, which rustup reads as the newest `1.97.x`. A
+      three-component version and a dated nightly are accepted.
     required: true
 
 # Neither input is defaulted, and GitHub does not enforce `required:` for a
@@ -97,16 +98,6 @@ runs:
           --locked \
           --root "${CACHE_ROOT}"
 
-    # Reuses cache-primary-key so the restore and save keys cannot drift.
-    # On a cold cache two jobs can race to reserve the same key; the loser's
-    # save logs a warning and does not fail, so the job stays green.
-    - name: Cache the built validator
-      if: steps.cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: ${{ steps.pins.outputs.cache-root }}
-        key: ${{ steps.cache.outputs.cache-primary-key }}
-
     - name: Put clap-validator on PATH
       shell: bash
       env:
@@ -119,3 +110,19 @@ runs:
     - name: Report clap-validator version
       shell: bash
       run: clap-validator --version
+
+    # Saved only once the binary has run, and last for that reason. Saving
+    # before the check would put a binary that cannot execute here under the
+    # exact key, and every later run would restore it, skip the build and
+    # fail the same way, with no path back except changing a pin. A failed
+    # check stops the composite before this step instead.
+    #
+    # Reuses cache-primary-key so the restore and save keys cannot drift. On
+    # a cold cache two jobs can race to reserve the same key; the loser's
+    # save logs a warning and does not fail, so the job stays green.
+    - name: Cache the built validator
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.pins.outputs.cache-root }}
+        key: ${{ steps.cache.outputs.cache-primary-key }}

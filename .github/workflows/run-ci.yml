@@ -464,6 +464,10 @@ jobs:
             check_rejection "rust-version-${channel}" 64 "must not be a floating channel" \
               "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${channel}"
           done
+          # rustup reads a two-component version as the newest patch in that
+          # line, so it floats as much as a channel does.
+          check_rejection rust-version-partial 64 "must name one release" \
+            "VALIDATOR_REV=${VALIDATOR_REV}" RUST_VERSION=1.97
 
           # The rejections all discard GITHUB_OUTPUT, so the accepted case
           # is checked here too. The cache key's shape is the thing the
@@ -513,8 +517,15 @@ jobs:
           esac
 
           # An image that cannot be identified must stop the run rather than
-          # key on nothing and pool this runner with every other one.
-          if output="$(env -i PATH="${PATH}" RUNNER_TEMP="${RUNNER_TEMP}" \
+          # key on nothing and pool this environment with every other one.
+          # The derivation reaches for awk on Linux and sw_vers on macOS, so
+          # a PATH holding neither is what makes it fall through, and the
+          # ImageOS given here cannot stand in for it either.
+          bare_bin="${RUNNER_TEMP}/bare-bin"
+          mkdir -p "${bare_bin}"
+          ln -sf "$(command -v uname)" "${bare_bin}/uname"
+          if output="$(env -i PATH="${bare_bin}" \
+            RUNNER_TEMP="${RUNNER_TEMP}" \
             RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
             ImageOS=/// GITHUB_OUTPUT=/dev/null \
             "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
@@ -523,11 +534,11 @@ jobs:
           else
             code=$?
           fi
-          printf '%s\n' "${output}" | sed -e 's/^::error::/error: /' -e 's/^/  unidentifiable-image | /'
+          printf '%s\n' "${output}" | sed -e 's/^::error::/error: /' -e 's/^/  unusable-image-label | /'
           if [ "${code}" != 71 ]; then
-            echo "::error::unidentifiable-image exited ${code}, expected 71" >&2
+            echo "::error::unusable-image-label exited ${code}, expected 71" >&2
             status=1
           else
-            echo "unidentifiable-image: rejected with exit 71, as expected"
+            echo "unusable-image-label: rejected with exit 71, as expected"
           fi
           exit "${status}"
