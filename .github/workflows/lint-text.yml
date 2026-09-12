@@ -287,7 +287,7 @@ jobs:
           fi
 
       # Fetch the installer from the repository and commit this workflow
-      # file came from, the model the manifest fetches above use, so the
+      # file came from, the model the manifest fetches above follow, so the
       # script and this workflow always share a commit. A `./` action path
       # would resolve against the caller's checkout instead. The `job`
       # context is only available on steps, so the two values are bound
