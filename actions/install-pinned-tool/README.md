@@ -12,7 +12,8 @@ path, which resolves against the caller's checkout, so
 [lint-github-actions](../../docs/workflows/lint-github-actions.md) and
 [lint-shell](../../docs/workflows/lint-shell.md) fetch the script at their
 own commit and run it with those variables instead. The
-[set-up-actionlint](../set-up-actionlint/README.md) and
+[set-up-actionlint](../set-up-actionlint/README.md),
+[set-up-shellcheck](../set-up-shellcheck/README.md) and
 [set-up-shfmt](../set-up-shfmt/README.md) actions run the same script through
 a path relative to their own directory.
 

@@ -23,13 +23,14 @@ actions/
   set-up-golangci-lint/  # Install golangci-lint
   set-up-goreleaser/     # Install GoReleaser
   set-up-scrut/          # Install scrut CLI test runner
+  set-up-shellcheck/     # Install shellcheck
   set-up-shfmt/          # Install shfmt
 .github/
   workflows/
     analyze-with-codeql.yml                 # Reusable: GitHub CodeQL security analysis
     create-gh-release-from-changelog.yml    # Reusable: create GitHub Release from changelog
     deploy-to-pages.yml                     # Reusable: GitHub Pages build and deploy
-    lint-github-actions.yml                 # Reusable: actionlint
+    lint-github-actions.yml                 # Reusable: actionlint and shellcheck
     lint-shell.yml                          # Reusable: ShellCheck and shfmt
     lint-text.yml                           # Reusable: markdownlint, Prettier, cspell, yamllint
     publish-to-npm.yml                      # Reusable: npm publish to registry
@@ -51,6 +52,9 @@ docs/
   migrations/            # Major-version migration guides (vN.md)
   plans/                 # Plan documents (todo/ and done/)
   workflows/             # Per-reusable-workflow reference docs (<name>.md)
+tests/
+  fixtures/              # Inputs for the scrut self-test
+  scrut/                 # scrut tests run-ci.yml runs against this repo
 ```
 
 Each composite action also has a `README.md` next to its `action.yml`
@@ -72,8 +76,8 @@ and `lint-shell.yml` therefore fetch
 `lint-text.yml` uses for its manifests, which keeps the installer on the
 workflow's own commit. The other reusable workflows inline their tool
 installation. Composite actions reach sibling files in this repo through
-`github.action_path`: `set-up-actionlint` and `set-up-shfmt` run
-`../install-pinned-tool/install-pinned-tool.sh`.
+`github.action_path`: `set-up-actionlint`, `set-up-shellcheck` and
+`set-up-shfmt` run `../install-pinned-tool/install-pinned-tool.sh`.
 
 ### Naming
 
@@ -87,12 +91,22 @@ installation. Composite actions reach sibling files in this repo through
 ### SHA-256 Checksum Verification
 
 Every tool download verifies its SHA-256 checksum against upstream-published
-checksum files. The exceptions are scrut, shfmt (3.13.0+), cargo-audit, and
-cargo-llvm-cov, whose upstreams do not publish checksum files suitable for
-this repo's pinning model; their checksums are committed in this repo.
-shfmt's are the `checksums` and `shfmt-checksums` input defaults in
-`actions/set-up-shfmt/action.yml` and `lint-shell.yml`, keyed by asset
-name; the others sit in case statements in the files that install them.
+checksum files. The exceptions are shellcheck, scrut, shfmt (3.13.0+),
+cargo-audit, and cargo-llvm-cov, whose upstreams do not publish checksum
+files suitable for this repo's pinning model; their checksums are committed
+in this repo. shellcheck's and shfmt's are input defaults keyed by asset
+name: `checksums` in `actions/set-up-shellcheck/action.yml` and
+`actions/set-up-shfmt/action.yml`, `shellcheck-checksums` in `lint-shell.yml`
+and `lint-github-actions.yml`, and `shfmt-checksums` in `lint-shell.yml`. The
+others sit in case statements in the files that install them.
+
+A tool a workflow depends on is installed here, never left to the runner
+image, even one every supported image ships. Leaving it to the image floats
+its version and can fail open: actionlint is the sharp case, since it skips
+every `run:` block and still exits 0 when it cannot find shellcheck, so a job
+that does not install one passes vacuously (#85). `run-ci.yml`'s
+`Check actionlint runs shellcheck` step guards that integration by linting a
+planted `SC2086`.
 
 ### Pinning Policy and Trust Model
 
@@ -109,7 +123,7 @@ anything that runs in CI.
   `# master @ YYYY-MM-DD` instead.
 - **Binary downloads via `curl`**: SHA-256 verified against an upstream
   checksum file or, where upstream does not publish one, against
-  hardcoded checksums in this repo (currently scrut, shfmt,
+  hardcoded checksums in this repo (currently shellcheck, scrut, shfmt,
   cargo-audit, cargo-llvm-cov). `actions/install-pinned-tool`
   implements that procedure once for any release binary.
 - **Python tools (yamllint)**: installed via `uv pip install
@@ -224,8 +238,12 @@ check (exit non-zero on unformatted code), not a write operation.
 
 ### Shell Conventions
 
-- Arguments from `args` inputs are split with `read -r -a` into arrays. This
-  handles simple space-delimited flags; quoting and escaping are not supported.
+- Composite actions read an `args` input one argument per line, with a
+  `while IFS= read -r` loop into a bash array, so an argument may contain
+  spaces.
+- The Rust reusable workflows split their `*-args` inputs with `read -r -a`
+  into a bash array. That handles simple space-delimited flags; quoting and
+  escaping are not supported.
 - Inputs are passed to shell steps via `env:` mappings, not inline expressions.
 - Tools are installed to `RUNNER_TEMP` and added to `GITHUB_PATH`.
 - `actions/install-pinned-tool/install-pinned-tool.sh` stays compatible with
@@ -352,6 +370,19 @@ per the existing rule in `.github/copilot-instructions.md`.
 1. Add a row to the Quick Reference table in the root `README.md`, under
    the appropriate group, linking to the new `docs/workflows/<name>.md`.
 
+## Merging Pull Requests
+
+Always merge with a merge commit (`gh pr merge --merge`), and never squash
+or rebase. This holds for every pull request in this repository, including
+single-commit and Dependabot ones.
+
+The reason is that each commit here is written to stand on its own. A
+branch's history separates the substantive change from its plan file, its
+lint fixes, and any commits made in response to review, and `git log`
+against a single file is how a convention's rationale gets recovered later.
+Squashing collapses that into one message, and rebasing discards the merge
+point that shows what landed together.
+
 ## Releasing
 
 This repository has no GoReleaser config; releases are plain Git tags.
@@ -378,7 +409,10 @@ The repository self-hosts its own workflows as integration tests. The `run-ci.ym
 `scan-for-secrets-with-trufflehog.yml` files call the reusable workflows from
 this same repository. `run-ci.yml` also runs `actions/install-pinned-tool`,
 and the `set-up-*` actions built on it, from the checkout on Linux amd64,
-Linux arm64 and macOS arm64, including inputs it must reject.
+Linux arm64 and macOS arm64, including inputs it must reject, and asserts
+that actionlint really does shell out to shellcheck. Its `scrut` job calls
+`run-scrut-tests.yml` with `setup-uv: true` against `tests/scrut/`, whose
+fixture is a PEP 723 script that only runs if uv reached `PATH`.
 `actions/install-cspell-dictionaries` is tested on the same three
 runners the same way, through `run-cspell` against a fixture kept
 outside the checkout: a dictionary installed beside `cspell-lib`

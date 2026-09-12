@@ -6,8 +6,8 @@
 
 Covers tools that Dependabot does not track: version strings inside
 workflow `env:` blocks and `inputs.*-version` defaults, plus the
-hardcoded SHA-256 checksum tables for shfmt, scrut, cargo-audit, and
-cargo-llvm-cov.
+hardcoded SHA-256 checksum tables for shellcheck, shfmt, scrut,
+cargo-audit, and cargo-llvm-cov.
 
 Exit status is 0 when everything is current, 1 when at least one tool
 has a newer upstream release, 2 on lookup errors. Outputs a Markdown
@@ -122,12 +122,36 @@ TOOLS: list[Tool] = [
         "0.9.133",
         lambda: github_latest_matching("nextest-rs/nextest", r"cargo-nextest-(\d+\.\d+\.\d+)"),
     ),
-    Tool("uv", "0.11.8", lambda: github_latest_release("astral-sh/uv")),
+    Tool(
+        "uv",
+        "0.11.8",
+        lambda: github_latest_release("astral-sh/uv"),
+        notes=(
+            "Bump every pin together: UV_VERSION in lint-text.yml and "
+            "check-tool-versions.yml, the uv-version default in run-reuse's "
+            "action.yml and in run-scrut-tests.yml, and both the install and the "
+            "asserted version in run-ci.yml. The documented defaults have to match: "
+            "the input tables in actions/run-reuse/README.md and "
+            "docs/workflows/run-scrut-tests.md, and the example in "
+            "actions/install-pinned-tool/README.md. Grep the outgoing version to "
+            "catch any that moved; CHANGELOG entries are historical and stay."
+        ),
+    ),
     Tool(
         "scrut",
         "0.4.3",
         lambda: github_latest_release("facebookincubator/scrut"),
         "Hardcoded SHA-256 checksums must be regenerated on bump.",
+    ),
+    Tool(
+        "shellcheck",
+        "0.11.0",
+        lambda: github_latest_release("koalaman/shellcheck"),
+        "Committed SHA-256 lines must be regenerated on bump: the `checksums` "
+        "default in actions/set-up-shellcheck and `shellcheck-checksums` in "
+        "lint-shell.yml and lint-github-actions.yml. run-ci.yml installs "
+        "shellcheck directly and through the wrapper and asserts the version "
+        "in both checks; bump its four lines and both specs too.",
     ),
     Tool(
         "shfmt",
