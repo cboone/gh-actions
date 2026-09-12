@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `install-cspell-dictionaries` composite action: installs cspell
+  dictionary packages from npm beside an existing cspell installation,
+  which is what lets a bare
+  `"import": ["@cspell/dict-pt-pt/cspell-ext.json"]` in a config
+  elsewhere in the tree resolve. Each
+  `<name>@<version>  sha512-<base64>` entry is downloaded from its
+  deterministic registry URL and verified against that integrity before
+  npm reads it, so the registry supplies bytes rather than trust. A
+  version range, a dist-tag, and a package declaring runtime
+  dependencies are all refused (#72)
+- `lint-text.yml` `extra-cspell-packages` input and `run-cspell`
+  `extra-packages` input: name the dictionaries to add. cspell bundles
+  English-family dictionaries and a few technical ones, so a repo whose
+  prose is in another language previously could not use `run-cspell` at
+  all: the dictionary it needed was in neither the pinned tool tree nor
+  the workspace, and cspell flagged essentially every word (#72)
 - `install-pinned-tool` composite action: installs a release binary
   pinned to an exact version and SHA-256 and adds it to `PATH`. The
   asset URL is a template over `{version}`, `{os}` and `{arch}`, with
