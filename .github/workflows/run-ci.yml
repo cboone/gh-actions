@@ -394,6 +394,11 @@ jobs:
       PEER_DEPENDENT_PACKAGE: >-
         eslint-config-prettier@9.1.0
         sha512-NSWl5BFQWEPi1j4TjVNItzYV7dZXZ+wP6I6ZhrBGpChQhZRUaElihE9uRRkcbRnNb76UMKDF3r+WTmNcGPKsqw==
+      # A second dictionary, so the direct composite-action exercise installs
+      # something the run-cspell step above did not already put in place.
+      FR_FR_PACKAGE: >-
+        @cspell/dict-fr-fr@2.3.2
+        sha512-cPNjlavSiMfH/bB/Zl5GEF+94s6C77mdvghvVsclco1Ly0VWN3EpH5L9EE3bDGLDpE7m9EnYfRs8TOfZugGrUg==
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -437,19 +442,37 @@ jobs:
             ${{ runner.temp }}/cspell-fixture
           extra-packages: ${{ env.PT_PT_PACKAGE }}
 
-      - name: Check the installed dictionary
+      # run-cspell reaches the installer script through a sibling path, so it
+      # leaves the composite action's own wiring untested: its
+      # github.action_path binding and its two inputs. This invokes it
+      # directly, the way the set-up-* wrappers are exercised above, with a
+      # second dictionary so a pass cannot come from what run-cspell already
+      # installed.
+      - name: Install a second dictionary through the action
+        uses: ./actions/install-cspell-dictionaries
+        with:
+          install-dir: ${{ github.workspace }}
+          packages: ${{ env.FR_FR_PACKAGE }}
+
+      - name: Check the installed dictionaries
         run: |
-          manifest="node_modules/@cspell/dict-pt-pt/package.json"
-          if [ ! -f "${manifest}" ]; then
-            echo "::error::${manifest} is missing; the dictionary was not installed" >&2
-            exit 1
-          fi
-          reported="$(node -p "JSON.parse(require('fs').readFileSync('${manifest}', 'utf8')).version")"
-          echo "@cspell/dict-pt-pt: ${reported}"
-          if [ "${reported}" != "3.0.6" ]; then
-            echo "::error::@cspell/dict-pt-pt reports '${reported}', expected 3.0.6" >&2
-            exit 1
-          fi
+          status=0
+          for spec in "@cspell/dict-pt-pt 3.0.6" "@cspell/dict-fr-fr 2.3.2"; do
+            read -r name want <<< "${spec}"
+            manifest="node_modules/${name}/package.json"
+            if [ ! -f "${manifest}" ]; then
+              echo "::error::${manifest} is missing; ${name} was not installed" >&2
+              status=1
+              continue
+            fi
+            reported="$(node -p "JSON.parse(require('fs').readFileSync('${manifest}', 'utf8')).version")"
+            echo "${name}: ${reported}"
+            if [ "${reported}" != "${want}" ]; then
+              echo "::error::${name} reports '${reported}', expected ${want}" >&2
+              status=1
+            fi
+          done
+          exit "${status}"
 
       # The rejection cases run the script directly under /bin/bash, which is
       # bash 3.2 on macOS, so each case can assert its exit code and message
