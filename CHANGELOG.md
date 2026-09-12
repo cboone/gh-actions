@@ -25,10 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `/etc/os-release` or `sw_vers` rather than from the runner's `ImageOS`,
   which names the host VM and would read alike for every container on it;
   `image-label` names an environment that can describe itself through
-  neither. With no
-  `restore-keys`, so a partial match cannot supply a validator built from
-  a different commit or against a different libc; a cache hit installs
-  no Rust toolchain and compiles nothing. Running
+  neither. There are no `restore-keys`, so a partial match cannot supply
+  a validator built from a different commit or against a different libc,
+  and a cache hit installs no Rust toolchain and compiles nothing. Running
   `clap-validator validate` is left to the calling job. Outputs
   `install-dir` and `cache-hit`. Linux and macOS runners (#88)
 - `install-cspell-dictionaries` composite action: installs cspell

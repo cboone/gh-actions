@@ -27,8 +27,8 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   `gh api repos/free-audio/clap-validator/git/ref/tags/0.4.1 --jq '.object.sha'`.
 - **Cache.** The key is
   `clap-validator-<os>-<arch>-<image>-<validator-rev>-rust<rust-version>`,
-  naming every input to the build. `<image>` is the runner image, such as
-  `ubuntu24` or `macos15`: OS and architecture alone do not separate
+  naming every input to the build. `<image>` names this environment, as
+  `ubuntu24.04` or `macos15`: OS and architecture alone do not separate
   ubuntu-22.04 from ubuntu-24.04, which are both Linux and X64 and carry
   different glibc versions, so a matrix over both would otherwise restore a
   binary that cannot exec. It comes from `ID` and `VERSION_ID` in
