@@ -18,23 +18,45 @@
 # commit is the pin: `cargo --rev` also takes tags and branches, and both
 # can be moved to a different commit afterwards.
 #
-# No message repeats an input's value. The runner reads any output line
-# beginning with "::" as a workflow command, and a value that never reaches
+# No ::error:: message repeats an input's value. The runner reads any output
+# line beginning with "::" as a workflow command, and those messages are
+# emitted before the value has been checked, so the one that never reaches
 # the log needs no escaping to be safe there. A step's `with:` block is
-# already in the run log when a value needs checking.
+# already in the run log when a value needs checking. The success line at
+# the end does name both pins, and runs only once each has matched its
+# pattern below, neither of which admits a newline or a percent sign.
 #
-# RUNNER_OS, RUNNER_ARCH, RUNNER_TEMP and GITHUB_OUTPUT must be set, as they
-# are on every Actions runner. Two values are written to GITHUB_OUTPUT:
+# ImageOS, RUNNER_OS, RUNNER_ARCH, RUNNER_TEMP and GITHUB_OUTPUT must be set,
+# as they are on every GitHub-hosted Actions runner. ImageOS alone is
+# tolerated as empty, for a self-hosted runner that does not set it. Three
+# values are written to GITHUB_OUTPUT:
 #
-#   cache-key    clap-validator-<os>-<arch>-<rev>-rust<rust version>
+#   cache-key    clap-validator-<os>-<arch>-<image>-<rev>-rust<rust version>
+#   cache-root   <RUNNER_TEMP>/clap-validator
 #   install-dir  <RUNNER_TEMP>/clap-validator/bin
 #
 # The key names every input to the build, and the action restores it with no
 # restore-keys, so a partial match cannot quietly supply a validator built
 # from another commit. Both pins are pattern-checked before they reach the
 # key, which is also what keeps a newline in either one from writing a
-# second, caller-controlled line to GITHUB_OUTPUT. install-dir is cargo's
-# own layout: `cargo install --root DIR` writes DIR/bin/<binary>.
+# second, caller-controlled line to GITHUB_OUTPUT.
+#
+# <image> is ImageOS, such as ubuntu24 or macos15. RUNNER_OS and RUNNER_ARCH
+# do not separate ubuntu-22.04 from ubuntu-24.04, which are both Linux/X64
+# and carry different glibc versions, so without it a binary built on one
+# would be restored on the other and die at exec. A self-hosted runner
+# reports `unknown` and therefore shares one key per OS and architecture;
+# a fleet with mixed images should not share a cache across them.
+#
+# A rust-version naming a channel (`stable`, `nightly`) is accepted, since
+# `run-rust-ci.yml` permits one too, but the key cannot track what the
+# channel points at: the same key keeps serving the binary built by whatever
+# compiler `stable` meant the first time. Pass an exact version to pin it.
+#
+# cache-root is what `cargo install --root` is given, and the directory the
+# cache stores; install-dir is cargo's own layout underneath it, since
+# `cargo install --root DIR` writes DIR/bin/<binary>. Both are derived here
+# so the build, the cache and PATH cannot come to disagree about the path.
 #
 # Compatible with bash 3.2, the /bin/bash on macOS: no associative arrays,
 # no ${var,,}, no mapfile, and positional parameters are expanded as "$@",
@@ -42,7 +64,7 @@
 # ("${@}" fails there).
 #
 # Exit codes:
-#   0  - Pins accepted, cache key and install directory written
+#   0  - Pins accepted, cache key, cache root and install directory written
 #   64 - Invalid or missing input
 #   71 - Unsupported operating system
 
@@ -107,11 +129,19 @@ function main() {
   *) fail "${E_PLATFORM}" "Unsupported operating system: ${kernel}. Linux and macOS runners only." ;;
   esac
 
-  local install_dir="${RUNNER_TEMP}/clap-validator/bin"
-  local cache_key="clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-${VALIDATOR_REV}-rust${RUST_VERSION}"
+  # A self-hosted runner need not set ImageOS, and one label is better than
+  # refusing to run there; see the header on what that costs.
+  local image="${ImageOS:-unknown}"
 
-  printf 'cache-key=%s\n' "${cache_key}" >>"${GITHUB_OUTPUT}"
-  printf 'install-dir=%s\n' "${install_dir}" >>"${GITHUB_OUTPUT}"
+  local cache_root="${RUNNER_TEMP}/clap-validator"
+  local install_dir="${cache_root}/bin"
+  local cache_key="clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-${image}-${VALIDATOR_REV}-rust${RUST_VERSION}"
+
+  {
+    printf 'cache-key=%s\n' "${cache_key}"
+    printf 'cache-root=%s\n' "${cache_root}"
+    printf 'install-dir=%s\n' "${install_dir}"
+  } >>"${GITHUB_OUTPUT}"
   echo "Pinned clap-validator to ${VALIDATOR_REV}, built with Rust ${RUST_VERSION}" >&2
 }
 

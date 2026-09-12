@@ -42,9 +42,12 @@ runs:
     # commit. CHECKER stays in `env:` because, for a job that sets
     # `container:`, the runner translates host paths there but not in
     # expressions written into `run:`. The script also derives the cache
-    # key, `clap-validator-<os>-<arch>-<rev>-rust<rust version>`: naming it
-    # in one place is what stops the restore and save keys from drifting,
-    # and it keeps the key expression inside this file's line limit.
+    # key, `clap-validator-<os>-<arch>-<image>-<rev>-rust<rust version>`,
+    # and the directory the build installs into. Naming each in one place
+    # is what stops the restore key, the save key, the build's `--root` and
+    # the directory added to PATH from drifting apart, and it keeps the key
+    # expression inside this file's line limit. Every step below reads
+    # those outputs rather than spelling the path again.
     - name: Check the pins
       id: pins
       shell: bash
@@ -64,7 +67,7 @@ runs:
       id: cache
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        path: ${{ runner.temp }}/clap-validator
+        path: ${{ steps.pins.outputs.cache-root }}
         key: ${{ steps.pins.outputs.cache-key }}
 
     # `--locked` builds against the committed Cargo.lock, so a new release
@@ -78,13 +81,14 @@ runs:
       env:
         VALIDATOR_REV: ${{ inputs.validator-rev }}
         RUST_VERSION: ${{ inputs.rust-version }}
+        CACHE_ROOT: ${{ steps.pins.outputs.cache-root }}
       run: |
         rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update
         cargo "+${RUST_VERSION}" install \
           --git https://github.com/free-audio/clap-validator \
           --rev "${VALIDATOR_REV}" \
           --locked \
-          --root "${RUNNER_TEMP}/clap-validator"
+          --root "${CACHE_ROOT}"
 
     # Reuses cache-primary-key so the restore and save keys cannot drift.
     # On a cold cache two jobs can race to reserve the same key; the loser's
@@ -93,7 +97,7 @@ runs:
       if: steps.cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        path: ${{ runner.temp }}/clap-validator
+        path: ${{ steps.pins.outputs.cache-root }}
         key: ${{ steps.cache.outputs.cache-primary-key }}
 
     - name: Put clap-validator on PATH

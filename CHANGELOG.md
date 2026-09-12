@@ -16,10 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   result, and adds it to `PATH`. Both inputs are required and have no
   defaults, and `validator-rev` must be a full 40-character lowercase
   commit SHA, since a tag can be moved to another commit. The cache key
-  names the runner OS and architecture and both pins, with no
+  names the runner OS, architecture and image and both pins, with no
   `restore-keys`, so a partial match cannot supply a validator built from
-  a different commit; a cache hit installs no Rust toolchain and compiles
-  nothing. Running `clap-validator validate` is left to the calling job.
+  a different commit or against a different glibc; a cache hit installs no
+  Rust toolchain and compiles nothing. Running `clap-validator validate` is left to the calling job.
   Outputs `install-dir` and `cache-hit`. Linux and macOS runners (#88)
 - `install-pinned-tool` composite action: installs a release binary
   pinned to an exact version and SHA-256 and adds it to `PATH`. The

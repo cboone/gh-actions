@@ -26,19 +26,29 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   the identity that matters. Resolve a tag to its commit with
   `gh api repos/free-audio/clap-validator/git/ref/tags/0.4.1 --jq '.object.sha'`.
 - **Cache.** The key is
-  `clap-validator-<os>-<arch>-<validator-rev>-rust<rust-version>`, naming
-  every input to the build. There are no `restore-keys`: a partial match
-  would silently supply a validator built from a different commit, which is
-  the failure the pinning exists to prevent. Restore and save are separate
-  steps, so the save happens explicitly on the success path. Two jobs racing
-  a cold cache both build; the loser's save logs a warning and does not fail.
+  `clap-validator-<os>-<arch>-<image>-<validator-rev>-rust<rust-version>`,
+  naming every input to the build. `<image>` is the runner image, such as
+  `ubuntu24` or `macos15`: OS and architecture alone do not separate
+  ubuntu-22.04 from ubuntu-24.04, which are both Linux and X64 and carry
+  different glibc versions, so a matrix over both would otherwise restore a
+  binary that cannot exec. A self-hosted runner that sets no `ImageOS`
+  reports `unknown` and shares one key per OS and architecture. There are no
+  `restore-keys`: a partial match would silently supply a validator built
+  from a different commit, which is the failure the pinning exists to
+  prevent. Restore and save are separate steps, so the save happens
+  explicitly on the success path. Two jobs racing a cold cache both build;
+  the loser's save logs a warning and does not fail.
 - **Toolchain.** `rustup` and `cargo` must be on `PATH`, as they are on
   GitHub-hosted Linux and macOS images. `rust-version` is installed with
   `--profile minimal` only when the cache misses, so a cache hit installs no
   Rust at all and compiles nothing: the restored binary is standalone. Pin
   it because clap-validator 0.4.1 declares MSRV 1.95.0 and is edition 2024,
   which the runner image's preinstalled Rust may or may not satisfy from one
-  refresh to the next.
+  refresh to the next. A channel name (`stable`, `nightly`) is accepted,
+  matching what [run-rust-ci](../../docs/workflows/run-rust-ci.md) permits,
+  but the key cannot track what a channel points at: it keeps serving the
+  binary built by whichever compiler the channel named first. Pass an exact
+  version to pin the toolchain as well as the source.
 - **Install location.** The binary is installed as
   `$RUNNER_TEMP/clap-validator/bin/clap-validator`, which is `cargo install
 --root`'s own layout rather than the `$RUNNER_TEMP/<tool>-bin/<tool>` the

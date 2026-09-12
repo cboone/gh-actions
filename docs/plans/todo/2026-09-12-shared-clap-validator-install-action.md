@@ -90,9 +90,10 @@ an exit-code block), `set -euo pipefail`, `readonly E_USAGE=64` and
 `readonly E_PLATFORM=71`, and bash 3.2 compatibility, since the rejection
 tests run it under `/bin/bash` on macOS.
 
-Reads `VALIDATOR_REV`, `RUST_VERSION`, `RUNNER_OS`, `RUNNER_ARCH`,
-`RUNNER_TEMP` and `GITHUB_OUTPUT`. Rejects, with `::error::` annotations
-and accumulated status so one run reports every problem:
+Reads `VALIDATOR_REV`, `RUST_VERSION`, `ImageOS`, `RUNNER_OS`,
+`RUNNER_ARCH`, `RUNNER_TEMP` and `GITHUB_OUTPUT`. Rejects, with an
+`::error::` annotation, exiting on the first problem as
+`install-pinned-tool.sh` does rather than accumulating:
 
 - an empty `validator-rev` or `rust-version`, exit 64;
 - a `validator-rev` that is not 40 lowercase hex characters, exit 64;
@@ -100,18 +101,25 @@ and accumulated status so one run reports every problem:
   the platform guard the README's "Supported platforms" section promises
   of every installer.
 
-On success writes two `GITHUB_OUTPUT` values:
+On success writes three `GITHUB_OUTPUT` values:
 
 - `cache-key`, as
-  `clap-validator-<RUNNER_OS>-<RUNNER_ARCH>-<rev>-rust<rust-version>`,
-  byte-identical to the key fosforo writes inline, since `RUNNER_OS` and
-  `RUNNER_ARCH` carry the same values as `runner.os` and `runner.arch`;
+  `clap-validator-<RUNNER_OS>-<RUNNER_ARCH>-<ImageOS>-<rev>-rust<rust-version>`.
+  fosforo's key omits the image, which is safe there because it validates
+  only on macOS; a shared action needs it, since `RUNNER_OS` and
+  `RUNNER_ARCH` are both `Linux`/`X64` on ubuntu-22.04 and ubuntu-24.04 and
+  a binary built against one glibc cannot exec on the other. A self-hosted
+  runner setting no `ImageOS` reports `unknown`;
+- `cache-root`, as `${RUNNER_TEMP}/clap-validator`;
 - `install-dir`, as `${RUNNER_TEMP}/clap-validator/bin`.
 
-Single-sourcing the key here is also what keeps the line under yamllint's
-120-character limit: written inline in `with:`, the key expression is 122
-characters. A comment records the literal shape so a reader of
-`action.yml` does not have to open the script to learn it.
+Deriving all three here is what keeps the restore key, the save key, the
+build's `--root` and the directory added to `PATH` from drifting apart:
+`${{ runner.temp }}` in a `with:` and `$RUNNER_TEMP` in a `run:` are
+different sources that a caller's job-level `env:` can separate. It also
+keeps the key under yamllint's 120-character limit, which the inline form
+exceeds. A comment records the literal shape so a reader of `action.yml`
+does not have to open the script to learn it.
 
 ### 2. `actions/set-up-clap-validator/action.yml` (new)
 

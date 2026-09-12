@@ -322,7 +322,12 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Set up clap-validator (builds on a cold cache)
+      # Caches saved on main are readable from a pull request against it, so
+      # this call builds only when the pins change or the entry has aged
+      # out; the rest of the time it restores, and the build path rides on
+      # whoever bumps a pin. It is not asserted either way here, because
+      # both outcomes are correct.
+      - name: Set up clap-validator
         id: first
         uses: ./actions/set-up-clap-validator
         with:
@@ -349,13 +354,12 @@ jobs:
           reported="$(clap-validator --version 2>&1)"
           reported="${reported%%$'\n'*}"
           echo "clap-validator: ${reported}"
-          case "${reported}" in
-            *0.4.1*) ;;
-            *)
-              echo "::error::clap-validator reports '${reported}', expected 0.4.1" >&2
-              status=1
-              ;;
-          esac
+          # Matched whole rather than as a substring, so 0.4.10 or a
+          # git-describe suffix cannot pass for the pinned release.
+          if [ "${reported}" != "clap-validator 0.4.1" ]; then
+            echo "::error::clap-validator reports '${reported}', expected 'clap-validator 0.4.1'" >&2
+            status=1
+          fi
           exit "${status}"
 
       # A second call finds the key the first one saved, so the cache-hit
@@ -424,8 +428,37 @@ jobs:
             VALIDATOR_REV=0.4.1 "RUST_VERSION=${RUST_VERSION}"
           check_rejection validator-rev-short-sha 64 "must be a full 40-character lowercase commit SHA" \
             VALIDATOR_REV=152b982 "RUST_VERSION=${RUST_VERSION}"
+          # Right length, wrong alphabet. Without this the two cases above
+          # are both too short, so an unanchored or case-insensitive
+          # pattern would still pass the suite.
+          check_rejection validator-rev-40-not-hex 64 "must be a full 40-character lowercase commit SHA" \
+            VALIDATOR_REV=zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz "RUST_VERSION=${RUST_VERSION}"
+          check_rejection validator-rev-uppercase 64 "must be a full 40-character lowercase commit SHA" \
+            VALIDATOR_REV=152B9823E992D782C5C1FD33BCA0295478B919AA "RUST_VERSION=${RUST_VERSION}"
           check_rejection missing-rust-version 64 "rust-version is not set" \
             "VALIDATOR_REV=${VALIDATOR_REV}"
           check_rejection rust-version-with-spaces 64 "must be a rustup toolchain name with no spaces" \
             "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=1.97.1 --bogus"
+
+          # The rejections all discard GITHUB_OUTPUT, so the accepted case
+          # is checked here too. The cache key's shape is the thing the
+          # whole design protects, and nothing else asserts it.
+          outputs="${RUNNER_TEMP}/check-pins-outputs"
+          : >"${outputs}"
+          env -i PATH="${PATH}" RUNNER_TEMP="${RUNNER_TEMP}" \
+            RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
+            ImageOS="${ImageOS:-}" GITHUB_OUTPUT="${outputs}" \
+            "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
+            /bin/bash actions/set-up-clap-validator/check-pins.sh
+          sed 's/^/  accepted | /' "${outputs}"
+          want_key="clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-${ImageOS:-unknown}"
+          want_key="${want_key}-${VALIDATOR_REV}-rust${RUST_VERSION}"
+          for want in "cache-key=${want_key}" \
+            "cache-root=${RUNNER_TEMP}/clap-validator" \
+            "install-dir=${RUNNER_TEMP}/clap-validator/bin"; do
+            if ! grep -qxF "${want}" "${outputs}"; then
+              echo "::error::check-pins.sh did not write '${want}'" >&2
+              status=1
+            fi
+          done
           exit "${status}"

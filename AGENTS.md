@@ -154,9 +154,11 @@ anything that runs in CI.
   commit's own `Cargo.lock`. `install-pinned-tool` cannot reach this
   upstream, which publishes nothing to crates.io and whose release assets
   cover neither Linux arm64 nor a file name derivable from a version
-  string. The action rejects a `validator-rev` that is not a full
-  40-character lowercase SHA, so a tag, which can be moved, cannot stand in
-  for the commit.
+  string (0.4.1's are `.zip`, and named
+  `clap-validator-0.4.1-127-g152b982-<platform>`, where the middle field is
+  a build counter no version string yields). The action rejects a
+  `validator-rev` that is not a full 40-character lowercase SHA, so a tag,
+  which can be moved, cannot stand in for the commit.
 - **`package.json` devDependencies**: exact versions (no `^`/`~`); the
   `package-lock.json` provides per-package sha512 integrity for any
   fresh `npm ci`.
