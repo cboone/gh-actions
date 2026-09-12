@@ -46,16 +46,17 @@
 # and carry different glibc versions, so without it a binary built on one
 # would be restored on the other and die at exec. A self-hosted runner sets
 # no ImageOS, so the OS release stands in for it: ID and VERSION_ID from
-# /etc/os-release on Linux, the major product version on macOS. A runner
-# where neither can be determined is refused rather than pooled with every
-# other one, and can set ImageOS itself to say what it is.
+# /etc/os-release on Linux, both required since an ID alone reads the same
+# for every release of a distribution, and the major product version on
+# macOS. A runner where neither can be determined is refused rather than
+# pooled with every other one, and can set ImageOS itself to say what it is.
 #
 # rust-version must name one toolchain. `stable`, `beta` and `nightly` are
-# refused, because each moves to a new compiler on its own schedule while
-# the key records only the name, so a hit would go on serving the binary
-# the previous compiler built. That is the same reason validator-rev
-# refuses a tag. A dated nightly such as nightly-2026-01-01 is one release
-# and is accepted.
+# refused, with or without a host triple appended, because each moves to a
+# new compiler on its own schedule while the key records only the name, so
+# a hit would go on serving the binary the previous compiler built. That is
+# the same reason validator-rev refuses a tag. A dated nightly such as
+# nightly-2026-01-01 is one release and is accepted.
 #
 # cache-root is what `cargo install --root` is given, and the directory the
 # cache stores; install-dir is cargo's own layout underneath it, since
@@ -125,14 +126,21 @@ function main() {
   if [[ ! "${RUST_VERSION}" =~ ${RUST_VERSION_PATTERN} ]]; then
     fail "${E_USAGE}" "rust-version must be a rustup toolchain name with no spaces, such as 1.97.1."
   fi
-  # These three move to a new compiler on their own schedule, and the cache
-  # key can only record the name, so a hit would go on serving the binary
-  # the previous compiler built. Rejecting them is the same reason a tag is
-  # rejected for validator-rev. A dated nightly names one release and is
-  # accepted.
+  # A channel moves to a new compiler on its own schedule, and the cache key
+  # can only record the name, so a hit would go on serving the binary the
+  # previous compiler built. Rejecting one is the same reason a tag is
+  # rejected for validator-rev. rustup also takes a channel with a host
+  # triple appended, `stable-x86_64-unknown-linux-gnu` and the like, which
+  # moves exactly as much, so the prefixes are rejected too. `nightly-` is
+  # the one that needs looking at rather than matching: nightly-2026-01-01
+  # names one release, where nightly-x86_64-unknown-linux-gnu floats.
   case "${RUST_VERSION}" in
-  stable | beta | nightly)
-    fail "${E_USAGE}" "rust-version must not be a floating channel (stable, beta, nightly), because the cache key cannot follow where one moves; pass an exact version such as 1.97.1, or a dated nightly."
+  stable | beta | nightly | stable-* | beta-*)
+    fail "${E_USAGE}" "rust-version must not be a floating channel (stable, beta, nightly, with or without a host triple), because the cache key cannot follow where one moves; pass an exact version such as 1.97.1, or a dated nightly."
+    ;;
+  nightly-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+  nightly-*)
+    fail "${E_USAGE}" "rust-version must not be a floating channel; a nightly must name its date, as nightly-2026-01-01 does."
     ;;
   esac
 
@@ -154,8 +162,12 @@ function main() {
   if [[ -z "${image}" ]]; then
     case "${kernel}" in
     Linux)
+      # Both fields or neither: VERSION_ID is optional in os-release, and
+      # an ID on its own says `ubuntu` for every Ubuntu release alike,
+      # which is the sharing this is here to stop. Leaving it empty hands
+      # the decision to the check below.
       if [[ -r /etc/os-release ]]; then
-        image="$(awk -F= '$1=="ID"{gsub(/"/,"",$2); id=$2} $1=="VERSION_ID"{gsub(/"/,"",$2); v=$2} END{printf "%s%s", id, v}' /etc/os-release)"
+        image="$(awk -F= '$1=="ID"{gsub(/"/,"",$2); id=$2} $1=="VERSION_ID"{gsub(/"/,"",$2); v=$2} END{if (id != "" && v != "") printf "%s%s", id, v}' /etc/os-release)"
       fi
       ;;
     Darwin)

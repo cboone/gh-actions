@@ -33,9 +33,10 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   different glibc versions, so a matrix over both would otherwise restore a
   binary that cannot exec. A self-hosted runner sets no `ImageOS`, so the OS
   release stands in for it: `ID` and `VERSION_ID` from `/etc/os-release` on
-  Linux, the major product version on macOS. A runner where neither can be
-  read is refused rather than pooled with every other one, and can set
-  `ImageOS` itself to say what it is. There are no
+  Linux, both required since an `ID` alone reads the same for every release
+  of a distribution, and the major product version on macOS. A runner where
+  neither can be read is refused rather than pooled with every other one,
+  and can set `ImageOS` itself to say what it is. There are no
   `restore-keys`: a partial match would silently supply a validator built
   from a different commit, which is the failure the pinning exists to
   prevent. Restore and save are separate steps, so the save happens
@@ -47,9 +48,10 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   Rust at all and compiles nothing: the restored binary is standalone. Pin
   it because clap-validator 0.4.1 declares MSRV 1.95.0 and is edition 2024,
   which the runner image's preinstalled Rust may or may not satisfy from one
-  refresh to the next. `stable`, `beta` and `nightly` are refused: each moves
-  to a new compiler on its own schedule while the key records only the name,
-  so a hit would go on serving the binary the previous compiler built. That
+  refresh to the next. `stable`, `beta` and `nightly` are refused, with or
+  without a host triple appended: each moves to a new compiler on its own
+  schedule while the key records only the name, so a hit would go on
+  serving the binary the previous compiler built. That
   is the same reason `validator-rev` refuses a tag, and it is why this input
   is stricter than
   [run-rust-ci](../../docs/workflows/run-rust-ci.md)'s, which caches no

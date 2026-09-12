@@ -16,9 +16,9 @@ inputs:
       The exact Rust toolchain to build it with. clap-validator 0.4.1
       declares MSRV 1.95.0 and is edition 2024, which the runner image's
       preinstalled Rust may or may not satisfy from one refresh to the
-      next. `stable`, `beta` and `nightly` are refused, since the cache
-      key cannot follow where a channel moves; a dated nightly is one
-      release and is accepted.
+      next. `stable`, `beta` and `nightly` are refused, with or without a
+      host triple, since the cache key cannot follow where a channel
+      moves; a dated nightly is one release and is accepted.
     required: true
 
 # Neither input is defaulted, and GitHub does not enforce `required:` for a
@@ -77,6 +77,10 @@ runs:
     # keeps the binary out of the runner's ~/.cargo/bin, so the cached path
     # holds exactly what this built. The toolchain is installed here rather
     # than in a step of its own, so a cache hit installs no Rust at all.
+    # The root is cleared first, as install-pinned-tool clears its own
+    # install directory: a second call in the same job with different pins
+    # misses the cache and would otherwise build over the first call's
+    # binary, and save whatever survived under the new key.
     - name: Build clap-validator
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
@@ -85,6 +89,7 @@ runs:
         RUST_VERSION: ${{ inputs.rust-version }}
         CACHE_ROOT: ${{ steps.pins.outputs.cache-root }}
       run: |
+        rm -rf "${CACHE_ROOT}"
         rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update
         cargo "+${RUST_VERSION}" install \
           --git https://github.com/free-audio/clap-validator \

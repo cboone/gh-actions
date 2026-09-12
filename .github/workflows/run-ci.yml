@@ -455,9 +455,12 @@ jobs:
             "VALIDATOR_REV=${VALIDATOR_REV}"
           check_rejection rust-version-with-spaces 64 "must be a rustup toolchain name with no spaces" \
             "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=1.97.1 --bogus"
-          # A channel the key cannot follow. A dated nightly is a single
-          # release, so it stays accepted and is not tested here.
-          for channel in stable beta nightly; do
+          # A channel the key cannot follow, bare or carrying a host triple.
+          # A dated nightly is a single release and stays accepted, which
+          # the no-ImageOS run below relies on.
+          for channel in stable beta nightly \
+            stable-x86_64-unknown-linux-gnu beta-aarch64-apple-darwin \
+            nightly-x86_64-unknown-linux-gnu; do
             check_rejection "rust-version-${channel}" 64 "must not be a floating channel" \
               "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${channel}"
           done
@@ -473,7 +476,7 @@ jobs:
             "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
             /bin/bash actions/set-up-clap-validator/check-pins.sh
           sed 's/^/  accepted | /' "${outputs}"
-          want_key="clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-${ImageOS:-unknown}"
+          want_key="clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-${ImageOS}"
           want_key="${want_key}-${VALIDATOR_REV}-rust${RUST_VERSION}"
           for want in "cache-key=${want_key}" \
             "cache-root=${RUNNER_TEMP}/clap-validator" \
@@ -483,4 +486,48 @@ jobs:
               status=1
             fi
           done
+
+          # Every runner here sets ImageOS, so the self-hosted path where it
+          # is absent would otherwise never run. What matters is that the
+          # image is derived from the OS release rather than defaulted to a
+          # shared constant, which is the sharing the derivation exists to
+          # stop.
+          : >"${outputs}"
+          env -i PATH="${PATH}" RUNNER_TEMP="${RUNNER_TEMP}" \
+            RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
+            GITHUB_OUTPUT="${outputs}" \
+            "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
+            /bin/bash actions/set-up-clap-validator/check-pins.sh
+          sed 's/^/  no-ImageOS | /' "${outputs}"
+          prefix="cache-key=clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-"
+          suffix="-${VALIDATOR_REV}-rust${RUST_VERSION}"
+          derived="$(grep '^cache-key=' "${outputs}")"
+          derived="${derived#"${prefix}"}"
+          derived="${derived%"${suffix}"}"
+          case "${derived}" in
+            "" | unknown)
+              echo "::error::no-ImageOS run derived image '${derived}', expected an OS release identifier" >&2
+              status=1
+              ;;
+            *) echo "no-ImageOS run derived image: ${derived}" ;;
+          esac
+
+          # An image that cannot be identified must stop the run rather than
+          # key on nothing and pool this runner with every other one.
+          if output="$(env -i PATH="${PATH}" RUNNER_TEMP="${RUNNER_TEMP}" \
+            RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
+            ImageOS=/// GITHUB_OUTPUT=/dev/null \
+            "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
+            /bin/bash actions/set-up-clap-validator/check-pins.sh 2>&1)"; then
+            code=0
+          else
+            code=$?
+          fi
+          printf '%s\n' "${output}" | sed -e 's/^::error::/error: /' -e 's/^/  unidentifiable-image | /'
+          if [ "${code}" != 71 ]; then
+            echo "::error::unidentifiable-image exited ${code}, expected 71" >&2
+            status=1
+          else
+            echo "unidentifiable-image: rejected with exit 71, as expected"
+          fi
           exit "${status}"
