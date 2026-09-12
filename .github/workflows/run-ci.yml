@@ -10,6 +10,9 @@ name: Run CI
 # `install-pinned-tool` runs that composite action, and the set-up-*
 # actions built on it, from this checkout on Linux amd64, Linux arm64 and
 # macOS arm64, including inputs it must reject.
+# `set-up-clap-validator` runs that action on the same three runners,
+# covering the cold-cache build, the cache-hit path and the pins it must
+# reject.
 
 on:
   push:
@@ -216,4 +219,137 @@ jobs:
           check_rejection plain-http-url 64 "must be an https:// URL" \
             TOOL=shfmt VERSION=3.13.1 "CHECKSUM=${SHFMT_SHA256}" \
             "URL_TEMPLATE=http://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}"
+          exit "${status}"
+
+  set-up-clap-validator:
+    name: set-up-clap-validator (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    # A cold cache builds clap-validator and its dependency tree from
+    # source, which the 10 minutes the job above allows would not cover.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Test fixtures, not pins this repo ships: both action inputs are
+      # required and have no defaults, so neither reaches a consumer. The
+      # rev is tag 0.4.1 resolved to its commit, and the toolchain is the
+      # one fosforo and springer build that commit with.
+      VALIDATOR_REV: 152b9823e992d782c5c1fd33bca0295478b919aa
+      RUST_VERSION: "1.97.1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up clap-validator (builds on a cold cache)
+        id: first
+        uses: ./actions/set-up-clap-validator
+        with:
+          validator-rev: ${{ env.VALIDATOR_REV }}
+          rust-version: ${{ env.RUST_VERSION }}
+
+      # The binary must resolve to this action's own install directory
+      # rather than to a copy the runner image ships, and must run.
+      - name: Check the installed binary
+        env:
+          INSTALL_DIR: ${{ steps.first.outputs.install-dir }}
+        run: |
+          status=0
+          expected="${RUNNER_TEMP}/clap-validator/bin"
+          resolved="$(command -v clap-validator || true)"
+          if [ "${resolved}" != "${expected}/clap-validator" ]; then
+            echo "::error::clap-validator resolves to '${resolved}', not ${expected}/clap-validator" >&2
+            status=1
+          fi
+          if [ "${INSTALL_DIR}" != "${expected}" ]; then
+            echo "::error::install-dir output is '${INSTALL_DIR}', expected ${expected}" >&2
+            status=1
+          fi
+          reported="$(clap-validator --version 2>&1)"
+          reported="${reported%%$'\n'*}"
+          echo "clap-validator: ${reported}"
+          case "${reported}" in
+            *0.4.1*) ;;
+            *)
+              echo "::error::clap-validator reports '${reported}', expected 0.4.1" >&2
+              status=1
+              ;;
+          esac
+          exit "${status}"
+
+      # A second call finds the key the first one saved, so the cache-hit
+      # path is covered on every run rather than only once some earlier run
+      # has warmed the cache. Skipped for a pull request from a fork, which
+      # gets read-only cache access: there the save above cannot persist and
+      # a miss here would be correct behavior rather than a regression.
+      - name: Set up clap-validator again
+        id: second
+        if: github.event.pull_request.head.repo.fork != true
+        uses: ./actions/set-up-clap-validator
+        with:
+          validator-rev: ${{ env.VALIDATOR_REV }}
+          rust-version: ${{ env.RUST_VERSION }}
+
+      - name: Check the cache-hit path
+        if: github.event.pull_request.head.repo.fork != true
+        env:
+          CACHE_HIT: ${{ steps.second.outputs.cache-hit }}
+        run: |
+          if [ "${CACHE_HIT}" != "true" ]; then
+            echo "::error::second call reports cache-hit '${CACHE_HIT}', expected true" >&2
+            exit 1
+          fi
+          echo "the second call restored the validator from the cache"
+
+      # The rejection cases run check-pins.sh directly under /bin/bash,
+      # which is bash 3.2 on macOS, so each can assert its exit code and
+      # message rather than only that it failed. They exist because
+      # `required: true` does not stop a composite action from being handed
+      # an empty input. Output is captured and its ::error:: prefixes
+      # rewritten, so the expected failures raise no annotations.
+      - name: Check the rejections
+        run: |
+          status=0
+          # Arguments: case name, expected exit code, expected message, then
+          # KEY=VALUE environment for the script.
+          check_rejection() {
+            local name="$1" want_code="$2" want_message="$3"
+            shift 3
+            local output code
+            if output="$(env -i PATH="${PATH}" RUNNER_TEMP="${RUNNER_TEMP}" \
+              RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
+              GITHUB_OUTPUT=/dev/null "$@" \
+              /bin/bash actions/set-up-clap-validator/check-pins.sh 2>&1)"; then
+              code=0
+            else
+              code=$?
+            fi
+            printf '%s\n' "${output}" | sed -e 's/^::error::/error: /' -e "s/^/  ${name} | /"
+            if [ "${code}" != "${want_code}" ]; then
+              echo "::error::${name} exited ${code}, expected ${want_code}" >&2
+              status=1
+            elif [[ "${output}" != *"${want_message}"* ]]; then
+              echo "::error::${name} did not report '${want_message}'" >&2
+              status=1
+            else
+              echo "${name}: rejected with exit ${code}, as expected"
+            fi
+          }
+          check_rejection missing-validator-rev 64 "validator-rev is not set" \
+            "RUST_VERSION=${RUST_VERSION}"
+          check_rejection empty-validator-rev 64 "validator-rev is not set" \
+            VALIDATOR_REV= "RUST_VERSION=${RUST_VERSION}"
+          check_rejection validator-rev-is-a-tag 64 "must be a full 40-character lowercase commit SHA" \
+            VALIDATOR_REV=0.4.1 "RUST_VERSION=${RUST_VERSION}"
+          check_rejection validator-rev-short-sha 64 "must be a full 40-character lowercase commit SHA" \
+            VALIDATOR_REV=152b982 "RUST_VERSION=${RUST_VERSION}"
+          check_rejection missing-rust-version 64 "rust-version is not set" \
+            "VALIDATOR_REV=${VALIDATOR_REV}"
+          check_rejection rust-version-with-spaces 64 "must be a rustup toolchain name with no spaces" \
+            "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=1.97.1 --bogus"
           exit "${status}"

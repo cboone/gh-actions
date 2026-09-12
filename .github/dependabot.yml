@@ -1,9 +1,11 @@
 # Dependabot keeps two surfaces up to date:
 #
-# 1. github-actions: every `uses:` reference in .github/workflows/ and in
-#    actions/*/action.yml that points to an external action. Dependabot
-#    follows the SHA-pin convention and updates both the SHA and the
-#    `# vX.Y.Z` comment.
+# 1. github-actions: every `uses:` reference pointing to an external
+#    action, in .github/workflows/ and in the action directories listed
+#    under `directories:` below. Dependabot follows the SHA-pin convention
+#    and updates both the SHA and the `# vX.Y.Z` comment. It reads only the
+#    directories named there, so an action that gains an external `uses:`
+#    has to be added to the list or its pins are never bumped.
 # 2. npm: package.json + package-lock.json devDependencies.
 #
 # Dependabot does NOT track:
@@ -24,6 +26,7 @@ updates:
     directories:
       - "/"
       - "/actions/create-pull-request"
+      - "/actions/set-up-clap-validator"
     schedule:
       interval: weekly
       day: monday
