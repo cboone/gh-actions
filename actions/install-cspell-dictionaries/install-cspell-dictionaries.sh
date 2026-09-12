@@ -48,7 +48,8 @@
 #   0  - Installed, or nothing to install
 #   64 - Invalid or missing input
 #   65 - Integrity malformed or mismatched
-#   66 - Package rejected: it declares runtime dependencies
+#   66 - Package tarball rejected: unreadable, or it declares runtime
+#        dependencies
 #   69 - Download failed
 #   70 - npm failed to install a verified tarball
 
@@ -230,8 +231,15 @@ function main() {
   # without a single request having been made.
   local specs=()
   local integrities=()
-  local line spec integrity extra
+  # Package names already seen, space delimited on both sides so a match is
+  # always a whole name. Two entries naming one package would unpack to a
+  # single directory and leave the second move with nothing to find.
+  local seen=" "
+  local line spec integrity extra name
   while IFS= read -r line; do
+    # A trailing carriage return would otherwise ride along on the last
+    # field and fail its pattern for a reason the message does not show.
+    line="${line%$'\r'}"
     # The inner read trims the surrounding whitespace the outer one keeps,
     # and splits the entry's two fields.
     read -r spec integrity extra <<<"${line}"
@@ -254,6 +262,12 @@ function main() {
         "Expected sha512- and 88 base64 characters, as printed by" \
         "npm view ${spec} dist.integrity"
     fi
+    name="${spec%@*}"
+    if [[ "${seen}" == *" ${name} "* ]]; then
+      fail "${E_USAGE}" "packages: ${name} is named more than once." \
+        "List each package once, at the one version its integrity pins."
+    fi
+    seen="${seen}${name} "
     specs+=("${spec}")
     integrities+=("${integrity}")
   done < <(printf '%s\n' "${packages}")
@@ -270,7 +284,7 @@ function main() {
 
   local tarballs=()
   local -i index
-  local name version asset url tarball actual
+  local version asset url tarball actual
   for ((index = 0; index < count; index++)); do
     spec="${specs[index]}"
     integrity="${integrities[index]}"

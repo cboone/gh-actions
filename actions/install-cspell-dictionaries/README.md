@@ -49,7 +49,8 @@ Both inputs are required.
 ### Entry format
 
 Two whitespace-separated fields per line. Blank lines and `#` comments are
-ignored, and an empty `packages` installs nothing.
+ignored, and an empty `packages` installs nothing. Each package may be named
+only once, since its integrity pins one version.
 
 ```text
 @cspell/dict-pt-pt@3.0.6  sha512-RT3EovAHK086ta4efTp+PxT9a2fZFHGrsf6AhX6LoFfxCn2RZAnITULSuVgkwpD/3Z/Di7oSXXNfeW9LKtGpGQ==
@@ -68,14 +69,14 @@ configurable.
 
 ## Exit codes
 
-| Code | Meaning                                            |
-| ---- | -------------------------------------------------- |
-| `0`  | Installed, or nothing to install                   |
-| `64` | Invalid or missing input                           |
-| `65` | Integrity malformed or mismatched                  |
-| `66` | Package rejected: it declares runtime dependencies |
-| `69` | Download failed                                    |
-| `70` | npm failed to install a verified tarball           |
+| Code | Meaning                                                                   |
+| ---- | ------------------------------------------------------------------------- |
+| `0`  | Installed, or nothing to install                                          |
+| `64` | Invalid or missing input                                                  |
+| `65` | Integrity malformed or mismatched                                         |
+| `66` | Package tarball rejected: unreadable, or it declares runtime dependencies |
+| `69` | Download failed                                                           |
+| `70` | npm failed to install a verified tarball                                  |
 
 ## Usage
 
