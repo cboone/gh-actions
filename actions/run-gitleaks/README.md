@@ -4,13 +4,24 @@ Install gitleaks binary and run a scan.
 
 ## Inputs
 
-| Name      | Type   | Default             | Description                   |
-| --------- | ------ | ------------------- | ----------------------------- |
-| `version` | string | `8.30.1`            | gitleaks version to install   |
-| `args`    | string | `detect --source .` | Arguments to pass to gitleaks |
+| Name      | Type   | Default                   | Description                                 |
+| --------- | ------ | ------------------------- | ------------------------------------------- |
+| `version` | string | `8.30.1`                  | gitleaks version to install                 |
+| `args`    | string | `detect`, `--source`, `.` | Arguments to pass to gitleaks, one per line |
 
 ## Usage
 
 ```yaml
 - uses: cboone/gh-actions/actions/run-gitleaks@v3.1.1
+```
+
+Each argument goes on its own line, so an argument may contain spaces:
+
+```yaml
+- uses: cboone/gh-actions/actions/run-gitleaks@v3.1.1
+  with:
+    args: |-
+      detect
+      --source
+      .
 ```
