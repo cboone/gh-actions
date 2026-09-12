@@ -480,22 +480,26 @@ jobs:
             "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
             /bin/bash actions/set-up-clap-validator/check-pins.sh
           sed 's/^/  accepted | /' "${outputs}"
-          want_key="clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-${ImageOS}"
-          want_key="${want_key}-${VALIDATOR_REV}-rust${RUST_VERSION}"
-          for want in "cache-key=${want_key}" \
-            "cache-root=${RUNNER_TEMP}/clap-validator" \
+          for want in "cache-root=${RUNNER_TEMP}/clap-validator" \
             "install-dir=${RUNNER_TEMP}/clap-validator/bin"; do
             if ! grep -qxF "${want}" "${outputs}"; then
               echo "::error::check-pins.sh did not write '${want}'" >&2
               status=1
             fi
           done
+          prefix="cache-key=clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-"
+          suffix="-${VALIDATOR_REV}-rust${RUST_VERSION}"
+          with_image="$(grep '^cache-key=' "${outputs}")"
+          with_image="${with_image#"${prefix}"}"
+          with_image="${with_image%"${suffix}"}"
 
-          # Every runner here sets ImageOS, so the self-hosted path where it
-          # is absent would otherwise never run. What matters is that the
-          # image is derived from the OS release rather than defaulted to a
-          # shared constant, which is the sharing the derivation exists to
-          # stop.
+          # The image is deliberately not compared against ImageOS: the
+          # script reads the OS release first so a `container:` job keys on
+          # the container rather than the host VM, and on ubuntu-latest the
+          # two disagree (ubuntu24.04 against ubuntu24). Asserting the
+          # derived value would restate the derivation, so what is checked
+          # is that it is a real identifier, and that unsetting ImageOS
+          # changes nothing, which is what "derivation first" means.
           : >"${outputs}"
           env -i PATH="${PATH}" RUNNER_TEMP="${RUNNER_TEMP}" \
             RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
@@ -503,11 +507,13 @@ jobs:
             "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
             /bin/bash actions/set-up-clap-validator/check-pins.sh
           sed 's/^/  no-ImageOS | /' "${outputs}"
-          prefix="cache-key=clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-"
-          suffix="-${VALIDATOR_REV}-rust${RUST_VERSION}"
           derived="$(grep '^cache-key=' "${outputs}")"
           derived="${derived#"${prefix}"}"
           derived="${derived%"${suffix}"}"
+          if [ "${derived}" != "${with_image}" ]; then
+            echo "::error::unsetting ImageOS changed the image from '${with_image}' to '${derived}'" >&2
+            status=1
+          fi
           case "${derived}" in
             "" | unknown)
               echo "::error::no-ImageOS run derived image '${derived}', expected an OS release identifier" >&2
