@@ -101,6 +101,7 @@ jobs:
     name: Deploy
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}

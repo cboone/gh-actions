@@ -47,6 +47,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   supported (run `set-up-actionlint` in your own job instead). A
   private fork of this repo cannot serve the script either (#87)
 
+### Fixed
+
+- `scan-for-secrets.yml`'s `validate-inputs` job and
+  `deploy-to-pages.yml`'s `deploy` job apply their workflow's
+  `timeout-minutes` input, as their sibling jobs already did. Both used
+  to inherit GitHub's 360-minute default with no way for a caller to
+  lower it. Neither workflow gains an input and no default changes.
+  `deploy` shares `build`'s input because `timeout-minutes` bounds
+  execution: time the job spends awaiting `github-pages` environment
+  approval is governed by GitHub's separate 30-day approval limit
+  instead, so the ceiling needs no allowance for an approver (#81)
+
 ## [3.1.1] - 2026-09-10
 
 ### Fixed
