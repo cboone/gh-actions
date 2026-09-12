@@ -9,7 +9,8 @@ name: Run CI
 # dot-paths such as `.github/`; #93 tracks that).
 # `install-pinned-tool` runs that composite action, and the set-up-*
 # actions built on it, from this checkout on Linux amd64, Linux arm64 and
-# macOS arm64, including inputs it must reject.
+# macOS arm64, including inputs it must reject. It also asserts that
+# actionlint really does shell out to shellcheck (#85).
 # `set-up-clap-validator` runs that action on the same three runners,
 # covering the cold-cache build, the cache-hit path and the pins it must
 # reject.
@@ -92,6 +93,20 @@ jobs:
           checksums-url-template: https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_checksums.txt
           archive-member: actionlint
 
+      - name: Install shellcheck (xz archive, arch renames, nested member)
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: shellcheck
+          version: 0.11.0
+          url-template: https://github.com/koalaman/shellcheck/releases/download/v{version}/shellcheck-v{version}.{os}.{arch}.tar.xz
+          arch-names: amd64=x86_64 arm64=aarch64
+          archive-member: shellcheck-v{version}/shellcheck
+          checksums: |
+            8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198  shellcheck-v0.11.0.linux.x86_64.tar.xz
+            12b331c1d2db6b9eb13cfca64306b1b157a86eb69db83023e261eaa7e7c14588  shellcheck-v0.11.0.linux.aarch64.tar.xz
+            3c89db4edcab7cf1c27bff178882e0f6f27f7afdf54e859fa041fca10febe4c6  shellcheck-v0.11.0.darwin.x86_64.tar.xz
+            56affdd8de5527894dca6dc3d7e0a99a873b0f004d7aabc30ae407d3f48b0a79  shellcheck-v0.11.0.darwin.aarch64.tar.xz
+
       - name: Install uv (target triples, nested member, per-asset .sha256)
         id: uv
         uses: ./actions/install-pinned-tool
@@ -105,14 +120,17 @@ jobs:
           archive-member: uv-{arch}-{os}/uv
 
       # Each binary must resolve to the pinned install rather than a copy
-      # the runner image ships, and must report the pinned version.
+      # the runner image ships, and must report the pinned version. Newlines
+      # in the reported version are collapsed rather than truncated at the
+      # first line, because shellcheck prints its version on the second.
       - name: Check the installed binaries
         env:
           UV_INSTALL_DIR: ${{ steps.uv.outputs.install-dir }}
         run: |
           status=0
           for spec in "shfmt 3.13.1 --version" "shfmt-single 3.13.1 --version" \
-            "actionlint 1.7.12 -version" "uv 0.11.8 --version"; do
+            "actionlint 1.7.12 -version" "shellcheck 0.11.0 --version" \
+            "uv 0.11.8 --version"; do
             read -r tool want flag <<< "${spec}"
             resolved="$(command -v "${tool}" || true)"
             if [ "${resolved}" != "${RUNNER_TEMP}/${tool}-bin/${tool}" ]; then
@@ -121,7 +139,7 @@ jobs:
               continue
             fi
             reported="$("${tool}" "${flag}" 2>&1)"
-            reported="${reported%%$'\n'*}"
+            reported="${reported//$'\n'/ }"
             echo "${tool}: ${reported}"
             case "${reported}" in
               *"${want}"*) ;;
@@ -140,8 +158,10 @@ jobs:
       # The set-up-* wrappers install into the same directories, so clear
       # them first; otherwise the next check would pass on the binaries the
       # direct installs left behind.
-      - name: Remove the direct shfmt and actionlint installs
-        run: rm -rf "${RUNNER_TEMP}/shfmt-bin" "${RUNNER_TEMP}/actionlint-bin"
+      - name: Remove the direct shfmt, actionlint and shellcheck installs
+        run: |
+          rm -rf "${RUNNER_TEMP}/shfmt-bin" "${RUNNER_TEMP}/actionlint-bin" \
+            "${RUNNER_TEMP}/shellcheck-bin"
 
       - name: Set up shfmt through the wrapper
         uses: ./actions/set-up-shfmt
@@ -149,10 +169,14 @@ jobs:
       - name: Set up actionlint through the wrapper
         uses: ./actions/set-up-actionlint
 
+      - name: Set up shellcheck through the wrapper
+        uses: ./actions/set-up-shellcheck
+
       - name: Check the wrapper installs
         run: |
           status=0
-          for spec in "shfmt 3.13.1 --version" "actionlint 1.7.12 -version"; do
+          for spec in "shfmt 3.13.1 --version" "actionlint 1.7.12 -version" \
+            "shellcheck 0.11.0 --version"; do
             read -r tool want flag <<< "${spec}"
             resolved="$(command -v "${tool}" || true)"
             if [ "${resolved}" != "${RUNNER_TEMP}/${tool}-bin/${tool}" ]; then
@@ -161,7 +185,7 @@ jobs:
               continue
             fi
             reported="$("${tool}" "${flag}" 2>&1)"
-            reported="${reported%%$'\n'*}"
+            reported="${reported//$'\n'/ }"
             echo "${tool}: ${reported}"
             case "${reported}" in
               *"${want}"*) ;;
@@ -172,6 +196,58 @@ jobs:
             esac
           done
           exit "${status}"
+
+      # actionlint shells out to shellcheck for every `run:` block, and with
+      # no shellcheck on PATH it skips all of them and still exits 0, which
+      # makes lint-github-actions.yml a vacuous pass (#85). This keeps that
+      # integration proven rather than assumed: a planted SC2086 must be
+      # reported. It fails if actionlint stops finding shellcheck, or changes
+      # how it discovers one.
+      #
+      # actionlint reads a workflow from stdin when the path is `-`, so the
+      # fixture never lands in the checkout for lint-github-actions.yml to
+      # find. It stays single-quoted so shellcheck reads it as a literal and
+      # does not flag this step's own `run:` block.
+      #
+      # Only the positive case is asserted. Requiring exit 0 without
+      # shellcheck would pin upstream's fail-open behavior, which is the
+      # behavior worth having change.
+      - name: Check actionlint runs shellcheck
+        run: |
+          # SC2016: the expansions below belong to the planted workflow, so
+          # single quotes are the point. They are what shellcheck must flag
+          # once actionlint hands it the planted `run:` block.
+          # shellcheck disable=SC2016
+          planted='name: planted
+          on: push
+          jobs:
+            sc2086:
+              runs-on: ubuntu-latest
+              steps:
+                - run: |
+                    unquoted=$1
+                    echo $unquoted
+          '
+          if output="$(printf '%s' "${planted}" | actionlint - 2>&1)"; then
+            code=0
+          else
+            code=$?
+          fi
+          # actionlint's own lines are printed behind fixed text: the runner
+          # reads any line starting with :: as a workflow command, after
+          # trimming leading whitespace.
+          printf '%s\n' "${output}" | sed 's/^/  actionlint | /'
+          if [ "${code}" = 0 ]; then
+            echo "::error::actionlint accepted a workflow with a planted SC2086; shellcheck did not run" >&2
+            exit 1
+          fi
+          case "${output}" in
+            *SC2086*) echo "actionlint reported the planted SC2086, as expected" ;;
+            *)
+              echo "::error::actionlint exited ${code} without reporting SC2086" >&2
+              exit 1
+              ;;
+          esac
 
       # The rejection cases run the script directly under /bin/bash, which
       # is bash 3.2 on macOS, so each case can assert its exit code and

@@ -7,6 +7,26 @@ on:
         description: actionlint version to install.
         type: string
         default: "1.7.12"
+      shellcheck-version:
+        description: >-
+          shellcheck version to install. When overriding it, pass that
+          version's checksums in shellcheck-checksums too.
+        type: string
+        default: "0.11.0"
+      shellcheck-checksums:
+        description: >-
+          SHA-256 of each shellcheck release archive, one
+          `<sha256>  <asset file name>` line per platform, as sha256sum
+          prints them. shellcheck releases ship no checksum file and publish
+          no digests in their release notes, so these are committed here. The
+          job runs on ubuntu-latest, so an override needs at least the
+          linux.x86_64 line.
+        type: string
+        default: |
+          8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198  shellcheck-v0.11.0.linux.x86_64.tar.xz
+          12b331c1d2db6b9eb13cfca64306b1b157a86eb69db83023e261eaa7e7c14588  shellcheck-v0.11.0.linux.aarch64.tar.xz
+          3c89db4edcab7cf1c27bff178882e0f6f27f7afdf54e859fa041fca10febe4c6  shellcheck-v0.11.0.darwin.x86_64.tar.xz
+          56affdd8de5527894dca6dc3d7e0a99a873b0f004d7aabc30ae407d3f48b0a79  shellcheck-v0.11.0.darwin.aarch64.tar.xz
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -38,8 +58,8 @@ jobs:
             msg="job.workflow_repository or job.workflow_sha is unavailable,"
             msg="${msg} so this workflow cannot fetch its pinned installer."
             msg="${msg} Neither is populated on GitHub Enterprise Server; run"
-            msg="${msg} actionlint in your own job with the set-up-actionlint"
-            msg="${msg} action there."
+            msg="${msg} actionlint in your own job with the set-up-shellcheck"
+            msg="${msg} and set-up-actionlint actions there."
             echo "::error::${msg}" >&2
             exit 1
           fi
@@ -57,6 +77,31 @@ jobs:
           CHECKSUMS_URL_TEMPLATE: https://github.com/rhysd/actionlint/releases/download/v{version}/actionlint_{version}_checksums.txt
           ARCHIVE_MEMBER: actionlint
         run: bash "${RUNNER_TEMP}/install-pinned-tool.sh"
+
+      # shellcheck is not optional here. actionlint shells out to it for
+      # every `run:` block, which is the only thing that lints the embedded
+      # shell in a workflow file. With no shellcheck on PATH it skips all of
+      # them and still exits 0, so relying on the runner image would make
+      # this job a vacuous pass, and relying on its version would lint with a
+      # different tool than lint-shell.yml uses.
+      - name: Install shellcheck
+        env:
+          TOOL: shellcheck
+          VERSION: ${{ inputs.shellcheck-version }}
+          URL_TEMPLATE: https://github.com/koalaman/shellcheck/releases/download/v{version}/shellcheck-v{version}.{os}.{arch}.tar.xz
+          CHECKSUMS: ${{ inputs.shellcheck-checksums }}
+          ARCHIVE_MEMBER: shellcheck-v{version}/shellcheck
+          ARCH_NAMES: amd64=x86_64 arm64=aarch64
+        run: bash "${RUNNER_TEMP}/install-pinned-tool.sh"
+
+      # The shellcheck line is the only evidence in the log that the
+      # integration above had anything to shell out to: a run missing it is a
+      # run whose `run:` blocks went unlinted without saying so. Both commands
+      # also fail the step outright when their binary is absent.
+      - name: Report tool versions
+        run: |
+          actionlint -version
+          shellcheck --version
 
       - name: Run actionlint
         run: actionlint

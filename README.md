@@ -18,16 +18,17 @@ usage examples.
 
 ### Linting and formatting
 
-| Component                                                      | Type     | What it does                             |
-| -------------------------------------------------------------- | -------- | ---------------------------------------- |
-| [lint-text](docs/workflows/lint-text.md)                       | workflow | markdownlint, Prettier, cspell, yamllint |
-| [lint-shell](docs/workflows/lint-shell.md)                     | workflow | ShellCheck and shfmt                     |
-| [lint-github-actions](docs/workflows/lint-github-actions.md)   | workflow | actionlint on workflow files             |
-| [run-cspell](actions/run-cspell/README.md)                     | action   | cspell with PR annotations               |
-| [run-reuse](actions/run-reuse/README.md)                       | action   | REUSE/SPDX compliance                    |
-| [set-up-shfmt](actions/set-up-shfmt/README.md)                 | action   | install shfmt                            |
-| [set-up-actionlint](actions/set-up-actionlint/README.md)       | action   | install actionlint                       |
-| [set-up-golangci-lint](actions/set-up-golangci-lint/README.md) | action   | install golangci-lint                    |
+| Component                                                      | Type     | What it does                                 |
+| -------------------------------------------------------------- | -------- | -------------------------------------------- |
+| [lint-text](docs/workflows/lint-text.md)                       | workflow | markdownlint, Prettier, cspell, yamllint     |
+| [lint-shell](docs/workflows/lint-shell.md)                     | workflow | ShellCheck and shfmt                         |
+| [lint-github-actions](docs/workflows/lint-github-actions.md)   | workflow | actionlint, with shellcheck on `run:` blocks |
+| [run-cspell](actions/run-cspell/README.md)                     | action   | cspell with PR annotations                   |
+| [run-reuse](actions/run-reuse/README.md)                       | action   | REUSE/SPDX compliance                        |
+| [set-up-shfmt](actions/set-up-shfmt/README.md)                 | action   | install shfmt                                |
+| [set-up-shellcheck](actions/set-up-shellcheck/README.md)       | action   | install shellcheck                           |
+| [set-up-actionlint](actions/set-up-actionlint/README.md)       | action   | install actionlint                           |
+| [set-up-golangci-lint](actions/set-up-golangci-lint/README.md) | action   | install golangci-lint                        |
 
 ### Testing and CI
 
@@ -140,8 +141,9 @@ integrity check available for its ecosystem.
   `# vX.Y.Z` comment.
 - **Binary downloads via `curl`**: SHA-256 verified against an upstream
   checksum file, or against hardcoded checksums in this repo where
-  upstream does not publish one (currently scrut, shfmt, cargo-audit,
-  cargo-llvm-cov). [install-pinned-tool](actions/install-pinned-tool/README.md)
+  upstream does not publish one (currently shellcheck, scrut, shfmt,
+  cargo-audit, cargo-llvm-cov).
+  [install-pinned-tool](actions/install-pinned-tool/README.md)
   implements the same download, verify, and install steps for any
   release binary.
 - **Python tools**: installed via `uv pip install --require-hashes`
