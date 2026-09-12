@@ -52,6 +52,9 @@ docs/
   migrations/            # Major-version migration guides (vN.md)
   plans/                 # Plan documents (todo/ and done/)
   workflows/             # Per-reusable-workflow reference docs (<name>.md)
+tests/
+  fixtures/              # Inputs for the scrut self-test
+  scrut/                 # scrut tests run-ci.yml runs against this repo
 ```
 
 Each composite action also has a `README.md` next to its `action.yml`
@@ -416,10 +419,12 @@ The repository self-hosts its own workflows as integration tests. The `run-ci.ym
 this same repository. `run-ci.yml` also runs `actions/install-pinned-tool`,
 and the `set-up-*` actions built on it, from the checkout on Linux amd64,
 Linux arm64 and macOS arm64, including inputs it must reject, and asserts
-that actionlint really does shell out to shellcheck. It runs
+that actionlint really does shell out to shellcheck. Its `scrut` job calls
+`run-scrut-tests.yml` with `setup-uv: true` against `tests/scrut/`, whose
+fixture is a PEP 723 script that only runs if uv reached `PATH`. It runs
 `actions/set-up-clap-validator` on those same three runners, covering the
-cold-cache build, the cache-hit path, and the pins `check-pins.sh` must
-reject. There is no unit test framework.
+install, the cache-hit path, and the pins `check-pins.sh` must reject.
+There is no unit test framework.
 
 ## Local Development
 

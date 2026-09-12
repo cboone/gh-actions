@@ -18,9 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit SHA, since a tag can be moved to another commit. The cache key
   names the runner OS, architecture and image and both pins, with no
   `restore-keys`, so a partial match cannot supply a validator built from
-  a different commit or against a different glibc; a cache hit installs no
-  Rust toolchain and compiles nothing. Running `clap-validator validate` is left to the calling job.
-  Outputs `install-dir` and `cache-hit`. Linux and macOS runners (#88)
+  a different commit or against a different glibc; a cache hit installs
+  no Rust toolchain and compiles nothing. Running
+  `clap-validator validate` is left to the calling job. Outputs
+  `install-dir` and `cache-hit`. Linux and macOS runners (#88)
+- `run-scrut-tests.yml` `setup-uv` and `uv-version` inputs: with
+  `setup-uv: true`, the workflow installs the pinned uv release,
+  verified against the SHA-256 upstream publishes beside the asset, and
+  adds it to `PATH` before `scrut-setup-cmd` runs. A CLI shipped as PEP
+  723 scripts no longer needs a hand-rolled runtime install in
+  `scrut-setup-cmd`. Linux and macOS runners, amd64 and arm64 (#82)
+- `tests/scrut/`: the repository's first scrut tests, run by
+  `run-ci.yml` against `run-scrut-tests.yml` with `setup-uv` enabled, so
+  the new install path is integration tested on every change (#82)
 - `install-pinned-tool` composite action: installs a release binary
   pinned to an exact version and SHA-256 and adds it to `PATH`. The
   asset URL is a template over `{version}`, `{os}` and `{arch}`, with
