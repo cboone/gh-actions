@@ -145,9 +145,10 @@ fixup.
 
 ### 4. Documentation
 
-- `docs/workflows/run-scrut-tests.md` — two rows in the Inputs table, and a
-  third Usage example showing a PEP 723 CLI. Keep the `@v3.1.1` pin the other
-  examples use.
+- `docs/workflows/run-scrut-tests.md` — two rows in the Inputs table, an
+  `### Installing uv` subsection under Inputs (the shape `lint-text.md` uses
+  for per-input explanation), and a third Usage example showing a PEP 723 CLI.
+  Keep the `@v3.1.1` pin the other examples use.
 - `AGENTS.md` — add `tests/` to the Repository Structure tree, and extend the
   Testing section (`:358-366`) to say `run-ci.yml` now calls
   `run-scrut-tests.yml` against that fixture with `setup-uv` enabled.

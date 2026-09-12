@@ -21,7 +21,7 @@ specified directory.
 | `runs-on`         | string  | `ubuntu-latest` | Runner label (Windows is not supported)                        |
 | `timeout-minutes` | number  | `10`            | Job timeout in minutes                                         |
 
-## Installing uv
+### Installing uv
 
 A CLI written in an interpreted language needs its runtime on `PATH` before
 scrut can execute anything, and `scrut-setup-cmd` is a `run:` string, so it

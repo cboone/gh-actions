@@ -127,10 +127,10 @@ TOOLS: list[Tool] = [
         "0.11.8",
         lambda: github_latest_release("astral-sh/uv"),
         notes=(
-            "Pinned in five places: lint-text.yml's UV_VERSION, this workflow's own "
-            "UV_VERSION, run-reuse's uv-version default, run-scrut-tests.yml's "
-            "uv-version default, and run-ci.yml's install-pinned-tool check. Bump "
-            "them together."
+            "Pinned in five files: UV_VERSION in lint-text.yml and "
+            "check-tool-versions.yml, the uv-version default in run-reuse's "
+            "action.yml and in run-scrut-tests.yml, and both the install and the "
+            "asserted version in run-ci.yml. Bump them together."
         ),
     ),
     Tool(
