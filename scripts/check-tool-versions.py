@@ -122,7 +122,17 @@ TOOLS: list[Tool] = [
         "0.9.133",
         lambda: github_latest_matching("nextest-rs/nextest", r"cargo-nextest-(\d+\.\d+\.\d+)"),
     ),
-    Tool("uv", "0.11.8", lambda: github_latest_release("astral-sh/uv")),
+    Tool(
+        "uv",
+        "0.11.8",
+        lambda: github_latest_release("astral-sh/uv"),
+        notes=(
+            "Pinned in five places: lint-text.yml's UV_VERSION, this workflow's own "
+            "UV_VERSION, run-reuse's uv-version default, run-scrut-tests.yml's "
+            "uv-version default, and run-ci.yml's install-pinned-tool check. Bump "
+            "them together."
+        ),
+    ),
     Tool(
         "scrut",
         "0.4.3",

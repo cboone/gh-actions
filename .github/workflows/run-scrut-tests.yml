@@ -30,9 +30,20 @@ on:
         description: >-
           Optional shell command to run before scrut tests. Use this to
           install dependencies or prepare fixtures needed by scrut test
-          files.
+          files. It runs after uv is installed, so it can call `uv`.
         type: string
         default: ""
+      setup-uv:
+        description: >-
+          Install uv and add it to PATH before scrut-setup-cmd runs. Set
+          this for a CLI that needs uv at test time, such as a PEP 723
+          script with a `#!/usr/bin/env -S uv run --script` shebang.
+        type: boolean
+        default: false
+      uv-version:
+        description: uv version to install when setup-uv is true.
+        type: string
+        default: "0.11.8"
       runs-on:
         description: Runner label (Windows is not supported).
         type: string
@@ -52,6 +63,53 @@ jobs:
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # Fetch the installer from the repository and commit this workflow
+      # file came from, the supply-chain model lint-text.yml uses for its
+      # manifests, so the script and this workflow always share a commit. A
+      # `./` action path would resolve against the caller's checkout
+      # instead. The `job` context is only available on steps, so the two
+      # values are bound here rather than at job or workflow level. The
+      # step carries the uv install's condition, so a job that installs
+      # nothing never reads the job context.
+      - name: Fetch install-pinned-tool
+        if: inputs.setup-uv
+        shell: bash
+        env:
+          REQ_REPO: ${{ job.workflow_repository }}
+          REQ_SHA: ${{ job.workflow_sha }}
+        run: |
+          if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
+            msg="job.workflow_repository or job.workflow_sha is unavailable,"
+            msg="${msg} so this workflow cannot fetch its pinned installer."
+            msg="${msg} Neither is populated on GitHub Enterprise Server; set"
+            msg="${msg} setup-uv: false there, and install uv in scrut-setup-cmd"
+            msg="${msg} instead."
+            echo "::error::${msg}" >&2
+            exit 1
+          fi
+          base="https://raw.githubusercontent.com/${REQ_REPO}/${REQ_SHA}"
+          echo "Fetching from ${base}"
+          curl -sSfL --proto '=https' --retry 3 --retry-delay 5 --retry-all-errors \
+            "${base}/actions/install-pinned-tool/install-pinned-tool.sh" \
+            -o "${RUNNER_TEMP}/install-pinned-tool.sh"
+
+      # uv goes on PATH before scrut-setup-cmd so that command can call it.
+      # Only `uv` is installed, not `uvx`: `uv tool run` is the equivalent,
+      # and a second install would re-download the whole tarball for one
+      # more member.
+      - name: Install uv
+        if: inputs.setup-uv
+        shell: bash
+        env:
+          TOOL: uv
+          VERSION: ${{ inputs.uv-version }}
+          URL_TEMPLATE: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+          CHECKSUMS_URL_TEMPLATE: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+          OS_NAMES: linux=unknown-linux-gnu darwin=apple-darwin
+          ARCH_NAMES: amd64=x86_64 arm64=aarch64
+          ARCHIVE_MEMBER: uv-{arch}-{os}/uv
+        run: bash "${RUNNER_TEMP}/install-pinned-tool.sh"
 
       - name: Scrut test setup
         if: inputs.scrut-setup-cmd != ''
