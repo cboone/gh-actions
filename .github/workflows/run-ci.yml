@@ -51,12 +51,21 @@ jobs:
         HELLO_BIN=./tests/fixtures/hello.py
         UV_PYTHON_PREFERENCE=only-system
 
-  # The action job below proves that an installed dictionary resolves; this
-  # one proves the workflow wiring, which is the half that job cannot reach:
-  # lint-text.yml fetches the installer at job.workflow_sha, and only a
-  # workflow_call can exercise that. It runs against this repo's own
-  # cspell.json, which imports nothing, so it asserts the install rather than
-  # the resolution.
+  # The action job below proves that an installed dictionary resolves; the two
+  # jobs here prove the workflow wiring, which is the half that job cannot
+  # reach: lint-text.yml fetches the installer at job.workflow_sha, and only a
+  # workflow_call exercises that.
+  #
+  # What they catch, because each makes the job fail: a fetch that 404s, an
+  # entry the installer rejects, a digest mismatch, and a CSPELL_INSTALL_DIR
+  # that is empty or points somewhere without cspell, which the installer
+  # refuses with `cspell is not installed in ...`. What they cannot catch is
+  # the install step being skipped outright, since a skipped step is green.
+  # Closing that needs an assertion between the install and the cspell run,
+  # and a caller cannot place one: a `uses:` job has no steps of its own, and
+  # cspell here reads this repo's root cspell.json, which imports no extra
+  # dictionary and is shared with the `text` job and `make spell`, neither of
+  # which installs one. #105 tracks the input that would make it expressible.
   text-extra-dicts:
     uses: ./.github/workflows/lint-text.yml
     with:
@@ -75,8 +84,10 @@ jobs:
   # this repo's own package.json and lockfile and so lands in the workspace
   # rather than in RUNNER_TEMP. The two install steps publish
   # CSPELL_INSTALL_DIR from different places, and this is the only job that
-  # exercises the consumer one. yamllint stays off because npm ci puts a
-  # node_modules tree in the workspace that `yamllint .` would walk.
+  # exercises the consumer one: the installer's own check that cspell sits in
+  # that directory is what makes a wrong value fail here rather than pass
+  # quietly. yamllint stays off because npm ci puts a node_modules tree in the
+  # workspace that `yamllint .` would walk.
   text-extra-dicts-consumer:
     uses: ./.github/workflows/lint-text.yml
     with:
