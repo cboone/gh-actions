@@ -596,6 +596,11 @@ jobs:
             fi
           }
           expect_bare no-image-at-all 71
+          # A key past GitHub's 512-character limit is reported here rather
+          # than surfacing later as a restore failure. 520 characters of
+          # label clears the limit on its own.
+          long_label="$(printf 'a%.0s' $(seq 1 520))"
+          expect_bare image-label-too-long 64 "IMAGE_LABEL=${long_label}"
           # A colon is reserved for the derived <name>:<version> form, so a
           # label carrying one is an input error rather than an unusable
           # environment.

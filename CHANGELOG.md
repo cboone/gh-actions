@@ -27,9 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `image-label` names an environment that can describe itself through
   neither. The derived halves are joined with a colon, which neither may
   contain, and `image-label` forbids one, so no two environments share an
-  identifier. The build runs from `RUNNER_TEMP` with `RUSTFLAGS`,
-  `CARGO_ENCODED_RUSTFLAGS` and `CARGO_BUILD_TARGET` unset, so the caller's
-  Cargo configuration cannot change a binary the key does not describe. There are no `restore-keys`, so a partial match cannot supply
+  identifier. The caller's Cargo configuration cannot change a binary the
+  key does not describe: `RUSTFLAGS`, `CARGO_ENCODED_RUSTFLAGS` and
+  `CARGO_BUILD_TARGET` are unset, `CARGO_HOME` is action-owned, and the
+  build runs from a fresh `/tmp` directory so cargo's search of parent
+  directories finds no `.cargo/config.toml`. A key past GitHub's
+  512-character limit is refused with a message naming the input. There are no `restore-keys`, so a partial match cannot supply
   a validator built from a different commit or against a different libc,
   and a cache hit installs no Rust toolchain and compiles nothing. Running
   `clap-validator validate` is left to the calling job. Outputs

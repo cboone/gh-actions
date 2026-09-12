@@ -48,13 +48,19 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   prevent. Restore and save are separate steps, so the save happens
   explicitly on the success path. Two jobs racing a cold cache both build;
   the loser's save logs a warning and does not fail.
-- **Build isolation.** The validator is built from `$RUNNER_TEMP` with
-  `RUSTFLAGS`, `CARGO_ENCODED_RUSTFLAGS` and `CARGO_BUILD_TARGET` unset, so
-  the calling job's Cargo configuration cannot reach it. It is a tool the
+- **Build isolation.** The calling job's Cargo configuration cannot reach
+  the build, from any of the three places cargo takes it: the environment
+  variables `RUSTFLAGS`, `CARGO_ENCODED_RUSTFLAGS` and `CARGO_BUILD_TARGET`
+  are unset, `CARGO_HOME` points at an action-owned directory emptied on
+  each rebuild, and the build runs from a fresh `/tmp` directory so that
+  cargo's search of the working directory and its parents finds neither the
+  workspace's `.cargo/config.toml` nor the runner's own. It is a tool the
   job runs rather than part of what the job builds, and the cache key names
   only the pins and the environment: a setting that changed the binary
   would be invisible to the key, and `CARGO_BUILD_TARGET` in particular
-  would cache a binary that cannot run on the runner that built it.
+  would cache a binary that cannot run on the runner that built it. A
+  consequence worth knowing: the build does not share the runner's cargo
+  registry cache, so a cache miss re-downloads the dependency sources.
 - **Toolchain.** `rustup` and `cargo` must be on `PATH`, as they are on
   GitHub-hosted Linux and macOS images. `rust-version` is installed with
   `--profile minimal` only when the cache misses, so a cache hit installs no

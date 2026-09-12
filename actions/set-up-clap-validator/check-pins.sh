@@ -237,6 +237,13 @@ function main() {
   local install_dir="${cache_root}/bin"
   local cache_key="clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-${image}-${VALIDATOR_REV}-rust${RUST_VERSION}"
 
+  # GitHub caps a cache key at 512 characters. Checked here so a long
+  # rust-version or image-label is reported as the input error it is,
+  # rather than surfacing later as a restore failure about the key.
+  if [[ "${#cache_key}" -gt 512 ]]; then
+    fail "${E_USAGE}" "The resulting cache key is ${#cache_key} characters, past GitHub's 512-character limit. Shorten rust-version or image-label."
+  fi
+
   {
     printf 'cache-key=%s\n' "${cache_key}"
     printf 'cache-root=%s\n' "${cache_root}"
