@@ -25,9 +25,11 @@
 #
 # Each tarball is downloaded from its deterministic registry URL and verified
 # against the caller's integrity before npm reads it, so the registry is
-# never the integrity boundary. A package declaring runtime dependencies is
-# refused: npm would resolve those from the registry unverified, and nothing
-# may reach node_modules that the caller did not hash.
+# never the integrity boundary. A package declaring dependencies of any kind
+# is refused: npm would resolve those from the registry unverified, and
+# nothing may reach node_modules that the caller did not hash. That covers
+# optionalDependencies, which npm installs by default, and peerDependencies,
+# which npm resolves on its own from version 7.
 #
 # RUNNER_TEMP must be set, as it is on every Actions runner.
 #
@@ -48,8 +50,7 @@
 #   0  - Installed, or nothing to install
 #   64 - Invalid or missing input
 #   65 - Integrity malformed or mismatched
-#   66 - Package tarball rejected: unreadable, or it declares runtime
-#        dependencies
+#   66 - Package tarball rejected: unreadable, or it declares dependencies
 #   69 - Download failed
 #   70 - npm failed to install a verified tarball
 
@@ -176,10 +177,11 @@ function compute_integrity() {
   printf 'sha512-%s' "${digest}"
 }
 
-# Fail unless a package tarball declares no runtime dependencies. npm would
-# resolve any it declares from the registry, where nothing has been verified
-# against a hash the caller reviewed, so only a dependency-free package can
-# be installed under its own integrity alone.
+# Fail unless a package tarball declares no dependencies npm would go to the
+# registry for. All three fields count: npm installs optionalDependencies by
+# default, and resolves peerDependencies automatically from npm 7 on. None of
+# them would be covered by the caller's integrity, so only a package that
+# declares no dependency at all can be installed under that integrity alone.
 # Arguments:
 #   $1 - tarball path
 #   $2 - <name>@<version>, for error messages
@@ -190,20 +192,22 @@ function require_no_dependencies() {
   if ! manifest="$(tar -x -z -O -f "${tarball}" package/package.json 2>/dev/null)"; then
     fail "${E_PACKAGE}" "${spec}: the tarball holds no package/package.json."
   fi
-  # node's diagnostics go to a file rather than into the capture, so a
-  # warning on stderr can never be mistaken for a dependency name.
+  # Each name is reported with the field that declared it, so the message
+  # names what to remove rather than only that something is there. node's
+  # diagnostics go to a file rather than into the capture, so a warning on
+  # stderr can never be mistaken for a dependency name.
   local dependencies
   if ! dependencies="$(printf '%s' "${manifest}" |
-    node -p 'Object.keys(JSON.parse(require("fs").readFileSync(0, "utf8")).dependencies || {}).join(", ")' \
+    node -p 'const m = JSON.parse(require("fs").readFileSync(0, "utf8")); ["dependencies", "optionalDependencies", "peerDependencies"].flatMap((f) => Object.keys(m[f] || {}).map((d) => d + " (" + f + ")")).join(", ")' \
       2>"${WORK_DIR}/node-stderr")"; then
     fail "${E_PACKAGE}" "${spec}: package.json in the tarball could not be read." \
       "node reported: $(tr '\n' ' ' <"${WORK_DIR}/node-stderr")"
   fi
   if [[ -n "${dependencies}" ]]; then
-    fail "${E_PACKAGE}" "${spec} declares runtime dependencies: ${dependencies}." \
-      "Only a dependency-free package can be installed under its own integrity," \
-      "because npm would resolve these from the registry unverified." \
-      "Dictionary packages ship data and normally declare none."
+    fail "${E_PACKAGE}" "${spec} declares dependencies: ${dependencies}." \
+      "Only a package that declares none can be installed under its own" \
+      "integrity, because npm would resolve these from the registry" \
+      "unverified. Dictionary packages ship data and normally declare none."
   fi
 }
 
@@ -313,12 +317,15 @@ function main() {
 
   # npm unpacks the verified tarballs in a directory of its own, so it can
   # neither reify nor prune the pinned tree the dictionaries are about to
-  # join, and reaches no registry: every package here is dependency-free and
-  # already on disk.
+  # join, and reaches no registry: every package here declares no dependency
+  # and is already on disk. --omit holds that second property independently
+  # of the manifest check above, so no registry package can enter the staging
+  # tree even if a tarball slipped past it.
   printf '%s\n' '{ "name": "cspell-dictionaries", "version": "0.0.0", "private": true }' \
     >"${WORK_DIR}/unpack/package.json"
   if ! (cd "${WORK_DIR}/unpack" &&
-    npm install --ignore-scripts --no-audit --no-fund "${tarballs[@]}"); then
+    npm install --ignore-scripts --no-audit --no-fund \
+      --omit=dev --omit=optional --omit=peer "${tarballs[@]}"); then
     fail "${E_INSTALL}" "npm failed to unpack the verified dictionary tarballs."
   fi
 

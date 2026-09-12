@@ -71,6 +71,24 @@ jobs:
         @cspell/dict-pt-pt@3.0.6
         sha512-RT3EovAHK086ta4efTp+PxT9a2fZFHGrsf6AhX6LoFfxCn2RZAnITULSuVgkwpD/3Z/Di7oSXXNfeW9LKtGpGQ==
 
+  # The same path with use-consumer-versions: true, where cspell comes from
+  # this repo's own package.json and lockfile and so lands in the workspace
+  # rather than in RUNNER_TEMP. The two install steps publish
+  # CSPELL_INSTALL_DIR from different places, and this is the only job that
+  # exercises the consumer one. yamllint stays off because npm ci puts a
+  # node_modules tree in the workspace that `yamllint .` would walk.
+  text-extra-dicts-consumer:
+    uses: ./.github/workflows/lint-text.yml
+    with:
+      run-markdownlint: false
+      run-prettier: false
+      run-cspell: true
+      run-yamllint: false
+      use-consumer-versions: true
+      extra-cspell-packages: >-
+        @cspell/dict-pt-pt@3.0.6
+        sha512-RT3EovAHK086ta4efTp+PxT9a2fZFHGrsf6AhX6LoFfxCn2RZAnITULSuVgkwpD/3Z/Di7oSXXNfeW9LKtGpGQ==
+
   install-pinned-tool:
     name: install-pinned-tool (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
@@ -358,6 +376,13 @@ jobs:
       DEPENDENT_PACKAGE: >-
         chalk-template@1.1.0
         sha512-T2VJbcDuZQ0Tb2EWwSotMPJjgpy1/tGee1BTpUNsGZ/qgNjV2t7Mvu+d4600U564nbLesN1x2dPL+xii174Ekg==
+      # eslint-config-prettier 9.1.0 declares eslint as a peer dependency and
+      # nothing else, so it is rejected only if peerDependencies are checked
+      # as well. npm resolves those on its own from version 7, which is what
+      # makes them count.
+      PEER_DEPENDENT_PACKAGE: >-
+        eslint-config-prettier@9.1.0
+        sha512-NSWl5BFQWEPi1j4TjVNItzYV7dZXZ+wP6I6ZhrBGpChQhZRUaElihE9uRRkcbRnNb76UMKDF3r+WTmNcGPKsqw==
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -461,8 +486,10 @@ jobs:
             "INSTALL_DIR=${PWD}" "PACKAGES=@cspell/dict-pt-pt@latest  ${zeros}"
           check_rejection missing-integrity 64 "expected '<name>@<version>  sha512-<base64>'" \
             "INSTALL_DIR=${PWD}" "PACKAGES=@cspell/dict-pt-pt@3.0.6"
-          check_rejection dependent-package 66 "declares runtime dependencies: chalk" \
+          check_rejection dependent-package 66 "declares dependencies: chalk (dependencies)" \
             "INSTALL_DIR=${PWD}" "PACKAGES=${DEPENDENT_PACKAGE}"
+          check_rejection peer-dependent-package 66 "declares dependencies: eslint (peerDependencies)" \
+            "INSTALL_DIR=${PWD}" "PACKAGES=${PEER_DEPENDENT_PACKAGE}"
           check_rejection cspell-not-installed 64 "cspell is not installed in" \
             "INSTALL_DIR=${RUNNER_TEMP}" "PACKAGES=${PT_PT_PACKAGE}"
           exit "${status}"

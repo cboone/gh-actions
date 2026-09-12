@@ -156,8 +156,9 @@ integrity check available for its ecosystem.
   verified against a sha512 the caller commits, before npm reads the
   tarball.
   [install-cspell-dictionaries](actions/install-cspell-dictionaries/README.md)
-  refuses a package that declares runtime dependencies, so nothing
-  reaches `node_modules` that the caller did not hash.
+  refuses a package that declares dependencies of any kind, `optional`
+  and `peer` included, so nothing reaches `node_modules` that the caller
+  did not hash.
 - **Rust tooling**: installed from binary release tarballs with SHA-256
   verification, never via `cargo install` (which would trust crates.io
   alone).

@@ -153,8 +153,10 @@ anything that runs in CI.
   deterministic registry URL and verifies it against that integrity
   before npm reads it. The digest is reviewed and committed in the
   calling repository, so the registry supplies bytes rather than trust.
-  A package declaring runtime dependencies is refused, because npm
-  would resolve those unverified. The packages install beside
+  A package declaring dependencies is refused, in `dependencies`,
+  `optionalDependencies` or `peerDependencies` alike, because npm
+  installs optional ones by default and resolves peers itself from
+  version 7, so all three would come from the registry unverified. The packages install beside
   `cspell-lib`, which is what makes a bare `import` in a config
   elsewhere in the tree resolve: cspell searches `cspell-lib`'s own
   directory as well as the config file's.

@@ -130,9 +130,10 @@ registry supplies bytes rather than trust: the digest is reviewed and
 committed in the calling repository. Keying on the exact
 `<name>@<version>` means a version bumped without its integrity fails
 with a mismatch rather than verifying against a stale digest. A package
-that declares runtime dependencies is refused, because npm would resolve
-those from the registry unverified; dictionary packages ship data and
-normally declare none. The
+that declares dependencies is refused, in `dependencies`,
+`optionalDependencies` or `peerDependencies` alike, because npm would
+resolve all three from the registry unverified; dictionary packages ship
+data and normally declare none. The
 [install-cspell-dictionaries](../../actions/install-cspell-dictionaries/README.md)
 action implements this and can be driven directly.
 
@@ -218,8 +219,8 @@ jobs:
       use-consumer-versions: true
 ```
 
-Repo whose prose is not in English, adding a dictionary cspell does not
-bundle:
+Repo whose prose is not in English. It adds a dictionary that cspell does
+not bundle, and its own `cspell.json` imports it:
 
 ```yaml
 jobs:

@@ -32,10 +32,13 @@ digest reviewed and committed in the calling repository. Keying on the exact
 `<name>@<version>` means a version bumped without its integrity fails with a
 mismatch rather than verifying against a stale digest.
 
-A package that declares runtime dependencies is refused. npm would resolve
-those from the registry unverified, and nothing may reach `node_modules` that
-the caller did not hash. Dictionary packages ship data and normally declare
-none.
+A package that declares dependencies is refused, in any of `dependencies`,
+`optionalDependencies` and `peerDependencies`. npm installs optional ones by
+default and resolves peers on its own from version 7, so all three would
+reach the registry unverified, and nothing may reach `node_modules` that the
+caller did not hash. The unpack step passes `--omit=dev --omit=optional
+--omit=peer` as well, so that holds even for a tarball that somehow gets past
+the manifest check. Dictionary packages ship data and normally declare none.
 
 ## Inputs
 
@@ -69,14 +72,14 @@ configurable.
 
 ## Exit codes
 
-| Code | Meaning                                                                   |
-| ---- | ------------------------------------------------------------------------- |
-| `0`  | Installed, or nothing to install                                          |
-| `64` | Invalid or missing input                                                  |
-| `65` | Integrity malformed or mismatched                                         |
-| `66` | Package tarball rejected: unreadable, or it declares runtime dependencies |
-| `69` | Download failed                                                           |
-| `70` | npm failed to install a verified tarball                                  |
+| Code | Meaning                                                           |
+| ---- | ----------------------------------------------------------------- |
+| `0`  | Installed, or nothing to install                                  |
+| `64` | Invalid or missing input                                          |
+| `65` | Integrity malformed or mismatched                                 |
+| `66` | Package tarball rejected: unreadable, or it declares dependencies |
+| `69` | Download failed                                                   |
+| `70` | npm failed to install a verified tarball                          |
 
 ## Usage
 
