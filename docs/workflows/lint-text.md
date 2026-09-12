@@ -16,6 +16,7 @@ and yamllint YAML validation. Each tool can be toggled independently.
 | `run-yamllint`          | boolean | `false`     | Run yamllint                                                              |
 | `preset`                | string  | `""`        | Optional preset config bundle (see below)                                 |
 | `use-consumer-versions` | boolean | `false`     | Install npm-based lint tools from the consumer's own lockfile (see below) |
+| `extra-cspell-packages` | string  | `""`        | Extra cspell dictionary packages to install (see below)                   |
 | `timeout-minutes`       | number  | `10`        | Job timeout in minutes                                                    |
 
 ### Preset configs
@@ -85,11 +86,71 @@ lockfile rather than this gh-actions repo. Requirements when
 `uv pip install --require-hashes` from this repo's
 `requirements/yamllint.txt`).
 
+### Extra cspell dictionaries
+
+cspell bundles English-family dictionaries and a few technical ones, so
+any other natural language needs a package it does not ship. By default
+this workflow installs only what this repo's lockfile pins, so a
+consumer config importing such a package has nothing to resolve against.
+`extra-cspell-packages` names the packages to add.
+
+Each entry is two whitespace-separated fields on one line. Blank lines
+and `#` comments are ignored, and the input is ignored entirely when
+`run-cspell` is false.
+
+```yaml
+extra-cspell-packages: |
+  @cspell/dict-pt-pt@3.0.6  sha512-RT3EovAHK086ta4efTp+PxT9a2fZFHGrsf6AhX6LoFfxCn2RZAnITULSuVgkwpD/3Z/Di7oSXXNfeW9LKtGpGQ==
+```
+
+The version must be exact: a range, a dist-tag such as `latest`, and a
+git, file or URL spec are all rejected, since the integrity pins one
+published tarball. Get the second field from npm:
+
+```bash
+npm view @cspell/dict-pt-pt@3.0.6 dist.integrity
+```
+
+Consumers keep writing the idiomatic import and never learn where CI put
+the tools:
+
+```jsonc
+{ "import": ["@cspell/dict-pt-pt/cspell-ext.json"], "language": "en,pt-PT" }
+```
+
+That resolves because the packages are installed beside cspell, wherever
+this workflow put it, and cspell searches `cspell-lib`'s own directory as
+well as the config file's. It works the same under
+`use-consumer-versions: true`, where cspell lives in the consumer's
+workspace instead.
+
+Each tarball is downloaded from its deterministic registry URL and
+verified against the caller's integrity before npm reads it, so the
+registry supplies bytes rather than trust: the digest is reviewed and
+committed in the calling repository. Keying on the exact
+`<name>@<version>` means a version bumped without its integrity fails
+with a mismatch rather than verifying against a stale digest. A package
+that declares dependencies is refused, in `dependencies`,
+`optionalDependencies` or `peerDependencies` alike, because npm would
+resolve all three from the registry unverified; dictionary packages ship
+data and normally declare none. The
+[install-cspell-dictionaries](../../actions/install-cspell-dictionaries/README.md)
+action implements this and can be driven directly.
+
+A dictionary that is not on npm is a different mechanism: commit the
+`.txt` or `.trie.gz` file and point at it with a `dictionaryDefinitions`
+entry in your own cspell config, whose `path` is resolved relative to
+that config file. Note that `path` does no package resolution at all, so
+a bare package specifier there cannot work; only `import` resolves
+packages.
+
 ### How the workflow reaches its own manifests
 
-The preset configs, `package.json` + `package-lock.json`, and
-`requirements/yamllint.txt` all live in this repo, not the consumer's.
-The workflow fetches them over `raw.githubusercontent.com` from
+The preset configs, `package.json` + `package-lock.json`,
+`requirements/yamllint.txt`, and the dictionary installer
+`actions/install-cspell-dictionaries/install-cspell-dictionaries.sh` all
+live in this repo, not the consumer's. The workflow fetches them over
+`raw.githubusercontent.com` from
 `${{ job.workflow_repository }}` at `${{ job.workflow_sha }}`: the
 repository and commit the workflow file itself came from, which is
 whatever ref the caller pinned. That is what keeps the manifests and the
@@ -101,13 +162,19 @@ Two limitations follow from it:
 - **GitHub Enterprise Server.** The `job.workflow_*` properties are not
   available there, so any step that fetches fails with an `::error::`
   naming the constraint. A fully working configuration on GHES is
-  `use-consumer-versions: true` with `preset: ""` and
-  `run-yamllint: false`: it fetches nothing and still gets per-package
-  sha512 integrity from the consumer's own lockfile.
+  `use-consumer-versions: true` with `preset: ""`,
+  `extra-cspell-packages: ""` and `run-yamllint: false`: it fetches
+  nothing and still gets per-package sha512 integrity from the
+  consumer's own lockfile. A non-English repo there can vendor the
+  dictionary file and reference it from `dictionaryDefinitions`, or add
+  the dictionary package to its own `package.json` (which
+  `use-consumer-versions: true` then installs into the workspace, where
+  a bare `import` resolves).
 - **Private forks of this repo.** `raw.githubusercontent.com` serves
   public repositories only. A private fork cannot supply its own
-  manifests; use `use-consumer-versions: true` there as well, and ship
-  local markdownlint and cspell configs instead of a preset.
+  manifests; use `use-consumer-versions: true` there as well, ship
+  local markdownlint and cspell configs instead of a preset, and reach
+  for the same two alternatives for dictionaries.
 
 Consumers on `@v3.0.0` or `@v3.1.0` fail here on default inputs: those
 releases read `github.job_workflow_sha`, which is not a real context
@@ -150,4 +217,17 @@ jobs:
     with:
       run-cspell: true
       use-consumer-versions: true
+```
+
+Repo whose prose is not in English. It adds a dictionary that cspell does
+not bundle, and its own `cspell.json` imports it:
+
+```yaml
+jobs:
+  text:
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.1.1
+    with:
+      run-cspell: true
+      extra-cspell-packages: |
+        @cspell/dict-pt-pt@3.0.6  sha512-RT3EovAHK086ta4efTp+PxT9a2fZFHGrsf6AhX6LoFfxCn2RZAnITULSuVgkwpD/3Z/Di7oSXXNfeW9LKtGpGQ==
 ```

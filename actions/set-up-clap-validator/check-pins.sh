@@ -10,6 +10,8 @@
 #
 #   VALIDATOR_REV (validator-rev)  clap-validator commit to build
 #   RUST_VERSION (rust-version)    exact Rust toolchain to build it with
+#   IMAGE_LABEL (image-label)      what to call this environment in the key,
+#                                  where it cannot describe itself
 #
 # GitHub does not enforce `required:` for a composite action's inputs: an
 # omitted one arrives as the empty string. Both pins are checked here, so a
@@ -27,8 +29,7 @@
 # pattern below, neither of which admits a newline or a percent sign.
 #
 # RUNNER_OS, RUNNER_ARCH, RUNNER_TEMP and GITHUB_OUTPUT must be set, as
-# they are on every Actions runner. ImageOS may be empty, and the <image>
-# note below says what happens then. Three values are written to
+# they are on every Actions runner. Three values are written to
 # GITHUB_OUTPUT:
 #
 #   cache-key    clap-validator-<os>-<arch>-<image>-<rev>-rust<rust version>
@@ -47,11 +48,17 @@
 # on one would be restored on the other and die at exec. It comes from ID
 # and VERSION_ID in /etc/os-release on Linux, both required since an ID
 # alone reads the same for every release of a distribution, or the major
-# product version on macOS, and falls back to ImageOS only when neither can
-# be read. That order is deliberate: ImageOS names the host VM, so in a job
-# that sets `container:` it still says ubuntu24 while cargo builds against
-# the container's libc. An environment that cannot be identified is refused
-# rather than pooled with every other one, and can set ImageOS itself.
+# product version on macOS. Both describe whatever userspace the build runs
+# in, container or not.
+#
+# The runner's own ImageOS is never consulted, though it looks like the
+# obvious answer on a GitHub-hosted runner. It names the host VM, so a job
+# that sets `container:` reads ubuntu24 whatever the container holds, and
+# two containers on one runner would land on the same key. Where the
+# environment cannot describe itself, IMAGE_LABEL says what to call it, and
+# that is safe for the same reason: a caller sets it deliberately. With
+# neither, the run stops rather than pooling this environment with every
+# other one.
 #
 # rust-version must name one release, because the key records what was
 # passed rather than what rustup resolved it to. `stable`, `beta` and
@@ -173,12 +180,9 @@ function main() {
   # userspace the binary was built against or one would be restored on the
   # other and die at exec.
   #
-  # The OS release is read first, and ImageOS is the fallback rather than
-  # the other way round, because ImageOS names the host VM: in a job that
-  # sets `container:` it still reads ubuntu24 while cargo builds against
-  # the container's libc, so two different container images on one runner
-  # would share a key. /etc/os-release and sw_vers describe whatever
-  # userspace the build actually runs in, container or not.
+  # /etc/os-release and sw_vers are read because they describe whatever
+  # userspace the build actually runs in, container or not, which is the
+  # question the component answers.
   local image=""
   case "${kernel}" in
   Linux)
@@ -200,15 +204,21 @@ function main() {
     fi
     ;;
   esac
+  # image-label, never ImageOS. ImageOS names the host VM, so in a job that
+  # sets `container:` it reads ubuntu24 whatever the container is, and
+  # taking it whenever the derivation came up short would hand two
+  # containers on one runner the same key: the collision this component
+  # exists to prevent, reintroduced at the point the derivation failed.
+  # image-label carries no such meaning, because a caller only sets it
+  # deliberately, for an environment that could not describe itself.
   if [[ -z "${image}" ]]; then
-    image="${ImageOS:-}"
+    image="${IMAGE_LABEL:-}"
   fi
   # Keying on nothing, or on a label that collides with another after
   # sanitizing, is the shared-key case this exists to prevent. Both are
-  # refused rather than patched over; a caller in that position can set
-  # ImageOS to a label unique to this environment.
+  # refused rather than patched over.
   if [[ ! "${image}" =~ ${IMAGE_PATTERN} ]]; then
-    fail "${E_PLATFORM}" "Could not identify the runner image, which the cache key needs to tell environments with incompatible libraries apart. Set ImageOS to a label unique to this one, matching [A-Za-z0-9][A-Za-z0-9._-]*."
+    fail "${E_PLATFORM}" "Could not identify this environment, which the cache key needs to tell environments with incompatible libraries apart. Pass image-label naming it, matching [A-Za-z0-9][A-Za-z0-9._-]*."
   fi
 
   local cache_root="${RUNNER_TEMP}/clap-validator"

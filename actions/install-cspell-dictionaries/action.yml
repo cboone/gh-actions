@@ -1,0 +1,43 @@
+name: Install cspell dictionaries
+description: >-
+  Install cspell dictionary packages from npm, each pinned to an exact
+  version and verified against a caller-supplied sha512, beside an existing
+  cspell installation. Installing them there is what lets a bare `import` in
+  a cspell config resolve, wherever that config lives. Linux and macOS
+  runners only.
+
+inputs:
+  packages:
+    description: >-
+      Dictionary packages to install, one
+      `<name>@<version>  sha512-<base64>` entry per line. Blank lines and
+      `#` comments are ignored. The version must be exact: a range, a
+      dist-tag and a git, file or URL spec are all rejected. Get the
+      integrity from `npm view <name>@<version> dist.integrity`. A package
+      that declares runtime dependencies is refused, because npm would
+      resolve those from the registry unverified.
+    required: true
+  install-dir:
+    description: >-
+      npm project directory whose `node_modules/` already holds cspell. The
+      dictionaries are installed there, beside `cspell-lib`.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install cspell dictionaries
+      shell: bash
+      env:
+        # `${{ github.action_path }}` points at this action's directory
+        # inside the gh-actions checkout the runner makes when loading the
+        # composite action. The reusable workflows in this repo fetch the
+        # same script at their own commit instead, because a `./` path in a
+        # reusable workflow resolves against the caller's checkout. Keep the
+        # path in `env:`: for a job that sets `container:`, the runner
+        # translates host paths in `env:` values, but not in an expression
+        # written into `run:`.
+        INSTALLER: ${{ github.action_path }}/install-cspell-dictionaries.sh
+        PACKAGES: ${{ inputs.packages }}
+        INSTALL_DIR: ${{ inputs.install-dir }}
+      run: bash "${INSTALLER}"

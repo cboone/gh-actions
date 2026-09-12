@@ -21,11 +21,24 @@ inputs:
       such as `1.97`, which rustup reads as the newest `1.97.x`. A
       three-component version and a dated nightly are accepted.
     required: true
+  image-label:
+    description: >-
+      What to call this environment in the cache key, needed only where it
+      cannot describe itself: the key is keyed on the userspace the binary
+      was built against, read from `/etc/os-release` on Linux or `sw_vers`
+      on macOS, and a runner offering neither is refused rather than
+      sharing a key with every other one. The runner's own `ImageOS` is
+      deliberately not used for this, since it names the host VM and would
+      read the same for every container on it.
+    required: false
+    default: ""
 
-# Neither input is defaulted, and GitHub does not enforce `required:` for a
+# Neither pin is defaulted, and GitHub does not enforce `required:` for a
 # composite action's inputs, so `Check the pins` below rejects an omitted
 # one itself. A caller that forgets should fail loudly rather than quietly
 # validate against a different validator than the job it is paired with.
+# image-label is the one optional input, and every GitHub-hosted runner
+# leaves it empty.
 
 outputs:
   install-dir:
@@ -58,6 +71,7 @@ runs:
         CHECKER: ${{ github.action_path }}/check-pins.sh
         VALIDATOR_REV: ${{ inputs.validator-rev }}
         RUST_VERSION: ${{ inputs.rust-version }}
+        IMAGE_LABEL: ${{ inputs.image-label }}
       run: bash "${CHECKER}"
 
     # Restore and save are split rather than combined so the save is an

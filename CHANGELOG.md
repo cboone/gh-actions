@@ -19,13 +19,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   must name one release for the same reason, so `stable`, `beta` and
   `nightly` are refused, with or without a host triple, and so is a
   partial version such as `1.97`, which rustup reads as the newest
-  `1.97.x`; a three-component version and a dated nightly are accepted. The cache key names the
-  runner OS, architecture and image and both pins, with no
+  `1.97.x`; a three-component version and a dated nightly are accepted.
+  The cache key names the runner OS, architecture and image and both
+  pins, the image being the userspace the build ran in, read from
+  `/etc/os-release` or `sw_vers` rather than from the runner's `ImageOS`,
+  which names the host VM and would read alike for every container on it;
+  `image-label` names an environment that can describe itself through
+  neither. With no
   `restore-keys`, so a partial match cannot supply a validator built from
   a different commit or against a different libc; a cache hit installs
   no Rust toolchain and compiles nothing. Running
   `clap-validator validate` is left to the calling job. Outputs
   `install-dir` and `cache-hit`. Linux and macOS runners (#88)
+- `install-cspell-dictionaries` composite action: installs cspell
+  dictionary packages from npm beside an existing cspell installation,
+  which is what lets a bare
+  `"import": ["@cspell/dict-pt-pt/cspell-ext.json"]` in a config
+  elsewhere in the tree resolve. Each
+  `<name>@<version>  sha512-<base64>` entry is downloaded from its
+  deterministic registry URL and verified against that integrity before
+  npm reads it, so the registry supplies bytes rather than trust. A
+  version range, a dist-tag, and a package declaring runtime
+  dependencies are all refused (#72)
+- `lint-text.yml` `extra-cspell-packages` input and `run-cspell`
+  `extra-packages` input: name the dictionaries to add. cspell bundles
+  English-family dictionaries and a few technical ones, so a repo whose
+  prose is in another language previously could not use `run-cspell` at
+  all: the dictionary it needed was in neither the pinned tool tree nor
+  the workspace, and cspell flagged essentially every word (#72)
 - `run-scrut-tests.yml` `setup-uv` and `uv-version` inputs: with
   `setup-uv: true`, the workflow installs the pinned uv release,
   verified against the SHA-256 upstream publishes beside the asset, and

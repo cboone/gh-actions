@@ -34,12 +34,13 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   binary that cannot exec. It comes from `ID` and `VERSION_ID` in
   `/etc/os-release` on Linux, both required since an `ID` alone reads the
   same for every release of a distribution, or the major product version on
-  macOS, and falls back to `ImageOS` only when neither can be read. That
-  order matters for a job that sets `container:`, where `ImageOS` still
-  names the host VM while `cargo` builds against the container's libc. An
-  environment that cannot be identified is refused rather than pooled with
-  every other one, and can set `ImageOS` itself to say what it is. There are
-  no `restore-keys`: a partial match would silently supply a validator built
+  macOS. Both describe whatever userspace the build runs in, container or
+  not. The runner's own `ImageOS` is deliberately never used: it names the
+  host VM, so a job that sets `container:` would read `ubuntu24` whatever
+  the container held, and two containers on one runner would land on the
+  same key. An environment that can describe itself through neither source
+  is refused rather than pooled with every other one, and `image-label`
+  says what to call it. There are no `restore-keys`: a partial match would silently supply a validator built
   from a different commit, which is the failure the pinning exists to
   prevent. Restore and save are separate steps, so the save happens
   explicitly on the success path. Two jobs racing a cold cache both build;
@@ -73,10 +74,11 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
 
 ## Inputs
 
-| Name            | Type   | Default  | Description                                                          |
-| --------------- | ------ | -------- | -------------------------------------------------------------------- |
-| `validator-rev` | string | required | clap-validator commit to build, as a full 40-character lowercase SHA |
-| `rust-version`  | string | required | Rust toolchain naming one release, such as `1.97.1`                  |
+| Name            | Type   | Default  | Description                                                                                 |
+| --------------- | ------ | -------- | ------------------------------------------------------------------------------------------- |
+| `validator-rev` | string | required | clap-validator commit to build, as a full 40-character lowercase SHA                        |
+| `rust-version`  | string | required | Rust toolchain naming one release, such as `1.97.1`                                         |
+| `image-label`   | string | `""`     | What to call this environment in the cache key; needed only where it cannot describe itself |
 
 ## Outputs
 
