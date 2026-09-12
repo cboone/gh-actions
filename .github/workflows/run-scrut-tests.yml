@@ -30,7 +30,8 @@ on:
         description: >-
           Optional shell command to run before scrut tests. Use this to
           install dependencies or prepare fixtures needed by scrut test
-          files. It runs after uv is installed, so it can call `uv`.
+          files. It runs after the uv install step, so it can call `uv`
+          when setup-uv is true.
         type: string
         default: ""
       setup-uv:
