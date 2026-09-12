@@ -34,6 +34,26 @@ jobs:
   shell:
     uses: ./.github/workflows/lint-shell.yml
 
+  # The action job below proves that an installed dictionary resolves; this
+  # one proves the workflow wiring, which is the half that job cannot reach:
+  # lint-text.yml fetches the installer at job.workflow_sha, and only a
+  # workflow_call can exercise that. It runs against this repo's own
+  # cspell.json, which imports nothing, so it asserts the install rather than
+  # the resolution.
+  text-extra-dicts:
+    uses: ./.github/workflows/lint-text.yml
+    with:
+      run-markdownlint: false
+      run-prettier: false
+      run-cspell: true
+      # A folded scalar, because an entry runs past the 120-column limit on
+      # one line. Folding joins these two lines with the single space the
+      # installer splits the entry on; a blank line would start the next
+      # entry.
+      extra-cspell-packages: >-
+        @cspell/dict-pt-pt@3.0.6
+        sha512-RT3EovAHK086ta4efTp+PxT9a2fZFHGrsf6AhX6LoFfxCn2RZAnITULSuVgkwpD/3Z/Di7oSXXNfeW9LKtGpGQ==
+
   install-pinned-tool:
     name: install-pinned-tool (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
@@ -216,4 +236,141 @@ jobs:
           check_rejection plain-http-url 64 "must be an https:// URL" \
             TOOL=shfmt VERSION=3.13.1 "CHECKSUM=${SHFMT_SHA256}" \
             "URL_TEMPLATE=http://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}"
+          exit "${status}"
+
+  install-cspell-dictionaries:
+    name: install-cspell-dictionaries (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    env:
+      # cspell ships no Portuguese dictionary, so this one has to come from
+      # npm. Its published sha512 is what the installer verifies against.
+      # Folded, because an entry runs past the 120-column limit on one line:
+      # folding joins the two fields with the single space the installer
+      # splits on.
+      PT_PT_PACKAGE: >-
+        @cspell/dict-pt-pt@3.0.6
+        sha512-RT3EovAHK086ta4efTp+PxT9a2fZFHGrsf6AhX6LoFfxCn2RZAnITULSuVgkwpD/3Z/Di7oSXXNfeW9LKtGpGQ==
+      # chalk-template 1.1.0 depends on chalk, which is what the rejection
+      # case below needs. A published version is immutable, so this entry
+      # stays correct without being maintained.
+      DEPENDENT_PACKAGE: >-
+        chalk-template@1.1.0
+        sha512-T2VJbcDuZQ0Tb2EWwSotMPJjgpy1/tGee1BTpUNsGZ/qgNjV2t7Mvu+d4600U564nbLesN1x2dPL+xii174Ekg==
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24.15.0"
+
+      # The fixture lives outside the checkout deliberately. A dictionary
+      # installed beside cspell-lib resolves from a config anywhere else in
+      # the tree, because cspell searches cspell-lib's own directory as well
+      # as the config file's; a fixture inside the workspace would resolve
+      # through the ordinary node_modules walk and prove nothing. --root
+      # points cspell's glob root at the fixture, since the files it checks
+      # are outside the working directory.
+      - name: Write a Portuguese fixture outside the checkout
+        run: |
+          fixture="${RUNNER_TEMP}/cspell-fixture"
+          mkdir -p "${fixture}"
+          printf '%s\n' \
+            '{' \
+            '  "version": "0.2",' \
+            '  "language": "en,pt-PT",' \
+            '  "import": ["@cspell/dict-pt-pt/cspell-ext.json"]' \
+            '}' > "${fixture}/cspell.json"
+          printf '%s\n' \
+            '# Amostra' \
+            '' \
+            'Este ficheiro contém palavras portuguesas que só uma' \
+            'verificação com o dicionário europeu aceita.' > "${fixture}/amostra.md"
+
+      # Green here is the end-to-end assertion: an unresolved import is a
+      # configuration error and unresolved Portuguese is a wall of unknown
+      # words, so both the install and the resolution have to have worked.
+      - name: Run cspell with an extra dictionary
+        uses: ./actions/run-cspell
+        with:
+          config: ${{ runner.temp }}/cspell-fixture/cspell.json
+          files: ${{ runner.temp }}/cspell-fixture/amostra.md
+          args: |
+            --root
+            ${{ runner.temp }}/cspell-fixture
+          extra-packages: ${{ env.PT_PT_PACKAGE }}
+
+      - name: Check the installed dictionary
+        run: |
+          manifest="node_modules/@cspell/dict-pt-pt/package.json"
+          if [ ! -f "${manifest}" ]; then
+            echo "::error::${manifest} is missing; the dictionary was not installed" >&2
+            exit 1
+          fi
+          reported="$(node -p "JSON.parse(require('fs').readFileSync('${manifest}', 'utf8')).version")"
+          echo "@cspell/dict-pt-pt: ${reported}"
+          if [ "${reported}" != "3.0.6" ]; then
+            echo "::error::@cspell/dict-pt-pt reports '${reported}', expected 3.0.6" >&2
+            exit 1
+          fi
+
+      # The rejection cases run the script directly under /bin/bash, which is
+      # bash 3.2 on macOS, so each case can assert its exit code and message
+      # rather than only that it failed. HOME is passed through because node
+      # reads it while inspecting a package's dependencies. Output is
+      # captured and its ::error:: prefixes rewritten, so the expected
+      # failures raise no annotations.
+      - name: Check the rejections
+        run: |
+          status=0
+          # Arguments: case name, expected exit code, expected message, then
+          # KEY=VALUE environment for the installer.
+          check_rejection() {
+            local name="$1" want_code="$2" want_message="$3"
+            shift 3
+            local output code
+            if output="$(env -i PATH="${PATH}" HOME="${HOME}" \
+              RUNNER_TEMP="${RUNNER_TEMP}" "$@" \
+              /bin/bash actions/install-cspell-dictionaries/install-cspell-dictionaries.sh 2>&1)"; then
+              code=0
+            else
+              code=$?
+            fi
+            printf '%s\n' "${output}" | sed -e 's/^::error::/error: /' -e "s/^/  ${name} | /"
+            if [ "${code}" != "${want_code}" ]; then
+              echo "::error::${name} exited ${code}, expected ${want_code}" >&2
+              status=1
+            elif [[ "${output}" != *"${want_message}"* ]]; then
+              echo "::error::${name} did not report '${want_message}'" >&2
+              status=1
+            else
+              echo "${name}: rejected with exit ${code}, as expected"
+            fi
+          }
+          # 86 base64 characters and the two padding ones: well formed, so it
+          # reaches the download and fails on the digest rather than on shape.
+          zeros="sha512-$(printf '%086d' 0)=="
+          check_rejection wrong-integrity 65 "Integrity verification failed for @cspell/dict-pt-pt@3.0.6" \
+            "INSTALL_DIR=${PWD}" "PACKAGES=@cspell/dict-pt-pt@3.0.6  ${zeros}"
+          check_rejection malformed-integrity 65 "is not a sha512 integrity" \
+            "INSTALL_DIR=${PWD}" "PACKAGES=@cspell/dict-pt-pt@3.0.6  sha512-tooshort"
+          check_rejection version-range 64 "is not <name>@<version> with an exact version" \
+            "INSTALL_DIR=${PWD}" "PACKAGES=@cspell/dict-pt-pt@^3.0.6  ${zeros}"
+          check_rejection dist-tag 64 "is not <name>@<version> with an exact version" \
+            "INSTALL_DIR=${PWD}" "PACKAGES=@cspell/dict-pt-pt@latest  ${zeros}"
+          check_rejection missing-integrity 64 "expected '<name>@<version>  sha512-<base64>'" \
+            "INSTALL_DIR=${PWD}" "PACKAGES=@cspell/dict-pt-pt@3.0.6"
+          check_rejection dependent-package 66 "declares runtime dependencies: chalk" \
+            "INSTALL_DIR=${PWD}" "PACKAGES=${DEPENDENT_PACKAGE}"
+          check_rejection cspell-not-installed 64 "cspell is not installed in" \
+            "INSTALL_DIR=${RUNNER_TEMP}" "PACKAGES=${PT_PT_PACKAGE}"
           exit "${status}"
