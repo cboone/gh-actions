@@ -28,7 +28,7 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
 - **Cache.** The key is
   `clap-validator-<os>-<arch>-<image>-<validator-rev>-rust<rust-version>`,
   naming every input to the build. `<image>` names this environment, as
-  `ubuntu24.04` or `macos15`: OS and architecture alone do not separate
+  `ubuntu:24.04` or `macos:15`: OS and architecture alone do not separate
   ubuntu-22.04 from ubuntu-24.04, which are both Linux and X64 and carry
   different glibc versions, so a matrix over both would otherwise restore a
   binary that cannot exec. It comes from `ID` and `VERSION_ID` in
@@ -40,11 +40,21 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   the container held, and two containers on one runner would land on the
   same key. An environment that can describe itself through neither source
   is refused rather than pooled with every other one, and `image-label`
-  says what to call it. There are no `restore-keys`: a partial match would silently supply a validator built
+  says what to call it. The two halves are joined with a colon, which the
+  os-release spec allows in neither, so `foo` with `12` cannot collide with
+  `foo1` with `2`; `image-label` forbids the colon for the same reason, so
+  no label can spell a derived identifier. There are no `restore-keys`: a partial match would silently supply a validator built
   from a different commit, which is the failure the pinning exists to
   prevent. Restore and save are separate steps, so the save happens
   explicitly on the success path. Two jobs racing a cold cache both build;
   the loser's save logs a warning and does not fail.
+- **Build isolation.** The validator is built from `$RUNNER_TEMP` with
+  `RUSTFLAGS`, `CARGO_ENCODED_RUSTFLAGS` and `CARGO_BUILD_TARGET` unset, so
+  the calling job's Cargo configuration cannot reach it. It is a tool the
+  job runs rather than part of what the job builds, and the cache key names
+  only the pins and the environment: a setting that changed the binary
+  would be invisible to the key, and `CARGO_BUILD_TARGET` in particular
+  would cache a binary that cannot run on the runner that built it.
 - **Toolchain.** `rustup` and `cargo` must be on `PATH`, as they are on
   GitHub-hosted Linux and macOS images. `rust-version` is installed with
   `--profile minimal` only when the cache misses, so a cache hit installs no
@@ -74,11 +84,11 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
 
 ## Inputs
 
-| Name            | Type   | Default  | Description                                                                                 |
-| --------------- | ------ | -------- | ------------------------------------------------------------------------------------------- |
-| `validator-rev` | string | required | clap-validator commit to build, as a full 40-character lowercase SHA                        |
-| `rust-version`  | string | required | Rust toolchain naming one release, such as `1.97.1`                                         |
-| `image-label`   | string | `""`     | What to call this environment in the cache key; needed only where it cannot describe itself |
+| Name            | Type   | Default  | Description                                                                                                |
+| --------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `validator-rev` | string | required | clap-validator commit to build, as a full 40-character lowercase SHA                                       |
+| `rust-version`  | string | required | Rust toolchain naming one release, such as `1.97.1`                                                        |
+| `image-label`   | string | `""`     | What to call this environment in the cache key, with no colon; needed only where it cannot describe itself |
 
 ## Outputs
 

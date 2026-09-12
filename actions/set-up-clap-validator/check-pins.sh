@@ -49,7 +49,9 @@
 # and VERSION_ID in /etc/os-release on Linux, both required since an ID
 # alone reads the same for every release of a distribution, or the major
 # product version on macOS. Both describe whatever userspace the build runs
-# in, container or not.
+# in, container or not, and both are spelled <name>:<version>: joining them
+# without a separator would let `foo` with `12` and `foo1` with `2` land on
+# one key, and the os-release spec allows a colon in neither field.
 #
 # The runner's own ImageOS is never consulted, though it looks like the
 # obvious answer on a GitHub-hosted runner. It names the host VM, so a job
@@ -82,7 +84,7 @@
 #
 # Exit codes:
 #   0  - Pins accepted, cache key, cache root and install directory written
-#   64 - Invalid or missing input
+#   64 - Invalid or missing input, image-label included
 #   71 - Unsupported operating system
 
 set -euo pipefail
@@ -108,7 +110,13 @@ readonly EXACT_VERSION_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9._+-]+)?$'
 # than stripped to: two labels that differ only in characters a strip would
 # remove, `ubuntu/22.04` and `ubuntu22.04`, would otherwise collide on one
 # key and trade binaries built against different libraries.
-readonly IMAGE_PATTERN='^[A-Za-z0-9][A-Za-z0-9._-]*$'
+readonly IMAGE_PATTERN='^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+
+# What a caller may pass as image-label: the same, minus the colon. A
+# derived value always carries exactly one, joining two fields that the
+# os-release spec forbids one in, so no label can spell a derived value and
+# the two sources cannot land on the same key.
+readonly IMAGE_LABEL_PATTERN='^[A-Za-z0-9][A-Za-z0-9._-]*$'
 
 # Emit an ::error:: annotation, then exit.
 # Arguments:
@@ -188,19 +196,20 @@ function main() {
   Linux)
     # Both fields or neither: VERSION_ID is optional in os-release, and an
     # ID on its own says `ubuntu` for every Ubuntu release alike, which is
-    # the sharing this is here to stop.
+    # the sharing this is here to stop. A field carrying a colon is refused
+    # the same way, since the colon is what makes the pair unambiguous.
     if [[ -r /etc/os-release ]]; then
-      image="$(awk -F= '$1=="ID"{gsub(/"/,"",$2); id=$2} $1=="VERSION_ID"{gsub(/"/,"",$2); v=$2} END{if (id != "" && v != "") printf "%s%s", id, v}' /etc/os-release 2>/dev/null || true)"
+      image="$(awk -F= '$1=="ID"{gsub(/"/,"",$2); id=$2} $1=="VERSION_ID"{gsub(/"/,"",$2); v=$2} END{if (id != "" && v != "" && id !~ /:/ && v !~ /:/) printf "%s:%s", id, v}' /etc/os-release 2>/dev/null || true)"
     fi
     ;;
   Darwin)
-    # Only with a version in hand: a bare `macos` would pass the pattern
+    # Only with a version in hand: a bare `macos:` would pass the pattern
     # below and put every macOS release on one key, which is the sharing
     # this component exists to prevent.
     local macos_version
     macos_version="$(sw_vers -productVersion 2>/dev/null | cut -d. -f1 || true)"
     if [[ -n "${macos_version}" ]]; then
-      image="macos${macos_version}"
+      image="macos:${macos_version}"
     fi
     ;;
   esac
@@ -212,6 +221,9 @@ function main() {
   # image-label carries no such meaning, because a caller only sets it
   # deliberately, for an environment that could not describe itself.
   if [[ -z "${image}" ]]; then
+    if [[ -n "${IMAGE_LABEL:-}" && ! "${IMAGE_LABEL}" =~ ${IMAGE_LABEL_PATTERN} ]]; then
+      fail "${E_USAGE}" "image-label must match [A-Za-z0-9][A-Za-z0-9._-]*. The colon is reserved for the identifier this action derives, so that a label cannot spell one."
+    fi
     image="${IMAGE_LABEL:-}"
   fi
   # Keying on nothing, or on a label that collides with another after

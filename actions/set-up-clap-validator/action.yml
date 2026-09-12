@@ -96,6 +96,17 @@ runs:
     # install directory: a second call in the same job with different pins
     # misses the cache and would otherwise build over the first call's
     # binary, and save whatever survived under the new key.
+    #
+    # The validator is a tool the job runs, not part of what the caller is
+    # building, so the caller's Cargo configuration is kept out of it. That
+    # is a cache-correctness requirement rather than a preference: the key
+    # names the pins and the environment and nothing else, so a setting that
+    # changed the binary would be invisible to it, and one job's build would
+    # be restored by another that configured Rust differently.
+    # `CARGO_BUILD_TARGET` is the sharp one, since a cross target yields a
+    # binary that cannot run on the runner that cached it. Building from
+    # RUNNER_TEMP rather than the workspace leaves a `.cargo/config.toml`
+    # there out of scope for the same reason.
     - name: Build clap-validator
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
@@ -105,6 +116,8 @@ runs:
         CACHE_ROOT: ${{ steps.pins.outputs.cache-root }}
       run: |
         rm -rf "${CACHE_ROOT}"
+        cd "${RUNNER_TEMP}"
+        unset RUSTFLAGS CARGO_ENCODED_RUSTFLAGS CARGO_BUILD_TARGET
         rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update
         cargo "+${RUST_VERSION}" install \
           --git https://github.com/free-audio/clap-validator \
