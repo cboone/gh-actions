@@ -11,6 +11,26 @@ on:
         description: Run shfmt format check.
         type: boolean
         default: true
+      shellcheck-version:
+        description: >-
+          shellcheck version to install. When overriding it, pass that
+          version's checksums in shellcheck-checksums too.
+        type: string
+        default: "0.11.0"
+      shellcheck-checksums:
+        description: >-
+          SHA-256 of each shellcheck release archive, one
+          `<sha256>  <asset file name>` line per platform, as sha256sum
+          prints them. shellcheck releases ship no checksum file and publish
+          no digests in their release notes, so these are committed here. The
+          job runs on ubuntu-latest, so an override needs at least the
+          linux.x86_64 line.
+        type: string
+        default: |
+          8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198  shellcheck-v0.11.0.linux.x86_64.tar.xz
+          12b331c1d2db6b9eb13cfca64306b1b157a86eb69db83023e261eaa7e7c14588  shellcheck-v0.11.0.linux.aarch64.tar.xz
+          3c89db4edcab7cf1c27bff178882e0f6f27f7afdf54e859fa041fca10febe4c6  shellcheck-v0.11.0.darwin.x86_64.tar.xz
+          56affdd8de5527894dca6dc3d7e0a99a873b0f004d7aabc30ae407d3f48b0a79  shellcheck-v0.11.0.darwin.aarch64.tar.xz
       shfmt-version:
         description: >-
           shfmt version to install. When overriding it, pass that version's
@@ -72,26 +92,17 @@ jobs:
             echo "found=false" >> "${GITHUB_OUTPUT}"
           fi
 
-      - name: Run ShellCheck
-        if: >-
-          inputs.run-shellcheck
-          && steps.find-scripts.outputs.found == 'true'
-        env:
-          SHELL_SCRIPTS: ${{ steps.find-scripts.outputs.files }}
-        run: |
-          echo "${SHELL_SCRIPTS}" | tr '\n' '\0' | xargs -0 shellcheck
-
       # Fetch the installer from the repository and commit this workflow
       # file came from, the supply-chain model lint-text.yml uses for its
       # manifests, so the script and this workflow always share a commit. A
       # `./` action path would resolve against the caller's checkout
       # instead. The `job` context is only available on steps, so the two
       # values are bound here rather than at job or workflow level. The
-      # step carries the shfmt install's condition, so a job that installs
+      # step carries both tool installs' conditions, so a job that installs
       # nothing never reads the job context.
       - name: Fetch install-pinned-tool
         if: >-
-          inputs.run-shfmt
+          (inputs.run-shellcheck || inputs.run-shfmt)
           && steps.find-scripts.outputs.found == 'true'
         env:
           REQ_REPO: ${{ job.workflow_repository }}
@@ -100,9 +111,9 @@ jobs:
           if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
             msg="job.workflow_repository or job.workflow_sha is unavailable,"
             msg="${msg} so this workflow cannot fetch its pinned installer."
-            msg="${msg} Neither is populated on GitHub Enterprise Server; set"
-            msg="${msg} run-shfmt: false there, or install shfmt in your own"
-            msg="${msg} job with the set-up-shfmt action."
+            msg="${msg} Neither is populated on GitHub Enterprise Server; run"
+            msg="${msg} ShellCheck and shfmt in your own job with the"
+            msg="${msg} set-up-shellcheck and set-up-shfmt actions there."
             echo "::error::${msg}" >&2
             exit 1
           fi
@@ -111,6 +122,32 @@ jobs:
           curl -sSfL --proto '=https' --retry 3 --retry-delay 5 --retry-all-errors \
             "${base}/actions/install-pinned-tool/install-pinned-tool.sh" \
             -o "${RUNNER_TEMP}/install-pinned-tool.sh"
+
+      # Pinned rather than taken from the runner image, so a runner image
+      # update cannot change what this job reports, and so it lints with the
+      # same shellcheck lint-github-actions.yml gives actionlint.
+      - name: Install shellcheck
+        if: >-
+          inputs.run-shellcheck
+          && steps.find-scripts.outputs.found == 'true'
+        env:
+          TOOL: shellcheck
+          VERSION: ${{ inputs.shellcheck-version }}
+          URL_TEMPLATE: https://github.com/koalaman/shellcheck/releases/download/v{version}/shellcheck-v{version}.{os}.{arch}.tar.xz
+          CHECKSUMS: ${{ inputs.shellcheck-checksums }}
+          ARCHIVE_MEMBER: shellcheck-v{version}/shellcheck
+          ARCH_NAMES: amd64=x86_64 arm64=aarch64
+        run: bash "${RUNNER_TEMP}/install-pinned-tool.sh"
+
+      - name: Run ShellCheck
+        if: >-
+          inputs.run-shellcheck
+          && steps.find-scripts.outputs.found == 'true'
+        env:
+          SHELL_SCRIPTS: ${{ steps.find-scripts.outputs.files }}
+        run: |
+          shellcheck --version
+          echo "${SHELL_SCRIPTS}" | tr '\n' '\0' | xargs -0 shellcheck
 
       - name: Install shfmt
         if: >-
