@@ -340,6 +340,19 @@ per the existing rule in `.github/copilot-instructions.md`.
 1. Add a row to the Quick Reference table in the root `README.md`, under
    the appropriate group, linking to the new `docs/workflows/<name>.md`.
 
+## Merging Pull Requests
+
+Always merge with a merge commit (`gh pr merge --merge`), and never squash
+or rebase. This holds for every pull request in this repository, including
+single-commit and Dependabot ones.
+
+The reason is that each commit here is written to stand on its own. A
+branch's history separates the substantive change from its plan file, its
+lint fixes, and any commits made in response to review, and `git log`
+against a single file is how a convention's rationale gets recovered later.
+Squashing collapses that into one message, and rebasing discards the merge
+point that shows what landed together.
+
 ## Releasing
 
 This repository has no GoReleaser config; releases are plain Git tags.
