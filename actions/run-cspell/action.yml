@@ -29,6 +29,17 @@ inputs:
       flags like `--no-must-find-files` or `--quiet`.
     required: false
     default: ""
+  extra-packages:
+    description: >-
+      Extra cspell dictionary packages to install, one
+      `<name>@<version>  sha512-<base64>` entry per line. cspell bundles
+      English-family dictionaries and a few technical ones, so any other
+      natural language needs a package it does not ship. The version
+      must be exact and the sha512 is required: get it from
+      `npm view <name>@<version> dist.integrity`. See
+      [install-cspell-dictionaries](../install-cspell-dictionaries/README.md).
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -50,6 +61,24 @@ runs:
         fi
         (cd "${GH_ACTIONS_ROOT}" && npm ci --ignore-scripts --no-audit --no-fund)
         printf '%s\n' "${GH_ACTIONS_ROOT}/node_modules/.bin" >> "${GITHUB_PATH}"
+
+    - name: Install extra cspell dictionaries
+      if: inputs.extra-packages != ''
+      shell: bash
+      env:
+        # install-cspell-dictionaries is a sibling of this action inside
+        # the gh-actions checkout the runner makes when loading it, so both
+        # come from the same commit. A `uses: ./` reference would resolve
+        # against the caller's workspace instead. INSTALLER stays in `env:`
+        # because, for a job that sets `container:`, the runner translates
+        # host paths there but not in expressions in `run:`.
+        INSTALLER: ${{ github.action_path }}/../install-cspell-dictionaries/install-cspell-dictionaries.sh
+        PACKAGES: ${{ inputs.extra-packages }}
+        # The dictionaries go beside the cspell the step above installed,
+        # which is what lets a bare `import` in the consumer's config
+        # resolve them.
+        INSTALL_DIR: ${{ github.action_path }}/../..
+      run: bash "${INSTALLER}"
 
     - name: Register cspell problem matcher
       shell: bash

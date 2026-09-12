@@ -18,17 +18,18 @@ usage examples.
 
 ### Linting and formatting
 
-| Component                                                      | Type     | What it does                                 |
-| -------------------------------------------------------------- | -------- | -------------------------------------------- |
-| [lint-text](docs/workflows/lint-text.md)                       | workflow | markdownlint, Prettier, cspell, yamllint     |
-| [lint-shell](docs/workflows/lint-shell.md)                     | workflow | ShellCheck and shfmt                         |
-| [lint-github-actions](docs/workflows/lint-github-actions.md)   | workflow | actionlint, with shellcheck on `run:` blocks |
-| [run-cspell](actions/run-cspell/README.md)                     | action   | cspell with PR annotations                   |
-| [run-reuse](actions/run-reuse/README.md)                       | action   | REUSE/SPDX compliance                        |
-| [set-up-shfmt](actions/set-up-shfmt/README.md)                 | action   | install shfmt                                |
-| [set-up-shellcheck](actions/set-up-shellcheck/README.md)       | action   | install shellcheck                           |
-| [set-up-actionlint](actions/set-up-actionlint/README.md)       | action   | install actionlint                           |
-| [set-up-golangci-lint](actions/set-up-golangci-lint/README.md) | action   | install golangci-lint                        |
+| Component                                                                    | Type     | What it does                                 |
+| ---------------------------------------------------------------------------- | -------- | -------------------------------------------- |
+| [lint-text](docs/workflows/lint-text.md)                                     | workflow | markdownlint, Prettier, cspell, yamllint     |
+| [lint-shell](docs/workflows/lint-shell.md)                                   | workflow | ShellCheck and shfmt                         |
+| [lint-github-actions](docs/workflows/lint-github-actions.md)                 | workflow | actionlint, with shellcheck on `run:` blocks |
+| [run-cspell](actions/run-cspell/README.md)                                   | action   | cspell with PR annotations                   |
+| [install-cspell-dictionaries](actions/install-cspell-dictionaries/README.md) | action   | install integrity-pinned cspell dictionaries |
+| [run-reuse](actions/run-reuse/README.md)                                     | action   | REUSE/SPDX compliance                        |
+| [set-up-shfmt](actions/set-up-shfmt/README.md)                               | action   | install shfmt                                |
+| [set-up-shellcheck](actions/set-up-shellcheck/README.md)                     | action   | install shellcheck                           |
+| [set-up-actionlint](actions/set-up-actionlint/README.md)                     | action   | install actionlint                           |
+| [set-up-golangci-lint](actions/set-up-golangci-lint/README.md)               | action   | install golangci-lint                        |
 
 ### Testing and CI
 
@@ -151,6 +152,13 @@ integrity check available for its ecosystem.
 - **npm tools**: installed via `npm ci` against the workflow
   repository's `package-lock.json` (per-package sha512 integrity),
   fetched at the workflow's own repository and commit.
+- **Caller-named cspell dictionaries**: pinned to an exact version and
+  verified against a sha512 the caller commits, before npm reads the
+  tarball.
+  [install-cspell-dictionaries](actions/install-cspell-dictionaries/README.md)
+  refuses a package that declares dependencies of any kind, `optional`
+  and `peer` included, so nothing reaches `node_modules` that the caller
+  did not hash.
 - **Rust tooling**: installed from binary release tarballs with SHA-256
   verification, never via `cargo install` (which would trust crates.io
   alone).

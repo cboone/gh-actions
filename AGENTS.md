@@ -12,6 +12,7 @@ verification. The repository is consumed by 26+ downstream repos.
 actions/
   create-gh-release/     # Create GitHub Release with gh
   create-pull-request/   # Wrapper: peter-evans/create-pull-request (SHA-pinned)
+  install-cspell-dictionaries/ # Install cspell dictionary packages pinned to a version and sha512
   install-pinned-tool/   # Install a release binary pinned to a version and SHA-256
   run-cspell/            # Install and run cspell spell checker
   run-gitleaks/          # Install and run gitleaks secret scanner
@@ -142,6 +143,23 @@ anything that runs in CI.
   but the trust boundary becomes the consumer's reviewed lockfile
   rather than this repo. Use this when CI must agree with the versions
   a consumer pins locally.
+- **Caller-named cspell dictionaries**: cspell bundles only
+  English-family dictionaries and a few technical ones, so any other
+  natural language needs a package no lockfile here can pin for every
+  consumer. `lint-text.yml`'s `extra-cspell-packages` and
+  `run-cspell`'s `extra-packages` take
+  `<name>@<version>  sha512-<base64>` entries, and
+  `actions/install-cspell-dictionaries` downloads each tarball from its
+  deterministic registry URL and verifies it against that integrity
+  before npm reads it. The digest is reviewed and committed in the
+  calling repository, so the registry supplies bytes rather than trust.
+  A package declaring dependencies is refused, in `dependencies`,
+  `optionalDependencies` or `peerDependencies` alike, because npm
+  installs optional ones by default and resolves peers itself from
+  version 7, so all three would come from the registry unverified. The packages install beside
+  `cspell-lib`, which is what makes a bare `import` in a config
+  elsewhere in the tree resolve: cspell searches `cspell-lib`'s own
+  directory as well as the config file's.
 - **Rust tooling** (cargo-deny, cargo-nextest, cargo-audit,
   cargo-llvm-cov): installed from binary release tarballs with SHA-256
   verification, never via `cargo install` (which would trust crates.io
@@ -396,8 +414,13 @@ and the `set-up-*` actions built on it, from the checkout on Linux amd64,
 Linux arm64 and macOS arm64, including inputs it must reject, and asserts
 that actionlint really does shell out to shellcheck. Its `scrut` job calls
 `run-scrut-tests.yml` with `setup-uv: true` against `tests/scrut/`, whose
-fixture is a PEP 723 script that only runs if uv reached `PATH`. There is
-no unit test framework.
+fixture is a PEP 723 script that only runs if uv reached `PATH`.
+`actions/install-cspell-dictionaries` is tested on the same three
+runners the same way, through `run-cspell` against a fixture kept
+outside the checkout: a dictionary installed beside `cspell-lib`
+resolves from a config anywhere else in the tree, so a fixture inside
+the workspace would resolve through the ordinary `node_modules` walk and
+assert nothing. There is no unit test framework.
 
 ## Local Development
 

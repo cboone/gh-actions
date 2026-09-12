@@ -48,6 +48,20 @@ on:
           yamllint is unaffected (Python, not npm).
         type: boolean
         default: false
+      extra-cspell-packages:
+        description: |
+          Extra cspell dictionary packages to install, one
+          `<name>@<version>  sha512-<base64>` entry per line. cspell
+          bundles English-family dictionaries and a few technical ones,
+          so any other natural language needs a package it does not
+          ship. The version must be exact and the sha512 is required:
+          get it from `npm view <name>@<version> dist.integrity`. The
+          packages install beside cspell, wherever this workflow put it,
+          so a consumer's own config keeps the idiomatic
+          `"import": ["@cspell/dict-pt-pt/cspell-ext.json"]`. Ignored
+          when run-cspell is false.
+        type: string
+        default: ""
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -209,6 +223,9 @@ jobs:
             "${base}/package-lock.json" -o "${install_dir}/package-lock.json"
           (cd "${install_dir}" && npm ci --ignore-scripts --include=dev --no-audit --no-fund)
           printf '%s\n' "${install_dir}/node_modules/.bin" >> "${GITHUB_PATH}"
+          # Publish where cspell landed, so the dictionary step below
+          # installs beside it without a second copy of this path.
+          printf 'CSPELL_INSTALL_DIR=%s\n' "${install_dir}" >> "${GITHUB_ENV}"
 
       - name: Install lint tools (consumer's package-lock.json)
         if: ${{ inputs.use-consumer-versions && (inputs.run-markdownlint || inputs.run-prettier || inputs.run-cspell) }}
@@ -232,6 +249,7 @@ jobs:
           fi
           npm ci --ignore-scripts --include=dev --no-audit --no-fund
           printf '%s\n' "${GITHUB_WORKSPACE}/node_modules/.bin" >> "${GITHUB_PATH}"
+          printf 'CSPELL_INSTALL_DIR=%s\n' "${GITHUB_WORKSPACE}" >> "${GITHUB_ENV}"
 
       - name: Validate consumer-installed lint tools
         if: >-
@@ -267,6 +285,43 @@ jobs:
           if [ "${missing}" -ne 0 ]; then
             exit 1
           fi
+
+      # Fetch the installer from the repository and commit this workflow
+      # file came from, the model the manifest fetches above follow, so the
+      # script and this workflow always share a commit. A `./` action path
+      # would resolve against the caller's checkout instead. The `job`
+      # context is only available on steps, so the two values are bound
+      # here rather than at job or workflow level.
+      - name: Fetch install-cspell-dictionaries
+        if: ${{ inputs.run-cspell && inputs.extra-cspell-packages != '' }}
+        env:
+          REQ_REPO: ${{ job.workflow_repository }}
+          REQ_SHA: ${{ job.workflow_sha }}
+        run: |
+          if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
+            msg="job.workflow_repository or job.workflow_sha is unavailable,"
+            msg="${msg} so this workflow cannot fetch its pinned dictionary"
+            msg="${msg} installer. Neither is populated on GitHub Enterprise"
+            msg="${msg} Server; leave extra-cspell-packages empty there, or"
+            msg="${msg} vendor the dictionary and point at it with"
+            msg="${msg} dictionaryDefinitions[].path in your cspell config."
+            echo "::error::${msg}" >&2
+            exit 1
+          fi
+          base="https://raw.githubusercontent.com/${REQ_REPO}/${REQ_SHA}"
+          echo "Fetching from ${base}"
+          curl -sSfL --proto '=https' --retry 3 --retry-delay 5 --retry-all-errors \
+            "${base}/actions/install-cspell-dictionaries/install-cspell-dictionaries.sh" \
+            -o "${RUNNER_TEMP}/install-cspell-dictionaries.sh"
+
+      # Ahead of every linter, so a malformed entry or a digest mismatch
+      # fails before any of them runs.
+      - name: Install extra cspell dictionaries
+        if: ${{ inputs.run-cspell && inputs.extra-cspell-packages != '' }}
+        env:
+          PACKAGES: ${{ inputs.extra-cspell-packages }}
+          INSTALL_DIR: ${{ env.CSPELL_INSTALL_DIR }}
+        run: bash "${RUNNER_TEMP}/install-cspell-dictionaries.sh"
 
       - name: Run markdownlint
         if: inputs.run-markdownlint
