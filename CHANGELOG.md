@@ -45,15 +45,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `install-pinned-tool`'s script instead of their own inline copies.
   Their inputs, defaults, and checksum sources are unchanged apart from
   `set-up-shfmt`'s new `checksums` input (#87)
-- `lint-shell.yml` and `lint-github-actions.yml` install shfmt and
-  actionlint by fetching `install-pinned-tool`'s script from
+- `lint-shell.yml` and `lint-github-actions.yml` install their tools by
+  fetching `install-pinned-tool`'s script from
   `job.workflow_repository` at `job.workflow_sha`, the model
   `lint-text.yml` uses for its manifests, instead of carrying inline
   installers. Both now depend on those `job` context properties, which
-  GitHub Enterprise Server does not populate: there, `lint-shell.yml`
-  needs `run-shfmt: false`, and `lint-github-actions.yml` is not
-  supported (run `set-up-actionlint` in your own job instead). A
-  private fork of this repo cannot serve the script either (#87)
+  GitHub Enterprise Server does not populate, so neither is supported
+  there: run the linters in your own job with `set-up-shellcheck`,
+  `set-up-shfmt` and `set-up-actionlint` instead. A private fork of this
+  repo cannot serve the script either (#87, #85)
 
 ### Fixed
 
@@ -66,13 +66,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   passed. On a runner image without ShellCheck, or a `runs-on` that
   lacks it, the job stayed green and silently stopped linting embedded
   shell (#85)
+
+  The `ubuntu-latest` image ships ShellCheck 0.9.0, so a first run on
+  this version can report findings from checks added in 0.10.0 and
+  0.11.0 (SC2327 to SC2332 among them) that no consumer has seen yet.
+  Fix them, add a `# shellcheck disable=` directive, or pin
+  `shellcheck-version: 0.9.0` with that release's checksum while you
+  work through them.
+
 - `lint-shell.yml` lints with a pinned, checksum-verified shellcheck
   instead of the runner image's, so a runner image update no longer
   changes what it reports with no change to any version a consumer
   pinned, and it lints with the same shellcheck actionlint gets. The
-  installer fetch now carries both tools' conditions, so on GitHub
-  Enterprise Server the workaround is `set-up-shellcheck` plus
-  `set-up-shfmt` in your own job rather than `run-shfmt: false` (#85)
+  installer fetch now carries both tools' conditions rather than
+  shfmt's alone. The same 0.9.0-to-0.11.0 jump applies to your tracked
+  scripts (#85)
 
 ## [3.1.1] - 2026-09-10
 

@@ -41,6 +41,12 @@ itself came from, which is whatever ref the caller pinned. The actionlint
 archive is verified against the `checksums.txt` actionlint publishes with each
 release, so any `actionlint-version` with such a release installs.
 
+The `ubuntu-latest` image ships ShellCheck 0.9.0, so the first run on a
+version of this workflow that pins 0.11.0 can report findings from checks
+added since (SC2327 to SC2332 among them). Fix them, add a
+`# shellcheck disable=` directive, or pin `shellcheck-version: 0.9.0` with
+that release's checksum while you work through them.
+
 shellcheck publishes no checksum file and no digests in its release notes, so
 its digests are committed as the `shellcheck-checksums` default. The keys are
 asset names, so overriding `shellcheck-version` without `shellcheck-checksums`

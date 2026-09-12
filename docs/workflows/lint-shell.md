@@ -43,7 +43,10 @@ shellcheck is pinned rather than taken from the runner image for the reason
 [lint-github-actions](lint-github-actions.md#why-shellcheck-is-pinned-here)
 records: a runner image update would otherwise change what this job reports
 with no change to any version you pinned, and would lint your scripts with a
-different shellcheck than the one actionlint shells out to.
+different shellcheck than the one actionlint shells out to. The
+`ubuntu-latest` image ships ShellCheck 0.9.0, so the first run on a version
+of this workflow that pins 0.11.0 can report findings from checks added
+since (SC2327 to SC2332 among them).
 
 Two limitations follow from fetching at the workflow's own commit, as they do
 for [lint-text](lint-text.md):
