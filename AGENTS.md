@@ -208,8 +208,12 @@ check (exit non-zero on unformatted code), not a write operation.
 
 ### Shell Conventions
 
-- Arguments from `args` inputs are split with `read -r -a` into arrays. This
-  handles simple space-delimited flags; quoting and escaping are not supported.
+- Composite actions read an `args` input one argument per line, with a
+  `while IFS= read -r` loop into a bash array, so an argument may contain
+  spaces.
+- The Rust reusable workflows split their `*-args` inputs with `read -r -a`
+  into a bash array. That handles simple space-delimited flags; quoting and
+  escaping are not supported.
 - Inputs are passed to shell steps via `env:` mappings, not inline expressions.
 - Tools are installed to `RUNNER_TEMP` and added to `GITHUB_PATH`.
 - `actions/install-pinned-tool/install-pinned-tool.sh` stays compatible with
