@@ -7,6 +7,8 @@ name: Run CI
 # installs; no `paths-ignore` filter here, because the linters these run
 # cover every file in the repo, Markdown and docs included (cspell skips
 # dot-paths such as `.github/`; #93 tracks that).
+# `scrut` exercises the same fetch path through run-scrut-tests.yml's
+# setup-uv input, against the fixture in tests/.
 # `install-pinned-tool` runs that composite action, and the set-up-*
 # actions built on it, from this checkout on Linux amd64, Linux arm64 and
 # macOS arm64, including inputs it must reject. It also asserts that
@@ -34,6 +36,20 @@ jobs:
 
   shell:
     uses: ./.github/workflows/lint-shell.yml
+
+  # The fixture is a PEP 723 script that runs from its shebang alone, so it
+  # passes only if setup-uv put uv on PATH. HELLO_BIN is deliberately a `./`
+  # path, which exercises scrut-env's relative-to-absolute fixup, and
+  # UV_PYTHON_PREFERENCE keeps uv from downloading a managed CPython for a
+  # script the runner's own interpreter already satisfies.
+  scrut:
+    uses: ./.github/workflows/run-scrut-tests.yml
+    with:
+      setup-uv: true
+      scrut-test-dir: tests/scrut/
+      scrut-env: |
+        HELLO_BIN=./tests/fixtures/hello.py
+        UV_PYTHON_PREFERENCE=only-system
 
   install-pinned-tool:
     name: install-pinned-tool (${{ matrix.runner }})
