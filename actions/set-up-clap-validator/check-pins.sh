@@ -26,10 +26,10 @@
 # the end does name both pins, and runs only once each has matched its
 # pattern below, neither of which admits a newline or a percent sign.
 #
-# ImageOS, RUNNER_OS, RUNNER_ARCH, RUNNER_TEMP and GITHUB_OUTPUT must be set,
-# as they are on every GitHub-hosted Actions runner. ImageOS alone is
-# tolerated as empty, for a self-hosted runner that does not set it. Three
-# values are written to GITHUB_OUTPUT:
+# RUNNER_OS, RUNNER_ARCH, RUNNER_TEMP and GITHUB_OUTPUT must be set, as
+# they are on every Actions runner. ImageOS may be empty, and the <image>
+# note below says what happens then. Three values are written to
+# GITHUB_OUTPUT:
 #
 #   cache-key    clap-validator-<os>-<arch>-<image>-<rev>-rust<rust version>
 #   cache-root   <RUNNER_TEMP>/clap-validator
@@ -44,14 +44,18 @@
 # <image> is ImageOS, such as ubuntu24 or macos15. RUNNER_OS and RUNNER_ARCH
 # do not separate ubuntu-22.04 from ubuntu-24.04, which are both Linux/X64
 # and carry different glibc versions, so without it a binary built on one
-# would be restored on the other and die at exec. A self-hosted runner
-# reports `unknown` and therefore shares one key per OS and architecture;
-# a fleet with mixed images should not share a cache across them.
+# would be restored on the other and die at exec. A self-hosted runner sets
+# no ImageOS, so the OS release stands in for it: ID and VERSION_ID from
+# /etc/os-release on Linux, the major product version on macOS. A runner
+# where neither can be determined is refused rather than pooled with every
+# other one, and can set ImageOS itself to say what it is.
 #
-# A rust-version naming a channel (`stable`, `nightly`) is accepted, since
-# `run-rust-ci.yml` permits one too, but the key cannot track what the
-# channel points at: the same key keeps serving the binary built by whatever
-# compiler `stable` meant the first time. Pass an exact version to pin it.
+# rust-version must name one toolchain. `stable`, `beta` and `nightly` are
+# refused, because each moves to a new compiler on its own schedule while
+# the key records only the name, so a hit would go on serving the binary
+# the previous compiler built. That is the same reason validator-rev
+# refuses a tag. A dated nightly such as nightly-2026-01-01 is one release
+# and is accepted.
 #
 # cache-root is what `cargo install --root` is given, and the directory the
 # cache stores; install-dir is cargo's own layout underneath it, since
@@ -77,9 +81,9 @@ readonly E_PLATFORM=71
 # prefix nor a value carrying a newline can match.
 readonly REV_PATTERN='^[0-9a-f]{40}$'
 
-# A rustup toolchain name: a version such as 1.97.1, or a channel such as
-# stable. Deliberately no whitespace, so the value is a single argument to
-# rustup and cargo and a single line in the cache key.
+# A rustup toolchain name, such as 1.97.1 or nightly-2026-01-01.
+# Deliberately no whitespace, so the value is a single argument to rustup
+# and cargo and a single line in the cache key.
 readonly RUST_VERSION_PATTERN='^[A-Za-z0-9][A-Za-z0-9._+-]*$'
 
 # Emit an ::error:: annotation, then exit.
@@ -121,6 +125,16 @@ function main() {
   if [[ ! "${RUST_VERSION}" =~ ${RUST_VERSION_PATTERN} ]]; then
     fail "${E_USAGE}" "rust-version must be a rustup toolchain name with no spaces, such as 1.97.1."
   fi
+  # These three move to a new compiler on their own schedule, and the cache
+  # key can only record the name, so a hit would go on serving the binary
+  # the previous compiler built. Rejecting them is the same reason a tag is
+  # rejected for validator-rev. A dated nightly names one release and is
+  # accepted.
+  case "${RUST_VERSION}" in
+  stable | beta | nightly)
+    fail "${E_USAGE}" "rust-version must not be a floating channel (stable, beta, nightly), because the cache key cannot follow where one moves; pass an exact version such as 1.97.1, or a dated nightly."
+    ;;
+  esac
 
   local kernel
   kernel="$(uname -s)"
@@ -129,9 +143,34 @@ function main() {
   *) fail "${E_PLATFORM}" "Unsupported operating system: ${kernel}. Linux and macOS runners only." ;;
   esac
 
-  # A self-hosted runner need not set ImageOS, and one label is better than
-  # refusing to run there; see the header on what that costs.
-  local image="${ImageOS:-unknown}"
+  # GitHub-hosted runners set ImageOS, such as ubuntu24 or macos15, and
+  # that is the discriminator that matters: RUNNER_OS and RUNNER_ARCH are
+  # the same on ubuntu-22.04 and ubuntu-24.04, whose glibc versions are
+  # not. A self-hosted runner sets none, so derive the OS release, which
+  # answers the same compatibility question. Keying on OS and architecture
+  # alone would let one host restore a binary another host built against a
+  # libc it does not have.
+  local image="${ImageOS:-}"
+  if [[ -z "${image}" ]]; then
+    case "${kernel}" in
+    Linux)
+      if [[ -r /etc/os-release ]]; then
+        image="$(awk -F= '$1=="ID"{gsub(/"/,"",$2); id=$2} $1=="VERSION_ID"{gsub(/"/,"",$2); v=$2} END{printf "%s%s", id, v}' /etc/os-release)"
+      fi
+      ;;
+    Darwin)
+      image="macos$(sw_vers -productVersion 2>/dev/null | cut -d. -f1)"
+      ;;
+    esac
+  fi
+  # Reduced to what a cache key can carry, then required to be non-empty.
+  # Keying on nothing is the shared-key case this exists to prevent, so an
+  # unidentifiable runner is refused rather than quietly pooled with every
+  # other one; a caller in that position can set ImageOS itself.
+  image="$(printf '%s' "${image}" | tr -cd '[:alnum:]._-')"
+  if [[ -z "${image}" ]]; then
+    fail "${E_PLATFORM}" "Could not identify the runner image, which the cache key needs to tell hosts with incompatible libraries apart. Set ImageOS to a label unique to this runner image."
+  fi
 
   local cache_root="${RUNNER_TEMP}/clap-validator"
   local install_dir="${cache_root}/bin"

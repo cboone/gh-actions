@@ -455,6 +455,12 @@ jobs:
             "VALIDATOR_REV=${VALIDATOR_REV}"
           check_rejection rust-version-with-spaces 64 "must be a rustup toolchain name with no spaces" \
             "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=1.97.1 --bogus"
+          # A channel the key cannot follow. A dated nightly is a single
+          # release, so it stays accepted and is not tested here.
+          for channel in stable beta nightly; do
+            check_rejection "rust-version-${channel}" 64 "must not be a floating channel" \
+              "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${channel}"
+          done
 
           # The rejections all discard GITHUB_OUTPUT, so the accepted case
           # is checked here too. The cache key's shape is the thing the

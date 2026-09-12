@@ -15,10 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `validator-rev` using the toolchain given in `rust-version`, caches the
   result, and adds it to `PATH`. Both inputs are required and have no
   defaults, and `validator-rev` must be a full 40-character lowercase
-  commit SHA, since a tag can be moved to another commit. The cache key
-  names the runner OS, architecture and image and both pins, with no
+  commit SHA, since a tag can be moved to another commit. `rust-version`
+  refuses `stable`, `beta` and `nightly` for the same reason, since the
+  key records only the channel name and cannot follow where it moves; a
+  dated nightly is one release and is accepted. The cache key names the
+  runner OS, architecture and image and both pins, with no
   `restore-keys`, so a partial match cannot supply a validator built from
-  a different commit or against a different glibc; a cache hit installs
+  a different commit or against a different libc; a cache hit installs
   no Rust toolchain and compiles nothing. Running
   `clap-validator validate` is left to the calling job. Outputs
   `install-dir` and `cache-hit`. Linux and macOS runners (#88)

@@ -156,9 +156,11 @@ integrity check available for its ecosystem.
   verification, never via `cargo install` (which would trust crates.io
   alone).
 - **clap-validator**: the one tool built from source, with
-  `cargo install --git --rev <40-char sha> --locked`, because upstream
-  publishes no crate and no release asset this repo can pin. The commit
-  pins the source and the lockfile pins its dependency tree, so this is a
+  `cargo install --git <repo> --rev <40-char sha> --locked`. Upstream
+  publishes no crate, and its release assets are `.zip` with no Linux
+  arm64 build, so `install-pinned-tool`, which extracts from tar and
+  covers both architectures, cannot consume them. The commit pins the
+  source and the lockfile pins its dependency tree, so this is a
   different trust path from `cargo install <crate>` rather than an
   exception to the rule above.
 - **`package.json` devDependencies**: exact versions; `package-lock.json`

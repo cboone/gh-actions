@@ -16,7 +16,9 @@ inputs:
       The exact Rust toolchain to build it with. clap-validator 0.4.1
       declares MSRV 1.95.0 and is edition 2024, which the runner image's
       preinstalled Rust may or may not satisfy from one refresh to the
-      next.
+      next. `stable`, `beta` and `nightly` are refused, since the cache
+      key cannot follow where a channel moves; a dated nightly is one
+      release and is accepted.
     required: true
 
 # Neither input is defaulted, and GitHub does not enforce `required:` for a
