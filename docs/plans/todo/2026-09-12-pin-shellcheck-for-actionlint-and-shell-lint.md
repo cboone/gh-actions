@@ -110,9 +110,11 @@ No `run-shellcheck` toggle: `actionlint` always wants it.
   workaround is `set-up-shellcheck` plus `set-up-shfmt` in the caller's own
   job, not `run-shfmt: false`.
 
-No report step here. `lint-shell.yml` runs `shellcheck` itself, so a missing
-binary already fails the step through `xargs`; only the floating version was
-wrong, and the installer's own log line records the pinned one.
+No separate report step here. `lint-shell.yml` runs `shellcheck` itself, so a
+missing binary already fails the step through `xargs`; only the floating
+version was wrong. The `Run ShellCheck` step prints `shellcheck --version`
+before linting, so the log says which version produced the findings now that
+a caller can override it.
 
 ### 4. `.github/workflows/run-ci.yml`
 
