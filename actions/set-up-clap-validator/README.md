@@ -86,7 +86,13 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   [run-rust-ci](../../docs/workflows/run-rust-ci.md)'s, which caches no
   compiled artifact against the toolchain name. A three-component version and
   a dated nightly such as `nightly-2026-01-01` each name one release and are
-  accepted.
+  accepted. Either may carry a host triple, as
+  `1.97.1-x86_64-apple-darwin` does, which is how an arm64 macOS runner
+  builds an x86_64 validator for x86_64 plugins. The triple is not checked
+  against the runner: rustup is the authority on which toolchains exist for
+  a host, and a mismatched one fails there rather than here. It does reach
+  the cache key, so a host-qualified toolchain never shares a key with a
+  bare one.
 - **Install location.** The binary is installed as
   `$RUNNER_TEMP/clap-validator/bin/clap-validator`, which is `cargo install
 --root`'s own layout rather than the `$RUNNER_TEMP/<tool>-bin/<tool>` the
