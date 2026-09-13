@@ -40,7 +40,13 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   the container held, and two containers on one runner would land on the
   same key. An environment that can describe itself through neither source
   is refused rather than pooled with every other one, and `image-label`
-  says what to call it. The two halves are joined with a colon, which the
+  says what to call it. Where the derivation does succeed, a label refines
+  it rather than being ignored: `ID:VERSION_ID` names a distribution
+  release, not the whole ABI, so two images can both say `ubuntu:24.04` and
+  carry different libraries, and only the caller knows when they have.
+  Appending can only split keys further, never merge two environments onto
+  one. The colon count says which case produced a value: none for a label
+  alone, one for a derivation, two for a derivation a label refined. The two halves are joined with a colon, which the
   os-release spec allows in neither, so `foo` with `12` cannot collide with
   `foo1` with `2`; `image-label` forbids the colon for the same reason, so
   no label can spell a derived identifier. There are no `restore-keys`: a partial match would silently supply a validator built
@@ -53,7 +59,9 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   emptied on each rebuild, so the runner's `config.toml` is not read. The
   build runs from a fresh `/tmp` directory, so cargo's search of the working
   directory and its parents finds neither the workspace's
-  `.cargo/config.toml` nor the runner's own. From the environment it clears
+  `.cargo/config.toml` nor the runner's own; a config in any ancestor of
+  that directory, `/tmp` and `/` included, fails the step rather than being
+  built against. From the environment it clears
   the variables that change what the compiler produces: `RUSTFLAGS`,
   `CARGO_ENCODED_RUSTFLAGS`, `CARGO_BUILD_RUSTFLAGS`, `CARGO_BUILD_TARGET`,
   `RUSTC`, `RUSTC_WRAPPER`, `RUSTC_WORKSPACE_WRAPPER`, their
@@ -105,11 +113,11 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
 
 ## Inputs
 
-| Name            | Type   | Default  | Description                                                                                                |
-| --------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------- |
-| `validator-rev` | string | required | clap-validator commit to build, as a full 40-character lowercase SHA                                       |
-| `rust-version`  | string | required | Rust toolchain naming one release, such as `1.97.1`                                                        |
-| `image-label`   | string | `""`     | What to call this environment in the cache key, with no colon; needed only where it cannot describe itself |
+| Name            | Type   | Default  | Description                                                                                                                              |
+| --------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `validator-rev` | string | required | clap-validator commit to build, as a full 40-character lowercase SHA                                                                     |
+| `rust-version`  | string | required | Rust toolchain naming one release, such as `1.97.1`                                                                                      |
+| `image-label`   | string | `""`     | Extra identity for this environment in the cache key, with no colon; refines the derived value, or replaces it where none can be derived |
 
 ## Outputs
 

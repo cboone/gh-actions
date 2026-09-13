@@ -560,12 +560,21 @@ jobs:
             echo "::error::ImageOS reached the key: image went from '${with_image}' to '${derived}'" >&2
             status=1
           fi
+          # The colon is what makes ID and VERSION_ID unambiguous, so a
+          # regression to joining them bare would reintroduce the
+          # foo/12 against foo1/2 collision while still looking derived.
           case "${derived}" in
             "" | unknown)
               echo "::error::derived image '${derived}' is not an OS release identifier" >&2
               status=1
               ;;
-            *) echo "derived image: ${derived} (ImageOS ignored, as intended)" ;;
+            *:*)
+              echo "derived image: ${derived} (ImageOS ignored, as intended)"
+              ;;
+            *)
+              echo "::error::derived image '${derived}' has no colon; ID and VERSION_ID must stay separable" >&2
+              status=1
+              ;;
           esac
 
           # An environment that cannot be identified must stop the run

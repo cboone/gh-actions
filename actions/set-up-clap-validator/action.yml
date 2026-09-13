@@ -153,6 +153,23 @@ runs:
         done < <(env)
         build_dir="$(mktemp -d /tmp/clap-validator-build.XXXXXX)"
         trap 'rm -rf "${build_dir}"' EXIT
+        # Cargo searches the build directory's parents too, and /tmp and /
+        # are still among them. Nothing ordinarily puts a config there;
+        # where something has, refusing beats building against it and
+        # caching the result under a key that does not mention it.
+        ancestor="${build_dir}"
+        while :; do
+          for config in "${ancestor}/.cargo/config.toml" "${ancestor}/.cargo/config"; do
+            if [ -e "${config}" ]; then
+              echo "::error::A Cargo config at ${config} would be read by this build." >&2
+              echo "It would change a binary the cache key does not describe. Remove it," >&2
+              echo "or run this action on a runner without it." >&2
+              exit 1
+            fi
+          done
+          [ "${ancestor}" = "/" ] && break
+          ancestor="$(dirname "${ancestor}")"
+        done
         cd "${build_dir}"
         rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update
         cargo "+${RUST_VERSION}" install \

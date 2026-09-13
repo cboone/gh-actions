@@ -56,11 +56,17 @@
 # The runner's own ImageOS is never consulted, though it looks like the
 # obvious answer on a GitHub-hosted runner. It names the host VM, so a job
 # that sets `container:` reads ubuntu24 whatever the container holds, and
-# two containers on one runner would land on the same key. Where the
-# environment cannot describe itself, IMAGE_LABEL says what to call it, and
-# that is safe for the same reason: a caller sets it deliberately. With
-# neither, the run stops rather than pooling this environment with every
-# other one.
+# two containers on one runner would land on the same key.
+#
+# IMAGE_LABEL is the caller's lever, and it refines rather than replaces:
+# `ID:VERSION_ID` names a distribution release, not the whole ABI, so two
+# images can both say ubuntu:24.04 and carry different libraries, and only
+# the caller knows when they have. A label appends, which can only split
+# keys further and never merge two environments onto one. Where nothing can
+# be derived the label stands alone, and with neither the run stops rather
+# than pooling this environment with every other one. Colon count tells the
+# cases apart: none for a label alone, one for a derivation, two for a
+# derivation a label refined.
 #
 # rust-version must name one release, because the key records what was
 # passed rather than what rustup resolved it to. `stable`, `beta` and
@@ -215,16 +221,27 @@ function main() {
   esac
   # image-label, never ImageOS. ImageOS names the host VM, so in a job that
   # sets `container:` it reads ubuntu24 whatever the container is, and
-  # taking it whenever the derivation came up short would hand two
-  # containers on one runner the same key: the collision this component
-  # exists to prevent, reintroduced at the point the derivation failed.
-  # image-label carries no such meaning, because a caller only sets it
-  # deliberately, for an environment that could not describe itself.
-  if [[ -z "${image}" ]]; then
-    if [[ -n "${IMAGE_LABEL:-}" && ! "${IMAGE_LABEL}" =~ ${IMAGE_LABEL_PATTERN} ]]; then
+  # taking it would hand two containers on one runner the same key: the
+  # collision this component exists to prevent. image-label carries no such
+  # meaning, because a caller only sets it deliberately.
+  #
+  # A label refines the derived identifier rather than replacing it, and
+  # stands alone only where nothing could be derived. `ID:VERSION_ID` names
+  # a distribution release, which is not the whole ABI: two images can both
+  # say ubuntu:24.04 and carry different libraries, and only the caller
+  # knows that. Appending can only split keys further, never merge two
+  # environments onto one, so the lever is safe to offer. The colon count
+  # says which case produced a value: none for a label alone, one for a
+  # derivation, two for a derivation a label refined.
+  if [[ -n "${IMAGE_LABEL:-}" ]]; then
+    if [[ ! "${IMAGE_LABEL}" =~ ${IMAGE_LABEL_PATTERN} ]]; then
       fail "${E_USAGE}" "image-label must match [A-Za-z0-9][A-Za-z0-9._-]*. The colon is reserved for the identifier this action derives, so that a label cannot spell one."
     fi
-    image="${IMAGE_LABEL:-}"
+    if [[ -n "${image}" ]]; then
+      image="${image}:${IMAGE_LABEL}"
+    else
+      image="${IMAGE_LABEL}"
+    fi
   fi
   # Keying on nothing, or on a label that collides with another after
   # sanitizing, is the shared-key case this exists to prevent. Both are

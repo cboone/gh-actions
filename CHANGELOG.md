@@ -31,17 +31,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image is the userspace the build ran in, read from `/etc/os-release` or
   `sw_vers` rather than from the runner's `ImageOS`, which names the host
   VM and would read alike for every container on it; `image-label` names
-  an environment that can describe itself through neither. The derived
-  halves are joined with a colon, which neither may contain and which
-  `image-label` forbids, so a label can never spell a derived identifier,
-  though callers labelling distinct environments must still make those
-  labels distinct. A key past GitHub's 512-character limit is refused with
+  an environment that can describe itself through neither, and refines
+  the derived value where there is one, since a distribution release is
+  not the whole ABI. The derived halves are joined with a colon, which
+  neither may contain and which `image-label` forbids, so a label can
+  never spell a derived identifier and the colon count tells the three
+  cases apart; callers labelling distinct environments must still make
+  those labels distinct. A key past GitHub's 512-character limit is refused with
   a message naming the input that could shorten it.
 
   The build is kept clear of the caller's Cargo configuration, which the
   key does not describe. `CARGO_HOME` is action-owned, the build runs from
   a fresh `/tmp` directory so cargo's search of parent directories finds
-  no `.cargo/config.toml`, and the environment variables known to change
+  no `.cargo/config.toml` and a config in any ancestor of it fails the
+  step, and the environment variables known to change
   what the compiler produces are cleared: `RUSTFLAGS`, the compiler and
   wrapper overrides in both spellings, and every
   `CARGO_TARGET_<triple>_RUSTFLAGS`, `_LINKER` and `_RUNNER`. That last
