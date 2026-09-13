@@ -577,6 +577,27 @@ jobs:
               ;;
           esac
 
+          # The refinement path: with the derivation succeeding, a label
+          # must extend the derived identifier rather than replace it or be
+          # dropped. Both regressions would otherwise pass, since every
+          # other label case here runs with the derivation disabled.
+          : >"${outputs}"
+          env -i PATH="${PATH}" RUNNER_TEMP="${RUNNER_TEMP}" \
+            RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
+            IMAGE_LABEL=refinement-fixture GITHUB_OUTPUT="${outputs}" \
+            "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
+            /bin/bash actions/set-up-clap-validator/check-pins.sh
+          sed 's/^/  refined | /' "${outputs}"
+          refined="$(grep '^cache-key=' "${outputs}")"
+          refined="${refined#"${prefix}"}"
+          refined="${refined%"${suffix}"}"
+          if [ "${refined}" != "${with_image}:refinement-fixture" ]; then
+            echo "::error::label gave image '${refined}', expected '${with_image}:refinement-fixture'" >&2
+            status=1
+          else
+            echo "image-label refines the derived identifier: ${refined}"
+          fi
+
           # An environment that cannot be identified must stop the run
           # rather than key on nothing and pool it with every other one. The
           # derivation reaches for awk on Linux and sw_vers on macOS, so a
