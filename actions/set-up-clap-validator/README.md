@@ -48,13 +48,20 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   prevent. Restore and save are separate steps, so the save happens
   explicitly on the success path. Two jobs racing a cold cache both build;
   the loser's save logs a warning and does not fail.
-- **Build isolation.** The calling job's Cargo configuration cannot reach
-  the build, from any of the three places cargo takes it: the environment
-  variables `RUSTFLAGS`, `CARGO_ENCODED_RUSTFLAGS` and `CARGO_BUILD_TARGET`
-  are unset, `CARGO_HOME` points at an action-owned directory emptied on
-  each rebuild, and the build runs from a fresh `/tmp` directory so that
-  cargo's search of the working directory and its parents finds neither the
-  workspace's `.cargo/config.toml` nor the runner's own. It is a tool the
+- **Build isolation.** Cargo takes configuration from three places, and
+  the build closes each. `CARGO_HOME` points at an action-owned directory,
+  emptied on each rebuild, so the runner's `config.toml` is not read. The
+  build runs from a fresh `/tmp` directory, so cargo's search of the working
+  directory and its parents finds neither the workspace's
+  `.cargo/config.toml` nor the runner's own. From the environment it clears
+  the variables that change what the compiler produces: `RUSTFLAGS`,
+  `CARGO_ENCODED_RUSTFLAGS`, `CARGO_BUILD_RUSTFLAGS`, `CARGO_BUILD_TARGET`,
+  `RUSTC`, `RUSTC_WRAPPER`, `RUSTC_WORKSPACE_WRAPPER`, and every
+  `CARGO_TARGET_<triple>_RUSTFLAGS`, `_LINKER` and `_RUNNER`. That last part
+  is a list rather than a boundary: a `CARGO_PROFILE_*` override, or a
+  variable Cargo adds in future, would still reach the build. Scrubbing to
+  an allowlist would close that, at the cost of dropping the proxy and
+  certificate variables a self-hosted runner needs to fetch the source. It is a tool the
   job runs rather than part of what the job builds, and the cache key names
   only the pins and the environment: a setting that changed the binary
   would be invisible to the key, and `CARGO_BUILD_TARGET` in particular

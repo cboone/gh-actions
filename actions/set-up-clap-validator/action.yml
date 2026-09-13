@@ -106,14 +106,26 @@ runs:
     # `CARGO_BUILD_TARGET` is the sharp one, since a cross target yields a
     # binary that cannot run on the runner that cached it.
     #
-    # Cargo takes configuration from three places, so all three are closed.
-    # The environment variables are unset. `$CARGO_HOME/config.toml` is
-    # displaced by pointing CARGO_HOME at an action-owned directory, emptied
-    # on each rebuild. And cargo walks from the working directory upward
-    # looking for `.cargo/config.toml`, which is why the build runs from a
-    # fresh /tmp directory rather than from RUNNER_TEMP: every ancestor of
-    # RUNNER_TEMP is inside the runner's home, so that walk would find the
-    # home config even with CARGO_HOME pointed elsewhere.
+    # Cargo takes configuration from three places, and each is closed.
+    # `$CARGO_HOME/config.toml` is displaced by pointing CARGO_HOME at an
+    # action-owned directory, emptied on each rebuild. Cargo also walks from
+    # the working directory upward looking for `.cargo/config.toml`, which
+    # is why the build runs from a fresh /tmp directory rather than from
+    # RUNNER_TEMP: every ancestor of RUNNER_TEMP is inside the runner's
+    # home, so that walk would find the home config even with CARGO_HOME
+    # pointed elsewhere.
+    #
+    # The third is the environment, and that one is a list rather than a
+    # boundary, so it is worth being exact about what it covers. Cleared
+    # here are the variables that change what the compiler produces:
+    # RUSTFLAGS and its encoded and `build.`-prefixed forms, the compiler
+    # and wrapper overrides, the default target, and the per-target
+    # equivalents, which name a triple and so are matched rather than
+    # listed. Not cleared is anything Cargo may add later, or a
+    # `CARGO_PROFILE_*` override. Scrubbing to an allowlist instead would
+    # close that, and would also drop proxy and certificate variables that a
+    # self-hosted runner needs to fetch the source at all, which is the
+    # worse failure of the two.
     - name: Build clap-validator
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
@@ -126,7 +138,17 @@ runs:
         rm -rf "${CACHE_ROOT}" "${cargo_home}"
         mkdir -p "${cargo_home}"
         export CARGO_HOME="${cargo_home}"
-        unset RUSTFLAGS CARGO_ENCODED_RUSTFLAGS CARGO_BUILD_TARGET
+        unset RUSTFLAGS CARGO_ENCODED_RUSTFLAGS CARGO_BUILD_TARGET \
+          CARGO_BUILD_RUSTFLAGS RUSTC RUSTC_WRAPPER RUSTC_WORKSPACE_WRAPPER
+        # CARGO_TARGET_<triple>_RUSTFLAGS names a triple, so it cannot be
+        # listed; every variable of that shape is cleared instead.
+        while IFS='=' read -r name _; do
+          case "${name}" in
+            CARGO_TARGET_*_RUSTFLAGS | CARGO_TARGET_*_LINKER | CARGO_TARGET_*_RUNNER)
+              unset "${name}"
+              ;;
+          esac
+        done < <(env)
         build_dir="$(mktemp -d /tmp/clap-validator-build.XXXXXX)"
         trap 'rm -rf "${build_dir}"' EXIT
         cd "${build_dir}"
