@@ -122,6 +122,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   there: run the linters in your own job with `set-up-shellcheck`,
   `set-up-shfmt` and `set-up-actionlint` instead. A private fork of this
   repo cannot serve the script either (#87, #85)
+- Updated pinned GitHub Actions: `actions/setup-node` to v7.0.0
+  (#108), `actions/setup-go` to v7.0.0 (#110), `actions/checkout` to
+  v7.0.1, `github/codeql-action` to v4.38.0, `actions/deploy-pages` to
+  v5.0.1, `softprops/action-gh-release` to v3.0.3,
+  `leanprover/lean-action` to v1.6.0, `Swatinem/rust-cache` to v2.9.2,
+  `crate-ci/typos` to v1.50.1 (#107), and `dtolnay/rust-toolchain` to
+  its 2026-09-12 master commit (#109)
+
+  Both major bumps are ECMAScript module migrations with dependency
+  upgrades, and each action still declares the Node 24 runtime, so no
+  runner requirement changes. Three of these change behavior consumers
+  can observe:
+
+  - `actions/setup-node` v7 no longer exports a placeholder
+    `NODE_AUTH_TOKEN` when `registry-url` is set and the variable is
+    unset, so later steps see it unset rather than set to a dummy
+    value. `publish-to-npm.yml` is unaffected: its install step never
+    had a usable token, current npm leaves the unresolved reference in
+    place rather than failing, and the publish step sets the secret
+    itself.
+  - `dtolnay/rust-toolchain` passes `--force-non-host` to rustup, so a
+    toolchain naming a non-host triple installs and fails at the
+    action's own `rustc` step instead of at install time. A toolchain
+    for the runner's host is unaffected.
+  - `crate-ci/typos` v1.49 and v1.50 carry the July and August 2026
+    dictionary updates, so the typos job `run-rust-ci.yml` runs when
+    `run-typos` is set may flag words that previously passed.
 
 ### Fixed
 
