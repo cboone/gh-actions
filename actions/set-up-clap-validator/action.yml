@@ -23,13 +23,16 @@ inputs:
     required: true
   image-label:
     description: >-
-      What to call this environment in the cache key, needed only where it
-      cannot describe itself: the key is keyed on the userspace the binary
-      was built against, read from `/etc/os-release` on Linux or `sw_vers`
-      on macOS, and a runner offering neither is refused rather than
-      sharing a key with every other one. The runner's own `ImageOS` is
-      deliberately not used for this, since it names the host VM and would
-      read the same for every container on it.
+      Extra identity for this environment in the cache key. The key names
+      the userspace the binary was built against, read from
+      `/etc/os-release` on Linux or `sw_vers` on macOS; this input refines
+      that where it succeeds and replaces it where it does not, and an
+      environment offering neither is refused rather than sharing a key
+      with every other one. Pass it when two environments would derive the
+      same identifier and are not interchangeable, since `ID:VERSION_ID`
+      names a distribution release rather than a whole ABI. The runner's
+      own `ImageOS` is deliberately not used, since it names the host VM
+      and would read the same for every container on it.
     required: false
     default: ""
 
@@ -96,6 +99,36 @@ runs:
     # install directory: a second call in the same job with different pins
     # misses the cache and would otherwise build over the first call's
     # binary, and save whatever survived under the new key.
+    #
+    # The validator is a tool the job runs, not part of what the caller is
+    # building, so the caller's Cargo configuration is kept out of it. That
+    # is a cache-correctness requirement rather than a preference: the key
+    # names the pins and the environment and nothing else, so a setting that
+    # changed the binary would be invisible to it, and one job's build would
+    # be restored by another that configured Rust differently.
+    # `CARGO_BUILD_TARGET` is the sharp one, since a cross target yields a
+    # binary that cannot run on the runner that cached it.
+    #
+    # Cargo takes configuration from three places, and each is closed.
+    # `$CARGO_HOME/config.toml` is displaced by pointing CARGO_HOME at an
+    # action-owned directory, emptied on each rebuild. Cargo also walks from
+    # the working directory upward looking for `.cargo/config.toml`, which
+    # is why the build runs from a fresh /tmp directory rather than from
+    # RUNNER_TEMP: every ancestor of RUNNER_TEMP is inside the runner's
+    # home, so that walk would find the home config even with CARGO_HOME
+    # pointed elsewhere.
+    #
+    # The third is the environment, and that one is a list rather than a
+    # boundary, so it is worth being exact about what it covers. Cleared
+    # here are the variables that change what the compiler produces:
+    # RUSTFLAGS and its encoded and `build.`-prefixed forms, the compiler
+    # and wrapper overrides in both their bare and `CARGO_BUILD_` spellings,
+    # the default target, and the per-target rustflags, linker and runner,
+    # which name a triple and so are matched rather than listed. Not cleared is anything Cargo may add later, or a
+    # `CARGO_PROFILE_*` override. Scrubbing to an allowlist instead would
+    # close that, and would also drop proxy and certificate variables that a
+    # self-hosted runner needs to fetch the source at all, which is the
+    # worse failure of the two.
     - name: Build clap-validator
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
@@ -104,7 +137,43 @@ runs:
         RUST_VERSION: ${{ inputs.rust-version }}
         CACHE_ROOT: ${{ steps.pins.outputs.cache-root }}
       run: |
-        rm -rf "${CACHE_ROOT}"
+        cargo_home="${RUNNER_TEMP}/clap-validator-cargo-home"
+        rm -rf "${CACHE_ROOT}" "${cargo_home}"
+        mkdir -p "${cargo_home}"
+        export CARGO_HOME="${cargo_home}"
+        unset RUSTFLAGS CARGO_ENCODED_RUSTFLAGS CARGO_BUILD_TARGET \
+          CARGO_BUILD_RUSTFLAGS RUSTC RUSTC_WRAPPER RUSTC_WORKSPACE_WRAPPER \
+          CARGO_BUILD_RUSTC CARGO_BUILD_RUSTC_WRAPPER \
+          CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER
+        # CARGO_TARGET_<triple>_RUSTFLAGS names a triple, so it cannot be
+        # listed; every variable of that shape is cleared instead.
+        while IFS='=' read -r name _; do
+          case "${name}" in
+            CARGO_TARGET_*_RUSTFLAGS | CARGO_TARGET_*_LINKER | CARGO_TARGET_*_RUNNER)
+              unset "${name}"
+              ;;
+          esac
+        done < <(env)
+        build_dir="$(mktemp -d /tmp/clap-validator-build.XXXXXX)"
+        trap 'rm -rf "${build_dir}"' EXIT
+        # Cargo searches the build directory's parents too, and /tmp and /
+        # are still among them. Nothing ordinarily puts a config there;
+        # where something has, refusing beats building against it and
+        # caching the result under a key that does not mention it.
+        ancestor="${build_dir}"
+        while :; do
+          for config in "${ancestor}/.cargo/config.toml" "${ancestor}/.cargo/config"; do
+            if [ -e "${config}" ]; then
+              echo "::error::A Cargo config at ${config} would be read by this build." >&2
+              echo "It would change a binary the cache key does not describe. Remove it," >&2
+              echo "or run this action on a runner without it." >&2
+              exit 1
+            fi
+          done
+          [ "${ancestor}" = "/" ] && break
+          ancestor="$(dirname "${ancestor}")"
+        done
+        cd "${build_dir}"
         rustup toolchain install "${RUST_VERSION}" --profile minimal --no-self-update
         cargo "+${RUST_VERSION}" install \
           --git https://github.com/free-audio/clap-validator \

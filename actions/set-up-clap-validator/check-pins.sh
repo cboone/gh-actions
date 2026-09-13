@@ -49,16 +49,24 @@
 # and VERSION_ID in /etc/os-release on Linux, both required since an ID
 # alone reads the same for every release of a distribution, or the major
 # product version on macOS. Both describe whatever userspace the build runs
-# in, container or not.
+# in, container or not, and both are spelled <name>:<version>: joining them
+# without a separator would let `foo` with `12` and `foo1` with `2` land on
+# one key, and the os-release spec allows a colon in neither field.
 #
 # The runner's own ImageOS is never consulted, though it looks like the
 # obvious answer on a GitHub-hosted runner. It names the host VM, so a job
 # that sets `container:` reads ubuntu24 whatever the container holds, and
-# two containers on one runner would land on the same key. Where the
-# environment cannot describe itself, IMAGE_LABEL says what to call it, and
-# that is safe for the same reason: a caller sets it deliberately. With
-# neither, the run stops rather than pooling this environment with every
-# other one.
+# two containers on one runner would land on the same key.
+#
+# IMAGE_LABEL is the caller's lever, and it refines rather than replaces:
+# `ID:VERSION_ID` names a distribution release, not the whole ABI, so two
+# images can both say ubuntu:24.04 and carry different libraries, and only
+# the caller knows when they have. A label appends, which can only split
+# keys further and never merge two environments onto one. Where nothing can
+# be derived the label stands alone, and with neither the run stops rather
+# than pooling this environment with every other one. Colon count tells the
+# cases apart: none for a label alone, one for a derivation, two for a
+# derivation a label refined.
 #
 # rust-version must name one release, because the key records what was
 # passed rather than what rustup resolved it to. `stable`, `beta` and
@@ -82,7 +90,7 @@
 #
 # Exit codes:
 #   0  - Pins accepted, cache key, cache root and install directory written
-#   64 - Invalid or missing input
+#   64 - Invalid or missing input, image-label included
 #   71 - Unsupported operating system
 
 set -euo pipefail
@@ -108,7 +116,13 @@ readonly EXACT_VERSION_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9._+-]+)?$'
 # than stripped to: two labels that differ only in characters a strip would
 # remove, `ubuntu/22.04` and `ubuntu22.04`, would otherwise collide on one
 # key and trade binaries built against different libraries.
-readonly IMAGE_PATTERN='^[A-Za-z0-9][A-Za-z0-9._-]*$'
+readonly IMAGE_PATTERN='^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+
+# What a caller may pass as image-label: the same, minus the colon. A
+# derived value always carries exactly one, joining two fields that the
+# os-release spec forbids one in, so no label can spell a derived value and
+# the two sources cannot land on the same key.
+readonly IMAGE_LABEL_PATTERN='^[A-Za-z0-9][A-Za-z0-9._-]*$'
 
 # Emit an ::error:: annotation, then exit.
 # Arguments:
@@ -188,31 +202,46 @@ function main() {
   Linux)
     # Both fields or neither: VERSION_ID is optional in os-release, and an
     # ID on its own says `ubuntu` for every Ubuntu release alike, which is
-    # the sharing this is here to stop.
+    # the sharing this is here to stop. A field carrying a colon is refused
+    # the same way, since the colon is what makes the pair unambiguous.
     if [[ -r /etc/os-release ]]; then
-      image="$(awk -F= '$1=="ID"{gsub(/"/,"",$2); id=$2} $1=="VERSION_ID"{gsub(/"/,"",$2); v=$2} END{if (id != "" && v != "") printf "%s%s", id, v}' /etc/os-release 2>/dev/null || true)"
+      image="$(awk -F= '$1=="ID"{gsub(/"/,"",$2); id=$2} $1=="VERSION_ID"{gsub(/"/,"",$2); v=$2} END{if (id != "" && v != "" && id !~ /:/ && v !~ /:/) printf "%s:%s", id, v}' /etc/os-release 2>/dev/null || true)"
     fi
     ;;
   Darwin)
-    # Only with a version in hand: a bare `macos` would pass the pattern
+    # Only with a version in hand: a bare `macos:` would pass the pattern
     # below and put every macOS release on one key, which is the sharing
     # this component exists to prevent.
     local macos_version
     macos_version="$(sw_vers -productVersion 2>/dev/null | cut -d. -f1 || true)"
     if [[ -n "${macos_version}" ]]; then
-      image="macos${macos_version}"
+      image="macos:${macos_version}"
     fi
     ;;
   esac
   # image-label, never ImageOS. ImageOS names the host VM, so in a job that
   # sets `container:` it reads ubuntu24 whatever the container is, and
-  # taking it whenever the derivation came up short would hand two
-  # containers on one runner the same key: the collision this component
-  # exists to prevent, reintroduced at the point the derivation failed.
-  # image-label carries no such meaning, because a caller only sets it
-  # deliberately, for an environment that could not describe itself.
-  if [[ -z "${image}" ]]; then
-    image="${IMAGE_LABEL:-}"
+  # taking it would hand two containers on one runner the same key: the
+  # collision this component exists to prevent. image-label carries no such
+  # meaning, because a caller only sets it deliberately.
+  #
+  # A label refines the derived identifier rather than replacing it, and
+  # stands alone only where nothing could be derived. `ID:VERSION_ID` names
+  # a distribution release, which is not the whole ABI: two images can both
+  # say ubuntu:24.04 and carry different libraries, and only the caller
+  # knows that. Appending can only split keys further, never merge two
+  # environments onto one, so the lever is safe to offer. The colon count
+  # says which case produced a value: none for a label alone, one for a
+  # derivation, two for a derivation a label refined.
+  if [[ -n "${IMAGE_LABEL:-}" ]]; then
+    if [[ ! "${IMAGE_LABEL}" =~ ${IMAGE_LABEL_PATTERN} ]]; then
+      fail "${E_USAGE}" "image-label must match [A-Za-z0-9][A-Za-z0-9._-]*. The colon is reserved for the identifier this action derives, so that a label cannot spell one."
+    fi
+    if [[ -n "${image}" ]]; then
+      image="${image}:${IMAGE_LABEL}"
+    else
+      image="${IMAGE_LABEL}"
+    fi
   fi
   # Keying on nothing, or on a label that collides with another after
   # sanitizing, is the shared-key case this exists to prevent. Both are
@@ -224,6 +253,13 @@ function main() {
   local cache_root="${RUNNER_TEMP}/clap-validator"
   local install_dir="${cache_root}/bin"
   local cache_key="clap-validator-${RUNNER_OS}-${RUNNER_ARCH}-${image}-${VALIDATOR_REV}-rust${RUST_VERSION}"
+
+  # GitHub caps a cache key at 512 characters. Checked here so a long
+  # rust-version or image-label is reported as the input error it is,
+  # rather than surfacing later as a restore failure about the key.
+  if [[ "${#cache_key}" -gt 512 ]]; then
+    fail "${E_USAGE}" "The resulting cache key is ${#cache_key} characters, past GitHub's 512-character limit. Shorten rust-version or image-label."
+  fi
 
   {
     printf 'cache-key=%s\n' "${cache_key}"

@@ -13,24 +13,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [clap-validator](https://github.com/free-audio/clap-validator), the
   conformance checker for CLAP audio plugins, from the commit given in
   `validator-rev` using the toolchain given in `rust-version`, caches the
-  result, and adds it to `PATH`. Both inputs are required and have no
-  defaults, and `validator-rev` must be a full 40-character lowercase
-  commit SHA, since a tag can be moved to another commit. `rust-version`
-  must name one release for the same reason, so `stable`, `beta` and
-  `nightly` are refused, with or without a host triple, and so is a
-  partial version such as `1.97`, which rustup reads as the newest
-  `1.97.x`; a three-component version and a dated nightly are accepted.
-  The cache key names the runner OS, architecture and image and both
-  pins, the image being the userspace the build ran in, read from
-  `/etc/os-release` or `sw_vers` rather than from the runner's `ImageOS`,
-  which names the host VM and would read alike for every container on it;
-  `image-label` names an environment that can describe itself through
-  neither. With no
-  `restore-keys`, so a partial match cannot supply a validator built from
-  a different commit or against a different libc; a cache hit installs
-  no Rust toolchain and compiles nothing. Running
-  `clap-validator validate` is left to the calling job. Outputs
-  `install-dir` and `cache-hit`. Linux and macOS runners (#88)
+  result, and adds it to `PATH`. Running `clap-validator validate` is left
+  to the calling job. Outputs `install-dir` and `cache-hit`. Linux and
+  macOS runners (#88)
+
+  Both pins are required and have no defaults, and each must name one
+  thing rather than something resolved later. `validator-rev` must be a
+  full 40-character lowercase commit SHA, since a tag can be moved.
+  `rust-version` must name one release for the same reason: `stable`,
+  `beta` and `nightly` are refused, with or without a host triple, and so
+  is a partial version such as `1.97`, which rustup reads as the newest
+  `1.97.x`. A three-component version and a dated nightly are accepted.
+
+  The cache key names the runner OS, the architecture, the image and both
+  pins, with no `restore-keys`, so a partial match cannot supply a
+  validator built from a different commit or against a different libc. The
+  image is the userspace the build ran in, read from `/etc/os-release` or
+  `sw_vers` rather than from the runner's `ImageOS`, which names the host
+  VM and would read alike for every container on it; `image-label` names
+  an environment that can describe itself through neither, and refines
+  the derived value where there is one, since a distribution release is
+  not the whole ABI. The derived halves are joined with a colon, which
+  neither may contain and which `image-label` forbids, so a label can
+  never spell a derived identifier and the colon count tells the three
+  cases apart; callers labelling distinct environments must still make
+  those labels distinct. A key past GitHub's 512-character limit is refused with
+  a message naming the input that could shorten it.
+
+  The build is kept clear of the caller's Cargo configuration, which the
+  key does not describe. `CARGO_HOME` is action-owned, the build runs from
+  a fresh `/tmp` directory so cargo's search of parent directories finds
+  no `.cargo/config.toml` and a config in any ancestor of it fails the
+  step, and the environment variables known to change
+  what the compiler produces are cleared: `RUSTFLAGS`, the compiler and
+  wrapper overrides in both spellings, and every
+  `CARGO_TARGET_<triple>_RUSTFLAGS`, `_LINKER` and `_RUNNER`. That last
+  part is a list rather than a boundary, so a `CARGO_PROFILE_*` override,
+  or a variable Cargo adds later, still reaches the build. A cache hit
+  installs no Rust toolchain and compiles nothing.
+
 - `install-cspell-dictionaries` composite action: installs cspell
   dictionary packages from npm beside an existing cspell installation,
   which is what lets a bare

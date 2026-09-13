@@ -560,49 +560,88 @@ jobs:
             echo "::error::ImageOS reached the key: image went from '${with_image}' to '${derived}'" >&2
             status=1
           fi
+          # The colon is what makes ID and VERSION_ID unambiguous, so a
+          # regression to joining them bare would reintroduce the
+          # foo/12 against foo1/2 collision while still looking derived.
           case "${derived}" in
             "" | unknown)
               echo "::error::derived image '${derived}' is not an OS release identifier" >&2
               status=1
               ;;
-            *) echo "derived image: ${derived} (ImageOS ignored, as intended)" ;;
+            *:*)
+              echo "derived image: ${derived} (ImageOS ignored, as intended)"
+              ;;
+            *)
+              echo "::error::derived image '${derived}' has no colon; ID and VERSION_ID must stay separable" >&2
+              status=1
+              ;;
           esac
 
-          # An image that cannot be identified must stop the run rather than
-          # key on nothing and pool this environment with every other one.
-          # The derivation reaches for awk on Linux and sw_vers on macOS, so
-          # a PATH holding neither is what makes it fall through, and the
-          # image-label given here cannot stand in for it either.
+          # The refinement path: with the derivation succeeding, a label
+          # must extend the derived identifier rather than replace it or be
+          # dropped. Both regressions would otherwise pass, since every
+          # other label case here runs with the derivation disabled.
+          : >"${outputs}"
+          env -i PATH="${PATH}" RUNNER_TEMP="${RUNNER_TEMP}" \
+            RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
+            IMAGE_LABEL=refinement-fixture GITHUB_OUTPUT="${outputs}" \
+            "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
+            /bin/bash actions/set-up-clap-validator/check-pins.sh
+          sed 's/^/  refined | /' "${outputs}"
+          refined="$(grep '^cache-key=' "${outputs}")"
+          refined="${refined#"${prefix}"}"
+          refined="${refined%"${suffix}"}"
+          if [ "${refined}" != "${with_image}:refinement-fixture" ]; then
+            echo "::error::label gave image '${refined}', expected '${with_image}:refinement-fixture'" >&2
+            status=1
+          else
+            echo "image-label refines the derived identifier: ${refined}"
+          fi
+
+          # An environment that cannot be identified must stop the run
+          # rather than key on nothing and pool it with every other one. The
+          # derivation reaches for awk on Linux and sw_vers on macOS, so a
+          # PATH holding neither is what makes it fall through.
           bare_bin="${RUNNER_TEMP}/bare-bin"
           mkdir -p "${bare_bin}"
           ln -sf "$(command -v uname)" "${bare_bin}/uname"
-          if output="$(env -i PATH="${bare_bin}" \
-            RUNNER_TEMP="${RUNNER_TEMP}" \
-            RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
-            IMAGE_LABEL=/// GITHUB_OUTPUT=/dev/null \
-            "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
-            /bin/bash actions/set-up-clap-validator/check-pins.sh 2>&1)"; then
-            code=0
-          else
-            code=$?
-          fi
-          printf '%s\n' "${output}" | sed -e 's/^::error::/error: /' -e 's/^/  unusable-image-label | /'
-          if [ "${code}" != 71 ]; then
-            echo "::error::unusable-image-label exited ${code}, expected 71" >&2
-            status=1
-          else
-            echo "unusable-image-label: rejected with exit 71, as expected"
-          fi
+          run_bare() {
+            env -i PATH="${bare_bin}" RUNNER_TEMP="${RUNNER_TEMP}" \
+              RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
+              GITHUB_OUTPUT="${1}" \
+              "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
+              "${@:2}" /bin/bash actions/set-up-clap-validator/check-pins.sh
+          }
+          expect_bare() {
+            local name="$1" want_code="$2"
+            shift 2
+            local output code
+            if output="$(run_bare /dev/null "$@" 2>&1)"; then code=0; else code=$?; fi
+            printf '%s\n' "${output}" | sed -e 's/^::error::/error: /' -e "s|^|  ${name} \| |"
+            if [ "${code}" != "${want_code}" ]; then
+              echo "::error::${name} exited ${code}, expected ${want_code}" >&2
+              status=1
+            else
+              echo "${name}: rejected with exit ${code}, as expected"
+            fi
+          }
+          expect_bare no-image-at-all 71
+          # A key past GitHub's 512-character limit is reported here rather
+          # than surfacing later as a restore failure. 520 characters of
+          # label clears the limit on its own.
+          long_label="$(printf 'a%.0s' $(seq 1 520))"
+          expect_bare image-label-too-long 64 "IMAGE_LABEL=${long_label}"
+          # A colon is reserved for the derived <name>:<version> form, so a
+          # label carrying one is an input error rather than an unusable
+          # environment.
+          expect_bare image-label-with-colon 64 IMAGE_LABEL=fedora:41
+          expect_bare image-label-unusable 64 IMAGE_LABEL=///
 
           # The same environment with a usable image-label proceeds, which
           # is what makes the refusal above recoverable rather than a dead
           # end for a runner that cannot describe itself.
           : >"${outputs}"
-          if env -i PATH="${bare_bin}" RUNNER_TEMP="${RUNNER_TEMP}" \
-            RUNNER_OS="${RUNNER_OS}" RUNNER_ARCH="${RUNNER_ARCH}" \
-            IMAGE_LABEL=self-hosted-fixture GITHUB_OUTPUT="${outputs}" \
-            "VALIDATOR_REV=${VALIDATOR_REV}" "RUST_VERSION=${RUST_VERSION}" \
-            /bin/bash actions/set-up-clap-validator/check-pins.sh >/dev/null 2>&1; then
+          if run_bare "${outputs}" IMAGE_LABEL=self-hosted-fixture >/dev/null 2>&1; then
             labelled="$(grep '^cache-key=' "${outputs}")"
             labelled="${labelled#"${prefix}"}"
             labelled="${labelled%"${suffix}"}"
