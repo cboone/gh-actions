@@ -119,9 +119,9 @@ runs:
     # boundary, so it is worth being exact about what it covers. Cleared
     # here are the variables that change what the compiler produces:
     # RUSTFLAGS and its encoded and `build.`-prefixed forms, the compiler
-    # and wrapper overrides, the default target, and the per-target
-    # equivalents, which name a triple and so are matched rather than
-    # listed. Not cleared is anything Cargo may add later, or a
+    # and wrapper overrides in both their bare and `CARGO_BUILD_` spellings,
+    # the default target, and the per-target rustflags, linker and runner,
+    # which name a triple and so are matched rather than listed. Not cleared is anything Cargo may add later, or a
     # `CARGO_PROFILE_*` override. Scrubbing to an allowlist instead would
     # close that, and would also drop proxy and certificate variables that a
     # self-hosted runner needs to fetch the source at all, which is the
@@ -139,7 +139,9 @@ runs:
         mkdir -p "${cargo_home}"
         export CARGO_HOME="${cargo_home}"
         unset RUSTFLAGS CARGO_ENCODED_RUSTFLAGS CARGO_BUILD_TARGET \
-          CARGO_BUILD_RUSTFLAGS RUSTC RUSTC_WRAPPER RUSTC_WORKSPACE_WRAPPER
+          CARGO_BUILD_RUSTFLAGS RUSTC RUSTC_WRAPPER RUSTC_WORKSPACE_WRAPPER \
+          CARGO_BUILD_RUSTC CARGO_BUILD_RUSTC_WRAPPER \
+          CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER
         # CARGO_TARGET_<triple>_RUSTFLAGS names a triple, so it cannot be
         # listed; every variable of that shape is cleared instead.
         while IFS='=' read -r name _; do

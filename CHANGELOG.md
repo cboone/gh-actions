@@ -26,14 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which names the host VM and would read alike for every container on it;
   `image-label` names an environment that can describe itself through
   neither. The derived halves are joined with a colon, which neither may
-  contain, and `image-label` forbids one, so no two environments share an
-  identifier. The build is kept clear of the caller's Cargo
+  contain, and `image-label` forbids one, so a label can never spell a
+  derived identifier; callers giving labels to distinct environments must
+  still make them distinct. The build is kept clear of the caller's Cargo
   configuration, which the key does not describe: `CARGO_HOME` is
   action-owned, the build runs from a fresh `/tmp` directory so cargo's
   search of parent directories finds no `.cargo/config.toml`, and the
   environment variables that change what the compiler produces are
-  cleared, `RUSTFLAGS` and the `RUSTC_*` wrappers and every
-  `CARGO_TARGET_<triple>_*` among them. A key past GitHub's
+  cleared, `RUSTFLAGS`, the compiler and wrapper overrides in both
+  spellings, and every `CARGO_TARGET_<triple>_RUSTFLAGS`, `_LINKER` and
+  `_RUNNER` among them. A key past GitHub's
   512-character limit is refused with a message naming the input. There are no `restore-keys`, so a partial match cannot supply
   a validator built from a different commit or against a different libc,
   and a cache hit installs no Rust toolchain and compiles nothing. Running

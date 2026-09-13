@@ -56,7 +56,9 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
   `.cargo/config.toml` nor the runner's own. From the environment it clears
   the variables that change what the compiler produces: `RUSTFLAGS`,
   `CARGO_ENCODED_RUSTFLAGS`, `CARGO_BUILD_RUSTFLAGS`, `CARGO_BUILD_TARGET`,
-  `RUSTC`, `RUSTC_WRAPPER`, `RUSTC_WORKSPACE_WRAPPER`, and every
+  `RUSTC`, `RUSTC_WRAPPER`, `RUSTC_WORKSPACE_WRAPPER`, their
+  `CARGO_BUILD_RUSTC`, `CARGO_BUILD_RUSTC_WRAPPER` and
+  `CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER` spellings, and every
   `CARGO_TARGET_<triple>_RUSTFLAGS`, `_LINKER` and `_RUNNER`. That last part
   is a list rather than a boundary: a `CARGO_PROFILE_*` override, or a
   variable Cargo adds in future, would still reach the build. Scrubbing to
