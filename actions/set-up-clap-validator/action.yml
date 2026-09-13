@@ -23,13 +23,16 @@ inputs:
     required: true
   image-label:
     description: >-
-      What to call this environment in the cache key, needed only where it
-      cannot describe itself: the key is keyed on the userspace the binary
-      was built against, read from `/etc/os-release` on Linux or `sw_vers`
-      on macOS, and a runner offering neither is refused rather than
-      sharing a key with every other one. The runner's own `ImageOS` is
-      deliberately not used for this, since it names the host VM and would
-      read the same for every container on it.
+      Extra identity for this environment in the cache key. The key names
+      the userspace the binary was built against, read from
+      `/etc/os-release` on Linux or `sw_vers` on macOS; this input refines
+      that where it succeeds and replaces it where it does not, and an
+      environment offering neither is refused rather than sharing a key
+      with every other one. Pass it when two environments would derive the
+      same identifier and are not interchangeable, since `ID:VERSION_ID`
+      names a distribution release rather than a whole ABI. The runner's
+      own `ImageOS` is deliberately not used, since it names the host VM
+      and would read the same for every container on it.
     required: false
     default: ""
 
