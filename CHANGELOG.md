@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-09-14
+
 ### Added
 
 - `set-up-clap-validator` composite action: builds
@@ -176,8 +178,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   installer fetch now carries both tools' conditions rather than
   shfmt's alone. The same 0.9.0-to-0.11.0 jump applies to your tracked
   scripts (#85)
-
-### Fixed
 
 - `scan-for-secrets.yml`'s `validate-inputs` job and
   `deploy-to-pages.yml`'s `deploy` job apply their workflow's
@@ -629,7 +629,8 @@ install --global "<pkg>@<version>"` (no integrity check) with `npm ci`
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v3.1.1...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v3.2.0...HEAD
+[3.2.0]: https://github.com/cboone/gh-actions/compare/v3.1.1...v3.2.0
 [3.1.1]: https://github.com/cboone/gh-actions/compare/v3.1.0...v3.1.1
 [3.1.0]: https://github.com/cboone/gh-actions/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/cboone/gh-actions/compare/v2.2.0...v3.0.0

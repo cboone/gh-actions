@@ -11,6 +11,6 @@ Install scrut CLI testing tool with a pinned version.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-scrut@v3.1.1
+- uses: cboone/gh-actions/actions/set-up-scrut@v3.2.0
 - run: scrut test tests/
 ```

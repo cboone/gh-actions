@@ -339,7 +339,7 @@ requirement, GITHUB_TOKEN requirement, changelog-format requirement.>
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/<name>@v3.1.1
+- uses: cboone/gh-actions/actions/<name>@v3.2.0
   with:
     example: value
 ```
@@ -350,10 +350,10 @@ For reusable workflows, the Usage example uses the `jobs:` form:
 ```yaml
 jobs:
   example:
-    uses: cboone/gh-actions/.github/workflows/<name>.yml@v3.1.1
+    uses: cboone/gh-actions/.github/workflows/<name>.yml@v3.2.0
 ```
 
-All Usage examples pin to the current released tag (currently `@v3.1.1`),
+All Usage examples pin to the current released tag (currently `@v3.2.0`),
 per the existing rule in `.github/copilot-instructions.md`.
 
 ## Adding a New Action

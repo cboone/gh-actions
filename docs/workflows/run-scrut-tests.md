@@ -43,7 +43,7 @@ pinned installer, and neither is populated on GitHub Enterprise Server. Leave
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.1.1
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.2.0
 ```
 
 With a custom shell and environment variables:
@@ -51,7 +51,7 @@ With a custom shell and environment variables:
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.1.1
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.2.0
     with:
       scrut-shell: zsh
       scrut-env: |
@@ -65,7 +65,7 @@ For a CLI shipped as PEP 723 scripts with
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.1.1
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v3.2.0
     with:
       setup-uv: true
       scrut-test-dir: "tests/scrut/"

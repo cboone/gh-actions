@@ -19,14 +19,14 @@ overriding `version` alone fails with
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-shfmt@v3.1.1
+- uses: cboone/gh-actions/actions/set-up-shfmt@v3.2.0
 - run: shfmt -d .
 ```
 
 Another version, with its checksums:
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-shfmt@v3.1.1
+- uses: cboone/gh-actions/actions/set-up-shfmt@v3.2.0
   with:
     version: 3.14.1
     checksums: |

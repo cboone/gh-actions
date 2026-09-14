@@ -68,7 +68,7 @@ or with no shell scripts to lint, which fetches nothing.
 ```yaml
 jobs:
   shell:
-    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v3.1.1
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v3.2.0
 ```
 
 Another version of either tool, with the checksum for the `ubuntu-latest`
@@ -77,7 +77,7 @@ asset:
 ```yaml
 jobs:
   shell:
-    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v3.1.1
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v3.2.0
     with:
       shellcheck-version: 0.10.0
       shellcheck-checksums: |

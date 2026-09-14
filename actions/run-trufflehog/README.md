@@ -20,13 +20,13 @@ filesystem
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-trufflehog@v3.1.1
+- uses: cboone/gh-actions/actions/run-trufflehog@v3.2.0
 ```
 
 Each argument goes on its own line, so an argument may contain spaces:
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-trufflehog@v3.1.1
+- uses: cboone/gh-actions/actions/run-trufflehog@v3.2.0
   with:
     args: |-
       filesystem

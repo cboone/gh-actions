@@ -11,7 +11,7 @@ Install golangci-lint binary with a pinned version.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-golangci-lint@v3.1.1
+- uses: cboone/gh-actions/actions/set-up-golangci-lint@v3.2.0
   with:
     version: "2.11.4"
 - run: golangci-lint run ./...

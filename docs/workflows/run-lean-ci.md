@@ -36,7 +36,7 @@ Default usage (build, lint, and test, with auto-detected Mathlib cache):
 ```yaml
 jobs:
   lean:
-    uses: cboone/gh-actions/.github/workflows/run-lean-ci.yml@v3.1.1
+    uses: cboone/gh-actions/.github/workflows/run-lean-ci.yml@v3.2.0
 ```
 
 For a project without a `testDriver` (no `lake test` target):
@@ -44,7 +44,7 @@ For a project without a `testDriver` (no `lake test` target):
 ```yaml
 jobs:
   lean:
-    uses: cboone/gh-actions/.github/workflows/run-lean-ci.yml@v3.1.1
+    uses: cboone/gh-actions/.github/workflows/run-lean-ci.yml@v3.2.0
     with:
       run-test: false
 ```
@@ -54,7 +54,7 @@ For a project that does not depend on Mathlib:
 ```yaml
 jobs:
   lean:
-    uses: cboone/gh-actions/.github/workflows/run-lean-ci.yml@v3.1.1
+    uses: cboone/gh-actions/.github/workflows/run-lean-ci.yml@v3.2.0
     with:
       use-mathlib-cache: "false"
 ```
