@@ -184,7 +184,7 @@ manifest), opening or updating a single tracking issue when something is
 outdated.
 
 For the long-form version of this policy, see
-[AGENTS.md](AGENTS.md#pinning-policy-and-trust-model).
+[the development reference](docs/development.md#pinning-policy-and-trust-model).
 
 ## Supported platforms
 
