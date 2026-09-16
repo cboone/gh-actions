@@ -49,10 +49,47 @@ jobs:
     uses: ./.github/workflows/run-scrut-tests.yml
     with:
       setup-uv: true
-      scrut-test-dir: tests/scrut/
+      scrut-test-dir: tests/scrut/setup-uv.md
       scrut-env: |
         HELLO_BIN=./tests/fixtures/hello.py
         UV_PYTHON_PREFERENCE=only-system
+
+  # Execute the production Zig formatting step against isolated projects,
+  # including a manifest the previous command silently excluded.
+  zig-format-paths:
+    name: Zig formatting paths (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.15.0"
+
+      - name: Install locked test dependencies
+        run: npm ci
+
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: "0.16.0"
+
+      - uses: ./actions/set-up-scrut
+
+      - name: Check Zig formatting behavior
+        shell: bash
+        env:
+          ZIG_FORMAT_FIXTURE: ${{ github.workspace }}/tests/fixtures/check-zig-format-paths.mjs
+        run: |
+          NODE_BIN="$(command -v node)"
+          export NODE_BIN
+          scrut test tests/scrut/zig-format-paths.md
 
   # The action job below proves that an installed dictionary resolves; the two
   # jobs here prove the workflow wiring, which is the half that job cannot
