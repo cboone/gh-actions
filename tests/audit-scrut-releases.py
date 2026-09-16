@@ -105,6 +105,10 @@ def audit(asset, cache, native_only):
         subprocess.run(["tar", "-xf", str(archive), "-C", temporary, members[0]], check=True)
         binary = Path(temporary) / member
         extracted_mode = stat.S_IMODE(binary.stat().st_mode)
+        if "archive_mode" in asset and oct(extracted_mode) != asset["archive_mode"]:
+            raise ValueError(
+                f"Archive mode mismatch for {asset['name']}: expected {asset['archive_mode']}, found {oct(extracted_mode)}"
+            )
         if not extracted_mode & 0o111:
             raise ValueError(f"Non-executable archive member in {asset['name']}: {archive_permissions}")
         actual_os, actual_arch, description, dependencies = inspect_binary(binary)

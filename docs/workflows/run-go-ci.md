@@ -17,21 +17,12 @@ Linux x86-64 and macOS arm64 use checksum-verified release binaries. See the
 
 **Permissions:** `contents: read`
 
-When Scrut is enabled, Linux arm64 builds v0.4.3 from checksum-verified,
-commit-pinned source with Rust 1.97.1 and a committed dependency lockfile,
-because upstream's arm64 release archive contains an x86-64 executable.
-Other supported platforms install checksum-pinned release binaries.
-The helper and lockfile come from this workflow's own repository and commit.
-Those contexts are unavailable on GHES, where the arm64 Scrut job gives a
-targeted error. See [the packaging investigation](https://github.com/cboone/gh-actions/issues/120).
-
 Source builds run with a fresh Cargo home outside the consumer checkout,
 reject ancestor Cargo configuration, and clear compiler, target and profile
 overrides. Network proxy and certificate settings remain available.
 
-Upstream's archive build reports a build timestamp in `scrut --version`,
-which the installer validates. The pinned source commit and archive checksum,
-rather than that timestamp, identify v0.4.3. This limitation is tracked in #120.
+The replacement build script reports `scrut 0.4.3` from package metadata;
+the installer validates that exact version before exposing the executable.
 
 ## Inputs
 

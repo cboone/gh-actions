@@ -87,13 +87,14 @@ Upstream [build.rs](https://github.com/facebookincubator/scrut/blob/04ecce97e63c
 
 The audit must reject a non-executable archive member and a smoke specification that executes no cases, even when Scrut returns success. [Controls](../tests/check-scrut-release-audit.py) use the real installed binary and production audit function and run in the four-platform installer matrix.
 
-| Planted defect                        | Instrument expected to catch it                          | Observed result                                             | Regression control          |
-| ------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------- | --------------------------- |
-| Archive executable mode is 0644       | Preserved permissions and executable-mode validity check | Rejected before binary invocation                           | Non-executable archive      |
-| Smoke fence is `console`              | Executed smoke-case count                                | Scrut returned 0 with zero cases; auditor rejected it       | Skipped smoke specification |
-| Smoke expected output differs         | Real Scrut execution and successful-case count           | Scrut returned 50 with one failed case; auditor rejected it | Failed smoke assertion      |
-| Smoke specification has 11 cases      | Exact parsed successful/failed/skipped counts            | Scrut returned 0 with 11 successes; auditor rejected it     | Extra smoke cases           |
-| Executable OS differs but CPU matches | Native OS check and binary invocation guard              | Rejected without invoking the extracted binary              | Wrong executable OS         |
+| Planted defect                          | Instrument expected to catch it                          | Observed result                                             | Regression control          |
+| --------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------- | --------------------------- |
+| Archive executable mode is 0644         | Preserved permissions and executable-mode validity check | Rejected before binary invocation                           | Non-executable archive      |
+| Reviewed mode differs from archive mode | Reviewed mode comparison                                 | Rejected before binary invocation                           | Archive mode mismatch       |
+| Smoke fence is `console`                | Executed smoke-case count                                | Scrut returned 0 with zero cases; auditor rejected it       | Skipped smoke specification |
+| Smoke expected output differs           | Real Scrut execution and successful-case count           | Scrut returned 50 with one failed case; auditor rejected it | Failed smoke assertion      |
+| Smoke specification has 11 cases        | Exact parsed successful/failed/skipped counts            | Scrut returned 0 with 11 successes; auditor rejected it     | Extra smoke cases           |
+| Executable OS differs but CPU matches   | Native OS check and binary invocation guard              | Rejected without invoking the extracted binary              | Wrong executable OS         |
 
 The valid archive control preserved mode 0755 and passed version and one snapshot case. Both audit protections were also weakened separately in temporary copies: removing the executed-case guard and restoring unconditional chmod each made the corresponding regression control fail with exit 1. The production auditor remained unchanged during those plants. These measurements were observed locally. The native installer matrix repeats the controls on all four supported platforms. A matching-architecture executable reported for the wrong OS is also rejected before invocation.
 

@@ -31,22 +31,25 @@ def main():
     with tempfile.TemporaryDirectory(prefix="scrut-audit-controls-") as temporary:
         cache = Path(temporary)
 
-        def asset(name, mode):
+        def asset(name, mode, archive_mode=None):
             archive = cache / f"{name}.tar.gz"
             with tarfile.open(archive, "w:gz") as output:
                 member = tarfile.TarInfo("scrut/scrut")
                 member.size = len(data)
                 member.mode = mode
                 output.addfile(member, io.BytesIO(data))
-            return {
+            selected = {
                 "name": archive.name,
                 "version": "v0.4.3",
                 "os": host_os,
                 "arch": host_arch,
                 "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
             }
+            if archive_mode is not None:
+                selected["archive_mode"] = archive_mode
+            return selected
 
-        valid = asset("valid", 0o755)
+        valid = asset("valid", 0o755, "0o755")
         result = auditor.audit(valid, cache, native_only=True)
         assert result["extracted_mode"] == "0o755", result
         assert result["execution"]["smoke_returncode"] == 0, result
@@ -62,6 +65,9 @@ def main():
 
         rejected(asset("non-executable", 0o644), "Non-executable archive member")
         print("Non-executable archive: rejected before binary invocation")
+
+        rejected(asset("mode-mismatch", 0o755, "0o744"), "Archive mode mismatch")
+        print("Archive executable mode mismatch: rejected before binary invocation")
 
         inspected = auditor.inspect_binary(Path(executable))
         other_os = "linux" if host_os == "macos" else "macos"
