@@ -29,6 +29,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  trufflehog-positive-control:
+    name: TruffleHog positive control
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install pinned TruffleHog and scan the checkout
+        uses: ./actions/run-trufflehog
+
+      - name: Install uv
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: uv
+          version: 0.11.8
+          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+          os-names: linux=unknown-linux-gnu darwin=apple-darwin
+          arch-names: amd64=x86_64 arm64=aarch64
+          archive-member: uv-{arch}-{os}/uv
+
+      - name: Check findings fail both TruffleHog entry points
+        run: uv run --script tests/trufflehog-positive-control.py
+
   actionlint:
     uses: ./.github/workflows/lint-github-actions.yml
 

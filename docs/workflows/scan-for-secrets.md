@@ -3,6 +3,11 @@
 Run gitleaks, trufflehog, or both to scan for leaked secrets. Supports
 full-history and working-tree scan scopes.
 
+TruffleHog findings fail the job (exit code 183). Its scan reports verified
+credentials and unknown results caused by verification errors. Unverified
+results are excluded to limit noise from invalid credentials, so revoked
+credentials and detections without verification are outside the TruffleHog gate.
+
 **Permissions:** `contents: read`
 
 ## Inputs

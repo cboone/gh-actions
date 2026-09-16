@@ -2,6 +2,11 @@
 
 Install trufflehog binary and run a scan.
 
+Reported findings fail the action (TruffleHog exit code 183). The scan reports
+verified credentials and unknown results caused by verification errors.
+Unverified results are excluded to limit noise from invalid credentials, so
+revoked credentials and detections without verification are outside this gate.
+
 ## Inputs
 
 | Name      | Type   | Default     | Description                                   |

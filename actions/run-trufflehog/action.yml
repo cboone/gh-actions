@@ -76,6 +76,13 @@ runs:
       run: |
         args=()
         while IFS= read -r line; do
-          [[ -n "${line}" ]] && args+=("${line}")
+          # Append enforced boolean flags once, including for existing callers.
+          case "${line}" in
+            --no-update|--no-update=*|--fail|--fail=*) continue ;;
+            *) [[ -n "${line}" ]] && args+=("${line}") ;;
+          esac
         done <<< "${TRUFFLEHOG_ARGS}"
-        trufflehog "${args[@]}" --results=verified,unknown
+        # Exclude unverified results to limit noise from invalid credentials.
+        # Verification errors remain visible through unknown results.
+        # Keep the checksum-verified version instead of updating during the scan.
+        trufflehog "${args[@]}" --no-update --results=verified,unknown --fail
