@@ -3,6 +3,11 @@
 Run Markdown linting, Prettier formatting checks, cspell spelling checks,
 and yamllint YAML validation. Each tool can be toggled independently.
 
+After setup succeeds, every enabled tool runs even if an earlier linter
+fails, so the job reports all tools' findings in one run. The job fails
+if any tool fails. Setup failures prevent the lint checks from running,
+and cancellation stops subsequent checks.
+
 **Permissions:** `contents: read`
 
 ## Inputs

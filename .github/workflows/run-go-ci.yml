@@ -270,7 +270,34 @@ jobs:
       - name: Build binary for scrut tests
         run: ${{ inputs.scrut-build-cmd }}
 
+      - name: Set up Rust for Linux arm64 source build
+        if: runner.os == 'Linux' && runner.arch == 'ARM64'
+        uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master @ 2026-06-30
+        with:
+          toolchain: "1.97.1"
+
+      - name: Build scrut for Linux arm64
+        if: runner.os == 'Linux' && runner.arch == 'ARM64'
+        shell: bash
+        env:
+          VERSION: "0.4.3"
+          SOURCE_REPO: ${{ job.workflow_repository }}
+          SOURCE_SHA: ${{ job.workflow_sha }}
+        run: |
+          if [[ -z "${SOURCE_REPO}" || -z "${SOURCE_SHA}" ]]; then
+            echo "::error::Linux arm64 source builds require job.workflow_repository and job.workflow_sha."
+            echo "::error::These contexts are unavailable on GHES; install Scrut with the set-up-scrut action instead."
+            exit 1
+          fi
+          build_dir="$(mktemp -d "${RUNNER_TEMP}/scrut-build.XXXXXX")"
+          source_url="https://raw.githubusercontent.com/${SOURCE_REPO}/${SOURCE_SHA}/actions/set-up-scrut"
+          for file in build-from-source.sh Cargo.lock; do
+            curl -sSfL --proto '=https' --proto-redir '=https' -o "${build_dir}/${file}" "${source_url}/${file}"
+          done
+          bash "${build_dir}/build-from-source.sh"
+
       - name: Install scrut
+        if: runner.os != 'Linux' || runner.arch != 'ARM64'
         shell: bash
         env:
           VERSION: "0.4.3"

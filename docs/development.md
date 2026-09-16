@@ -110,6 +110,14 @@ anything that runs in CI.
   verification, never via `cargo install` (which would trust crates.io
   alone). cargo-llvm-cov in particular was migrated off `cargo install
 --locked` for this reason.
+- **Scrut on Linux arm64**: an approved source-build exception because
+  upstream's v0.4.3 arm64 archive contains an x86-64 executable (#120).
+  `actions/set-up-scrut/build-from-source.sh` pins the source commit,
+  verifies its archive SHA-256, and builds with Rust 1.97.1 and the
+  adjacent committed `Cargo.lock` using `cargo build --locked`.
+  `run-scrut-tests.yml`, `run-go-ci.yml` and `run-zig-ci.yml` fetch both
+  files at `job.workflow_sha`.
+  Other supported platforms retain checksum-pinned release binaries.
 - **clap-validator** (`set-up-clap-validator`): built from source with
   `cargo install --git <repo> --rev <40-char sha> --locked`. This is a
   different trust path from the `cargo install <crate>` the bullet above
@@ -185,7 +193,7 @@ version.
 
 - **`github-actions`**: external `uses:` references in `.github/workflows/`
   and the action directories configured in `.github/dependabot.yml`
-  (currently `actions/create-pull-request` and `actions/set-up-clap-validator`).
+  (currently `actions/create-pull-request`, `actions/set-up-clap-validator`, and `actions/set-up-scrut`).
   Add an action directory to that configuration when it gains an external
   `uses:` reference. Dependabot bumps both the SHA and the `# vX.Y.Z` comment.
 - **`npm`**: `package.json` devDependencies and `package-lock.json`.
