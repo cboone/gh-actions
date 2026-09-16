@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import platform
 import re
+import stat
 import struct
 import subprocess
 import tempfile
@@ -94,11 +95,18 @@ def audit(asset, cache, native_only):
     members = [member for member in command(["tar", "-tf", str(archive)]).splitlines() if member.split("/")[-1] == "scrut"]
     if len(members) != 1:
         raise ValueError(f"Expected exactly one scrut executable in {asset['name']}: {members}")
+    member = Path(members[0])
+    if member.is_absolute() or ".." in member.parts:
+        raise ValueError(f"Unsafe archive member: {member}")
+    archive_permissions = command(["tar", "-tvf", str(archive), members[0]]).split()[0]
+    if not archive_permissions.startswith("-"):
+        raise ValueError(f"Expected a regular executable member: {archive_permissions}")
     with tempfile.TemporaryDirectory(dir=cache) as temporary:
-        binary = Path(temporary) / "scrut"
-        with binary.open("wb") as output:
-            subprocess.run(["tar", "-xOf", str(archive), members[0]], stdout=output, check=True)
-        binary.chmod(0o700)
+        subprocess.run(["tar", "-xf", str(archive), "-C", temporary, members[0]], check=True)
+        binary = Path(temporary) / member
+        extracted_mode = stat.S_IMODE(binary.stat().st_mode)
+        if not extracted_mode & 0o111:
+            raise ValueError(f"Non-executable archive member in {asset['name']}: {archive_permissions}")
         actual_os, actual_arch, description, dependencies = inspect_binary(binary)
         binary_hash = hashlib.sha256(binary.read_bytes()).hexdigest()
         if "binary_sha256" in asset and binary_hash != asset["binary_sha256"]:
@@ -109,6 +117,8 @@ def audit(asset, cache, native_only):
             "actual_os": actual_os,
             "actual_arch": actual_arch,
             "format": description,
+            "archive_permissions": archive_permissions,
+            "extracted_mode": oct(extracted_mode),
             "dependencies": dependencies,
             "execution": {"status": "not attempted on a different OS"},
         }
@@ -119,9 +129,12 @@ def audit(asset, cache, native_only):
                 execution.update(returncode=version.returncode, stdout=version.stdout.strip(), stderr=version.stderr.strip())
                 if version.returncode == 0:
                     spec = Path(temporary) / "smoke.md"
-                    spec.write_text('# Release smoke test\n\n```console\n$ printf "scrut works\\n"\nscrut works\n```\n')
+                    spec.write_text('# Release smoke test\n\n```scrut\n$ printf "scrut works\\n"\nscrut works\n```\n')
                     smoke = subprocess.run([str(binary), "test", str(spec)], capture_output=True, text=True, timeout=30)
                     execution.update(smoke_returncode=smoke.returncode, smoke_stdout=smoke.stdout.strip(), smoke_stderr=smoke.stderr.strip())
+                    smoke_output = smoke.stdout + smoke.stderr
+                    if "1 succeeded" not in smoke_output or "0 failed" not in smoke_output or "0 skipped" not in smoke_output:
+                        raise ValueError(f"Expected one executed, successful snapshot test for {asset['name']}: {smoke_output}")
             except OSError as error:
                 execution.update(errno=error.errno, error=str(error))
             execution["status"] = "attempted"

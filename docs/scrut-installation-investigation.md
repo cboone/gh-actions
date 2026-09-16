@@ -6,16 +6,16 @@ Investigation for [#120](https://github.com/cboone/gh-actions/issues/120), audit
 
 All 32 published Linux/macOS archives, four per release, were downloaded and hashed. The [reviewed asset manifest](../tests/fixtures/scrut-release-assets.json) records each URL, archive SHA-256, extracted executable SHA-256, labeled platform and actual platform. Within every release, the two Linux executables are byte-identical x86-64 files, and the two macOS executables are byte-identical arm64 files. Archive checksums establish integrity, but do not establish executable compatibility.
 
-| Release | Linux x86-64 asset | Linux arm64 asset     | macOS arm64 asset | macOS x86-64 asset      | Observed macOS version |
-| ------- | ------------------ | --------------------- | ----------------- | ----------------------- | ---------------------- |
-| v0.4.3  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.4.3`          |
-| v0.4.2  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.4.1`          |
-| v0.4.1  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.4.1`          |
-| v0.4.0  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.4.0`          |
-| v0.3.0  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.3.0`          |
-| v0.2.3  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.2.3`          |
-| v0.2.2  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.2.1`          |
-| v0.2.1  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.2.1`          |
+| Release | Linux x86-64 asset | Linux arm64 asset     | macOS arm64 asset | macOS x86-64 asset      | Observed native version |
+| ------- | ------------------ | --------------------- | ----------------- | ----------------------- | ----------------------- |
+| v0.4.3  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.4.3`           |
+| v0.4.2  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.4.1`           |
+| v0.4.1  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.4.1`           |
+| v0.4.0  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.4.0`           |
+| v0.3.0  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.3.0`           |
+| v0.2.3  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.2.3`           |
+| v0.2.2  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.2.1`           |
+| v0.2.1  | ELF x86-64         | ELF x86-64, incorrect | Mach-O arm64      | Mach-O arm64, incorrect | `scrut 0.2.1`           |
 
 v0.2.1 uses `.tar.zst` and Rust target triples in asset names; subsequent releases use `.tar.gz` and OS/architecture names. Neither naming scheme prevents the defect. Rolling back does not provide a working arm64 Linux or Intel macOS release asset.
 
@@ -29,7 +29,9 @@ ELF program headers identify `/lib64/ld-linux-x86-64.so.2` as the interpreter in
 
 Local execution on macOS 26.6.2 arm64 passed `--version` and a snapshot smoke test for all 16 macOS archives, including incorrectly labeled Intel assets. This confirms execution on arm64, not Intel compatibility. Linux executables were inspected locally without execution because the local OS is macOS.
 
-The `scrut-release-audit` CI matrix selects each runner's labeled platform and records version execution and snapshot execution, or the expected native architecture rejection for reviewed defective assets. Its artifacts preserve interpreter, direct dependencies, executable format, hashes and execution results. The matrix covers Linux x86-64, Linux arm64, macOS arm64 and [macOS Intel](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). Native CI execution remains unverified until a completed run is recorded here.
+The `scrut-release-audit` CI matrix selects each runner's labeled platform and records version execution and snapshot execution, or the expected native architecture rejection for reviewed defective assets. Its artifacts preserve interpreter, direct dependencies, executable format, hashes and execution results. The matrix covers Linux x86-64, Linux arm64, macOS arm64 and [macOS Intel](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+
+All four initial audit jobs completed in [Run CI 35119922891](https://github.com/cboone/gh-actions/actions/runs/35119922891) at source head `88f9aa70c8f8b9199db3de0bf08c1c285eab1796`. The eight native Linux x86-64 and eight native macOS arm64 assets passed version execution. All eight labeled Linux arm64 assets were rejected with errno 8 (`Exec format error`); all eight labeled macOS x86-64 assets were rejected with errno 86 (incompatible executable architecture). The version column above matches observed Linux x86-64 and macOS arm64 output, including stale v0.2.2 and v0.4.2 output on both OSes. That initial audit used a skipped smoke fence and normalized file permissions, so it does not establish snapshot execution or original executable permissions. The corrected audit preserves extracted permissions and requires one successful, executed smoke case. Native failures are expected only in the historical audit; installers must use compatible binaries.
 
 ## Upstream architecture selection
 
@@ -61,6 +63,8 @@ The published tag revisions share the defect. Historical release-run logs and wo
 
 The source build pins v0.4.3 commit `04ecce97e63c354e0374961ac977cc678d0f3932`, source archive SHA-256 `947997a4a7140ee57183eb0cc448774e074e0bc5477c942190da4ac4fd4555cd`, Rust `1.97.1` and [Cargo.lock](../actions/set-up-scrut/Cargo.lock). The initial lockfile is copied byte-for-byte from PR #119 head `e7fd97e9a761e00e37e5153ce61988e5db7ce93e`, with SHA-256 `2fb26c22c12d2ad259a1c6591853f17c7f97752876f377159127f496682590c9`. It pins every registry dependency version and crate checksum. Generating that lockfile is a review operation, not an installer operation. Cargo must reject dependency changes rather than resolve them on the runner.
 
+Source builds add compiler, native linker and crate-download availability requirements. The helper isolates Cargo state for each installation and removes its temporary source tree afterward. A future native binary cache must use an exact key covering the source archive, lockfile, replacement build script, Rust pin, host target and runner userspace, without partial restoration. Reusing binaries across different libc or macOS environments would weaken the compatibility boundary. No such cache is introduced by this exception.
+
 The helper also preserves PR #119's isolation at head `3393581e4f1f588344ff3fb16e01e6a5860d1e05`: a temporary source tree outside the consumer checkout, a separate Cargo home, rejected ancestor Cargo configuration, and removed consumer build/compiler overrides. The exact compiler is selected explicitly and the build passes the compiler's host triple through `--target`, so a consumer's `CARGO_BUILD_TARGET` cannot silently select a foreign architecture. The source build uses the runner's native compiler/linker and userspace, so it is a compatible native build, not a promise of byte-identical binaries across runner images. Rust setup is SHA-pinned; Dependabot covers its action reference. Compiler and lockfile updates remain reviewed changes.
 
 Composite actions read the helper, lockfile and version build script through `github.action_path`. All three reusable workflows fetch them from `job.workflow_repository` at `job.workflow_sha`, outside the caller's workspace. Missing workflow context fails explicitly. This source exception requires GitHub.com when used through reusable workflows; GitHub Enterprise Server cannot supply that context. The composite action can read its local pinned resources without the workflow context.
@@ -76,6 +80,16 @@ Upstream [build.rs](https://github.com/facebookincubator/scrut/blob/04ecce97e63c
 - The Go/Zig fixture changes only its workflow-specific context bindings and caller test inputs. It asserts the original `job.workflow_*` bindings before substituting this CI checkout's repository/SHA. It does not run the consumer's Go/Zig build jobs or independently prove those job-context values through a Go/Zig `workflow_call`; the actual standalone workflow call tests that context path.
 - Every entry point executes the exact-version, executable-architecture and snapshot assertions in `tests/scrut/installation.md`. The action also remains exercised by the existing Zig formatting matrix.
 - `scrut-release-audit` verifies reviewed historical archive and executable hashes before any execution. Correctly packaged native assets must execute successfully. Known architecture defects must be rejected on the intended native runner; that expected failure is audit evidence, not an approved installation path.
+
+### Audit controls
+
+The audit must reject a non-executable archive member and a smoke specification that executes no cases, even when Scrut returns success. Controls use the real installed binary and production audit function.
+
+| Planted defect                  | Instrument expected to catch it                          | Observed result     | Regression control          |
+| ------------------------------- | -------------------------------------------------------- | ------------------- | --------------------------- |
+| Archive executable mode is 0644 | Preserved permissions and executable-mode validity check | Pending measurement | Non-executable archive      |
+| Smoke fence is `console`        | Executed smoke-case count                                | Pending measurement | Skipped smoke specification |
+| Smoke expected output differs   | Real Scrut execution and successful-case count           | Pending measurement | Failed smoke assertion      |
 
 ## Maintenance and removal criteria
 
