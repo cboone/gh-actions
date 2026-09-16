@@ -31,6 +31,13 @@ on:
         description: Run zig fmt --check.
         type: boolean
         default: true
+      fmt-paths:
+        description: >-
+          Space-separated paths passed to zig fmt --check. Includes
+          build.zig.zon by default because zig fmt also formats ZON.
+          Quoting, escaping, and glob expansion are not supported.
+        type: string
+        default: "build.zig build.zig.zon src"
       run-build:
         description: Run zig build.
         type: boolean
@@ -168,7 +175,16 @@ jobs:
           version: ${{ steps.resolve-zig-version.outputs.version }}
 
       - name: Check formatting
-        run: zig fmt --check src/ build.zig
+        shell: bash
+        env:
+          FMT_PATHS: ${{ inputs.fmt-paths }}
+        run: |
+          read -r -a paths <<< "${FMT_PATHS}"
+          if [[ ${#paths[@]} -eq 0 ]]; then
+            echo "::error::fmt-paths must contain at least one path" >&2
+            exit 1
+          fi
+          zig fmt --check "${paths[@]}"
 
   build:
     name: Build
