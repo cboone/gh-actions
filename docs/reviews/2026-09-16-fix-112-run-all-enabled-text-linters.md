@@ -63,7 +63,7 @@ The user authorized the additional Go/Zig installers and changelog scope. Both i
 
 At `eabe636`, every active PR CI check passed, including all ten scheduling scenarios, both Linux arm64 Scrut entry points changed here, and the other installer matrices. Two trufflehog jobs were intentionally skipped in gitleaks-only runs. Run CI evidence: [run 35115461097](https://github.com/cboone/gh-actions/actions/runs/35115461097).
 
-The source-build helper compiled locally and its executable passed both UV integration checks. All five local repository checks, ShellCheck, shfmt and the whitespace check passed before that push. CI at the reviewed commit does not validate subsequent transport and GHES error changes; those require local validation and fresh CI after push.
+The source-build helper compiled locally and its executable passed both UV integration checks. All five local repository checks, ShellCheck, shfmt and the whitespace check passed. CI at `1128c2df21b809858cf417a691ccb0416b146497` passed all 37 active checks, including subsequent transport and GHES guards, all ten scheduling scenarios, all four arm64 installation paths and conflicting consumer Cargo settings. Two unused TruffleHog checks were skipped. Evidence: [run 35121424049](https://github.com/cboone/gh-actions/actions/runs/35121424049). This validation snapshot precedes the negative rejection cases added in response to review 5225420148; those cases require their own subsequent CI result.
 
 ## Review Resolution
 
@@ -76,4 +76,5 @@ The source-build helper compiled locally and its executable passed both UV integ
 - Review metadata: refreshed against the complete synchronized diff.
 - Helper HTTPS restrictions and GHES context error: implemented and passed CI at `e7fd97e`.
 - Additional Go/Zig installers and changelog: authorized, implemented and passed CI at `32dcd59`.
-- Cargo configuration isolation and timestamp version limitation: implemented; fresh CI pending. Go/Zig installer fixtures now supply conflicting Cargo configuration, compiler flags, wrapper and target settings to verify isolation.
+- Cargo configuration isolation and timestamp version limitation: implemented and passed CI at `1128c2d`. Go/Zig installer fixtures supply conflicting Cargo configuration, compiler flags, wrapper and target settings to verify isolation.
+- Source checksum and unsupported-version rejection: added to the existing Go/Zig runner fixtures after review 5225420148; fresh CI is required for these added cases.
