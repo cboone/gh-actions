@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `lint-text.yml` runs every enabled linter after setup succeeds even when
+  an earlier linter fails, reporting all findings in one run. Any linter
+  failure still fails the job; setup failure and cancellation prevent
+  subsequent checks (#112)
 - Scrut installation on Linux arm64 and macOS x86-64 now builds v0.4.3
   from a pinned source commit with a reviewed archive checksum, Rust 1.97.1
   and a committed dependency lockfile. Upstream's release archives contain
