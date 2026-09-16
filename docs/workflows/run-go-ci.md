@@ -10,6 +10,14 @@ operation.
 
 **Permissions:** `contents: read`
 
+When Scrut is enabled, Linux arm64 builds v0.4.3 from checksum-verified,
+commit-pinned source with Rust 1.97.1 and a committed dependency lockfile,
+because upstream's arm64 release archive contains an x86-64 executable.
+Other supported platforms install checksum-pinned release binaries.
+The helper and lockfile come from this workflow's own repository and commit.
+Those contexts are unavailable on GHES, where the arm64 Scrut job gives a
+targeted error. See [the packaging investigation](https://github.com/cboone/gh-actions/issues/120).
+
 ## Inputs
 
 | Name                    | Type    | Default          | Description                                                |

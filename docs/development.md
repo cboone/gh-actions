@@ -115,7 +115,8 @@ anything that runs in CI.
   `actions/set-up-scrut/build-from-source.sh` pins the source commit,
   verifies its archive SHA-256, and builds with Rust 1.97.1 and the
   adjacent committed `Cargo.lock` using `cargo build --locked`.
-  `run-scrut-tests.yml` fetches both files at `job.workflow_sha`.
+  `run-scrut-tests.yml`, `run-go-ci.yml` and `run-zig-ci.yml` fetch both
+  files at `job.workflow_sha`.
   Other supported platforms retain checksum-pinned release binaries.
 - **clap-validator** (`set-up-clap-validator`): built from source with
   `cargo install --git <repo> --rev <40-char sha> --locked`. This is a
