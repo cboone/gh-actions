@@ -413,7 +413,11 @@ jobs:
             exit 1
           fi
           tar -xz -C "${install_dir}" -f "${tarball_path}" --strip-components=1
-          "${install_dir}/scrut" --version
+          version_output="$("${install_dir}/scrut" --version)"
+          if [[ "${version_output}" != "scrut ${VERSION}" ]]; then
+            echo "Unexpected Scrut version: ${version_output}; expected scrut ${VERSION}" >&2
+            exit 1
+          fi
           printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run scrut tests

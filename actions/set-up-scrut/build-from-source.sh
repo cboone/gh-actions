@@ -24,6 +24,8 @@ function main() {
   fi
   if [[ "${actual}" != "${source_checksum}" ]]; then
     echo "Scrut source archive checksum verification failed." >&2
+    echo "Expected: ${source_checksum}" >&2
+    echo "Actual:   ${actual}" >&2
     exit 1
   fi
   tar -xzf "${archive}" -C "${source_dir}" --strip-components=1
