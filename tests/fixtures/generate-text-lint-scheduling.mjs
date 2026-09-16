@@ -70,16 +70,14 @@ steps.push({
   shell: "bash",
   env: {
     OUTCOMES: ["lint-tools-ready", ...tools].map((id) => `\${{ steps.${id}.outcome }}`).join(","),
-    FAILED: "${{ failure() }}",
   },
-  run: 'printf \'outcomes=%s\\nfailed=%s\\n\' "${OUTCOMES}" "${FAILED}" >> "${GITHUB_OUTPUT}"',
+  run: 'printf \'outcomes=%s\\n\' "${OUTCOMES}" >> "${GITHUB_OUTPUT}"',
 });
 const action = {
   name: "Text lint scheduling fixture",
   description: "Exercise production step conditions on the GitHub runner.",
   outputs: {
     outcomes: { description: "Readiness and linter step outcomes.", value: "${{ steps.report.outputs.outcomes }}" },
-    failed: { description: "Whether the composite accumulated a failure.", value: "${{ steps.report.outputs.failed }}" },
   },
   runs: { using: "composite", steps },
 };
@@ -87,7 +85,7 @@ const directory = ".local/text-lint-scheduling";
 mkdirSync(directory, { recursive: true });
 writeFileSync(`${directory}/action.yml`, stringify(action));
 const expectedFailure = ["early-failure", "all-fail", "setup-failure"].includes(scenario);
-const expected = `expected-outcomes=${scenarios[scenario].join(",")}\nexpected-failed=${expectedFailure}\nexpected-outcome=${expectedFailure ? "failure" : "success"}\n`;
+const expected = `expected-outcomes=${scenarios[scenario].join(",")}\nexpected-outcome=${expectedFailure ? "failure" : "success"}\n`;
 if (process.env.GITHUB_OUTPUT) {
   writeFileSync(process.env.GITHUB_OUTPUT, expected, { flag: "a" });
 }

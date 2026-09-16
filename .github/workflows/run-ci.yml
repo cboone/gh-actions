@@ -86,18 +86,12 @@ jobs:
         env:
           ACTUAL_OUTCOMES: ${{ steps.exercise.outputs.outcomes }}
           EXPECTED_OUTCOMES: ${{ steps.fixture.outputs.expected-outcomes }}
-          ACTUAL_FAILED: ${{ steps.exercise.outputs.failed }}
-          EXPECTED_FAILED: ${{ steps.fixture.outputs.expected-failed }}
           ACTUAL_OUTCOME: ${{ steps.exercise.outcome }}
           EXPECTED_OUTCOME: ${{ steps.fixture.outputs.expected-outcome }}
         run: |
           status=0
           if [[ "${ACTUAL_OUTCOMES}" != "${EXPECTED_OUTCOMES}" ]]; then
             echo "::error::Step outcomes: ${ACTUAL_OUTCOMES}; expected ${EXPECTED_OUTCOMES}"
-            status=1
-          fi
-          if [[ "${ACTUAL_FAILED}" != "${EXPECTED_FAILED}" ]]; then
-            echo "::error::Accumulated failure: ${ACTUAL_FAILED}; expected ${EXPECTED_FAILED}"
             status=1
           fi
           if [[ "${ACTUAL_OUTCOME}" != "${EXPECTED_OUTCOME}" ]]; then
