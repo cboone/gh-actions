@@ -10,7 +10,7 @@ Reusable composite actions and workflows for downstream CI/CD. Tool downloads us
 - Composite actions live in `actions/`; reusable workflows in `.github/workflows/` use `workflow_call`.
 - A reusable workflow's `./` action path resolves against the caller's checkout. Fetch repository-owned helpers and manifests from `job.workflow_repository` at `job.workflow_sha`. Composite actions use `github.action_path` for sibling files.
 - Install required tools explicitly unless their runner-provided use is documented in the development reference. In particular, actionlint can pass without examining shell blocks when shellcheck is absent; keep the CI control that plants `SC2086`.
-- Ordinary data inputs reach shell commands through `env:` mappings. Explicit command inputs such as `scrut-setup-cmd` and `scrut-build-cmd` intentionally execute through `run:`. Install downloaded tools under `RUNNER_TEMP` and append to `GITHUB_PATH`. The generic installer must remain Bash 3.2 compatible.
+- Ordinary data and argument inputs must reach shell commands through `env:` mappings; existing interpolation gaps are tracked in [#115](https://github.com/cboone/gh-actions/issues/115). Explicit command inputs such as `scrut-setup-cmd` and `scrut-build-cmd` intentionally execute through `run:`. Release binaries install under `RUNNER_TEMP` and use `GITHUB_PATH` or an absolute invocation path; other trust paths follow the development reference. The generic installer must remain Bash 3.2 compatible.
 - Use imperative names: `set-up-*` installs; `run-*` installs and executes.
 
 ## Pinning Policy and Trust Model

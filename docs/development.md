@@ -43,7 +43,8 @@ and `lint-github-actions.yml`, and `shfmt-checksums` in `lint-shell.yml`. The
 others sit in case statements in the files that install them.
 
 A tool a workflow depends on is installed here unless its runner-provided
-use is explicitly documented. `actions/create-gh-release` and `create-gh-release-from-changelog.yml` use
+use is explicitly documented. `actions/create-gh-release`, `create-gh-release-from-changelog.yml`,
+`release-rust-binaries.yml` and `check-tool-versions.yml` use
 the GitHub-hosted runner's `gh` CLI rather than installing it. Leaving a tool to the image floats
 its version and can fail open: actionlint is the sharp case, since it skips
 every `run:` block and still exits 0 when it cannot find shellcheck, so a job
@@ -118,7 +119,7 @@ anything that runs in CI.
   commit's own `Cargo.lock`. `install-pinned-tool` cannot reach this
   upstream, which publishes nothing to crates.io and whose release assets
   cover neither Linux arm64 nor a file name derivable from a version
-  string (0.4.1's are `.zip`, and named
+  string (the 0.4.1 assets are `.zip`, and named
   `clap-validator-0.4.1-127-g152b982-<platform>`, where the middle field is
   a build counter no version string yields). The action rejects a
   `validator-rev` that is not a full 40-character lowercase SHA, so a tag,
@@ -222,10 +223,18 @@ check (exit non-zero on unformatted code), not a write operation.
 - The Rust reusable workflows split their `*-args` inputs with `read -r -a`
   into a bash array. That handles simple space-delimited flags; quoting and
   escaping are not supported.
-- Ordinary data inputs are passed to shell steps via `env:` mappings, not inline expressions.
+- Ordinary data and argument inputs must be passed to shell steps via `env:` mappings,
+  using quoted variables and explicit argument arrays, not inline expressions.
   Explicit command inputs (`scrut-setup-cmd` and `scrut-build-cmd` in the scrut,
   Go and Zig workflows) intentionally execute through `run:`.
-- Tools are installed to `RUNNER_TEMP` and added to `GITHUB_PATH`.
+  Existing direct interpolation of `test-flags` and `codecov-files` in
+  `run-go-ci.yml`, and `goreleaser-args` in `release-go-binaries.yml`, is a
+  migration gap tracked in [#115](https://github.com/cboone/gh-actions/issues/115),
+  not an exception for ordinary data or argument inputs.
+- Release binaries install under `RUNNER_TEMP`. Tools called by name are added
+  to `GITHUB_PATH`; the Go and Rust Codecov binaries use absolute paths instead.
+  npm tools follow their lockfile trust path: `actions/run-cspell` installs
+  beside the action checkout and exposes that `node_modules/.bin` through `GITHUB_PATH`.
 - `actions/install-pinned-tool/install-pinned-tool.sh` stays compatible with
   bash 3.2, the `/bin/bash` on macOS; its header lists what that rules out.
 
@@ -316,7 +325,8 @@ jobs:
 1. For downloaded tools, accept a `version` input with a pinned default,
    subject to the caller-controlled exceptions above. Runner-provided tools
    such as `actions/create-gh-release` follow their documented exception.
-1. For a release binary, bind
+1. For a new release-binary installer whose upstream packaging fits the generic
+   installer's URL, checksum and archive inputs, bind
    `${{ github.action_path }}/../install-pinned-tool/install-pinned-tool.sh`
    to an `env:` variable and run it with the tool's URL template and
    checksum source, as `actions/set-up-shfmt/action.yml` does. Keep the
@@ -325,9 +335,11 @@ jobs:
    `run:`. Set the installer variables the tool does not use to `""` so a
    caller's job-level `env` cannot reach them. The script detects OS and architecture, downloads, verifies the
    SHA-256, installs to `RUNNER_TEMP`, and appends to `GITHUB_PATH`.
-   Custom release-binary installers detect OS and architecture with `uname -s` / `uname -m`
+   Existing custom installers remain supported. New custom release-binary installers
+   are allowed when upstream packaging cannot fit the generic contract. They detect
+   OS and architecture with `uname -s` / `uname -m`
    case statements, verify a SHA-256, install to `RUNNER_TEMP`, and
-   append to `GITHUB_PATH` themselves. Wrapper, npm, Python and source-built
+   expose the tool through `GITHUB_PATH` or an absolute invocation path. Wrapper, npm, Python and source-built
    actions follow their applicable trust path in the pinning policy above.
 1. For `run-*` actions, add a second step that executes the tool.
 1. Create `actions/<name>/README.md` from the per-component template
