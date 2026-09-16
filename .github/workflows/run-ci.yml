@@ -118,7 +118,7 @@ jobs:
     uses: ./.github/workflows/run-scrut-tests.yml
     with:
       setup-uv: true
-      scrut-test-dir: tests/scrut/
+      scrut-test-dir: tests/scrut/setup-uv.md
       scrut-env: |
         HELLO_BIN=./tests/fixtures/hello.py
         UV_PYTHON_PREFERENCE=only-system
