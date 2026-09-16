@@ -1,7 +1,22 @@
 # lint-shell
 
-Run ShellCheck and shfmt on shell scripts. Automatically discovers scripts
-by file extension and MIME type.
+Run ShellCheck and shfmt on tracked shell scripts. Discovery uses shfmt's
+shell extensions and shebang detection throughout the tracked tree, including
+extension-less scripts in any directory. Untracked build output is excluded.
+Discovery requires the Git index provided by the workflow's checkout step;
+full Git history is not required. Submodule contents are not included.
+
+shfmt is installed before discovery whenever either checker is enabled,
+including with `run-shfmt: false`. An empty discovered set emits a notice and
+writes to the job summary before skipping both checks. Disabling both checkers
+skips installation and discovery.
+
+The format check uses `shfmt -d` without style flags so it reads
+`.editorconfig`. Adding a style flag such as `-i 2` disables those settings.
+
+Discovery checks each tracked regular file with `shfmt -f` and retains its
+original path in a NUL-separated manifest for both checkers. This avoids a
+shfmt 3.13.1 bug where `-f=0` lists explicitly supplied non-shell files too.
 
 Both tools are installed from their release assets and verified against the
 committed SHA-256 in `shellcheck-checksums` and `shfmt-checksums`. To use
@@ -61,7 +76,8 @@ for [lint-text](lint-text.md):
   workaround applies.
 
 Neither affects a run with both `run-shellcheck: false` and `run-shfmt: false`,
-or with no shell scripts to lint, which fetches nothing.
+which fetches nothing. With either checker enabled, the installer is fetched
+even when there are no shell scripts, because discovery requires shfmt.
 
 ## Usage
 

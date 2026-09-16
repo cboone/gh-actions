@@ -40,6 +40,11 @@ jobs:
   shell:
     uses: ./.github/workflows/lint-shell.yml
 
+  shellcheck-only:
+    uses: ./.github/workflows/lint-shell.yml
+    with:
+      run-shfmt: false
+
   # The fixture is a PEP 723 script that runs from its shebang alone, so it
   # passes only if setup-uv put uv on PATH. HELLO_BIN is deliberately a `./`
   # path, which exercises scrut-env's relative-to-absolute fixup, and
@@ -183,6 +188,9 @@ jobs:
           os-names: linux=unknown-linux-gnu darwin=apple-darwin
           arch-names: amd64=x86_64 arm64=aarch64
           archive-member: uv-{arch}-{os}/uv
+
+      - name: Check tracked shell discovery and checker execution
+        run: uv run tests/check-shell-discovery.py
 
       # Each binary must resolve to the pinned install rather than a copy
       # the runner image ships, and must report the pinned version. Newlines

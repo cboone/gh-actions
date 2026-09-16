@@ -67,43 +67,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Find shell scripts
-        id: find-scripts
-        run: |
-          {
-            find . \( -name '*.sh' -o -name '*.bash' \) \
-              -not -path '*/node_modules/*' \
-              -not -path '*/.git/*' \
-              -print0 2>/dev/null \
-              | xargs -0 -r printf '%s\n' || true
-            find bin/ scripts/ script/ -type f -print0 2>/dev/null \
-              | xargs -0 -r file --mime-type 2>/dev/null \
-              | grep 'text/x-shellscript' \
-              | cut -d: -f1 || true
-          } | sort -u | grep -v '^$' > /tmp/shell-scripts.txt || true
-          {
-            echo "files<<DELIM"
-            cat /tmp/shell-scripts.txt
-            echo "DELIM"
-          } >> "${GITHUB_OUTPUT}"
-          if [ -s /tmp/shell-scripts.txt ]; then
-            echo "found=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "found=false" >> "${GITHUB_OUTPUT}"
-          fi
-
       # Fetch the installer from the repository and commit this workflow
       # file came from, the supply-chain model lint-text.yml uses for its
       # manifests, so the script and this workflow always share a commit. A
       # `./` action path would resolve against the caller's checkout
       # instead. The `job` context is only available on steps, so the two
       # values are bound here rather than at job or workflow level. The
-      # step carries both tool installs' conditions, so a job that installs
-      # nothing never reads the job context.
+      # step runs when either checker is enabled, because discovery itself
+      # needs shfmt even when only ShellCheck is enabled.
       - name: Fetch install-pinned-tool
-        if: >-
-          (inputs.run-shellcheck || inputs.run-shfmt)
-          && steps.find-scripts.outputs.found == 'true'
+        if: inputs.run-shellcheck || inputs.run-shfmt
         env:
           REQ_REPO: ${{ job.workflow_repository }}
           REQ_SHA: ${{ job.workflow_sha }}
@@ -122,6 +95,43 @@ jobs:
           curl -sSfL --proto '=https' --retry 3 --retry-delay 5 --retry-all-errors \
             "${base}/actions/install-pinned-tool/install-pinned-tool.sh" \
             -o "${RUNNER_TEMP}/install-pinned-tool.sh"
+
+      - name: Install shfmt
+        if: inputs.run-shellcheck || inputs.run-shfmt
+        env:
+          TOOL: shfmt
+          VERSION: ${{ inputs.shfmt-version }}
+          URL_TEMPLATE: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
+          CHECKSUMS: ${{ inputs.shfmt-checksums }}
+        run: bash "${RUNNER_TEMP}/install-pinned-tool.sh"
+
+      - name: Find shell scripts
+        id: find-scripts
+        if: inputs.run-shellcheck || inputs.run-shfmt
+        run: |
+          # shfmt 3.13.1's -f=0 treats explicit files as shell scripts even
+          # without a shell extension or shebang. Use -f per tracked file,
+          # then retain the original path in a NUL-separated manifest.
+          git ls-files -z > "${RUNNER_TEMP}/tracked-files.txt"
+          : > "${RUNNER_TEMP}/shell-scripts.txt"
+          while IFS= read -r -d '' path; do
+            # A tracked submodule is a directory; do not walk its contents.
+            if [[ ! -f "${path}" ]]; then
+              continue
+            fi
+            shfmt -f -- "${path}" > "${RUNNER_TEMP}/shell-candidate.txt"
+            if [[ -s "${RUNNER_TEMP}/shell-candidate.txt" ]]; then
+              printf '%s\0' "${path}" >> "${RUNNER_TEMP}/shell-scripts.txt"
+            fi
+          done < "${RUNNER_TEMP}/tracked-files.txt"
+          if [[ -s "${RUNNER_TEMP}/shell-scripts.txt" ]]; then
+            echo "found=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "found=false" >> "${GITHUB_OUTPUT}"
+            msg="No tracked shell scripts found; ShellCheck and shfmt checks were skipped."
+            echo "::notice::${msg}"
+            echo "${msg}" >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
       # Pinned rather than taken from the runner image, so a runner image
       # update cannot change what this job reports, and so it lints with the
@@ -143,28 +153,15 @@ jobs:
         if: >-
           inputs.run-shellcheck
           && steps.find-scripts.outputs.found == 'true'
-        env:
-          SHELL_SCRIPTS: ${{ steps.find-scripts.outputs.files }}
         run: |
           shellcheck --version
-          echo "${SHELL_SCRIPTS}" | tr '\n' '\0' | xargs -0 shellcheck
-
-      - name: Install shfmt
-        if: >-
-          inputs.run-shfmt
-          && steps.find-scripts.outputs.found == 'true'
-        env:
-          TOOL: shfmt
-          VERSION: ${{ inputs.shfmt-version }}
-          URL_TEMPLATE: https://github.com/mvdan/sh/releases/download/v{version}/shfmt_v{version}_{os}_{arch}
-          CHECKSUMS: ${{ inputs.shfmt-checksums }}
-        run: bash "${RUNNER_TEMP}/install-pinned-tool.sh"
+          xargs -0 -r shellcheck -- < "${RUNNER_TEMP}/shell-scripts.txt"
 
       - name: Run shfmt check
         if: >-
           inputs.run-shfmt
           && steps.find-scripts.outputs.found == 'true'
-        env:
-          SHELL_SCRIPTS: ${{ steps.find-scripts.outputs.files }}
         run: |
-          echo "${SHELL_SCRIPTS}" | tr '\n' '\0' | xargs -0 shfmt -d
+          # No style flags: shfmt reads .editorconfig, and flags such as
+          # -i would disable those settings entirely.
+          xargs -0 -r shfmt -d -- < "${RUNNER_TEMP}/shell-scripts.txt"
