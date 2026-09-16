@@ -30,17 +30,17 @@ rather than that timestamp, identify v0.4.3. This limitation is tracked in #120.
 
 ## Inputs
 
-| Name              | Type    | Default         | Description                                                             |
-| ----------------- | ------- | --------------- | ----------------------------------------------------------------------- |
-| `scrut-version`   | string  | `"0.4.3"`       | scrut version to install (checksums pinned to this)                     |
-| `scrut-shell`     | string  | `""`            | Shell for `--shell` flag (e.g., "zsh", "bash")                          |
-| `scrut-test-dir`  | string  | `"tests/"`      | Directory containing scrut test files                                   |
-| `scrut-env`       | string  | `""`            | Newline-delimited KEY=VALUE env vars for scrut tests                    |
-| `scrut-setup-cmd` | string  | `""`            | Shell command to run before scrut tests; runs after the uv install step |
-| `setup-uv`        | boolean | `false`         | Install uv and add it to `PATH` before `scrut-setup-cmd` runs           |
-| `uv-version`      | string  | `"0.11.8"`      | uv version to install when `setup-uv` is true                           |
-| `runs-on`         | string  | `ubuntu-latest` | Runner label (Windows is not supported)                                 |
-| `timeout-minutes` | number  | `10`            | Job timeout in minutes                                                  |
+| Name              | Type    | Default         | Description                                                                                                                              |
+| ----------------- | ------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `scrut-version`   | string  | `"0.4.3"`       | scrut version to install; changing versions requires release checksums and Linux arm64 source, archive, Rust toolchain and lockfile pins |
+| `scrut-shell`     | string  | `""`            | Shell for `--shell` flag (e.g., "zsh", "bash")                                                                                           |
+| `scrut-test-dir`  | string  | `"tests/"`      | Directory containing scrut test files                                                                                                    |
+| `scrut-env`       | string  | `""`            | Newline-delimited KEY=VALUE env vars for scrut tests                                                                                     |
+| `scrut-setup-cmd` | string  | `""`            | Shell command to run before scrut tests; runs after the uv install step                                                                  |
+| `setup-uv`        | boolean | `false`         | Install uv and add it to `PATH` before `scrut-setup-cmd` runs                                                                            |
+| `uv-version`      | string  | `"0.11.8"`      | uv version to install when `setup-uv` is true                                                                                            |
+| `runs-on`         | string  | `ubuntu-latest` | Runner label (Windows is not supported)                                                                                                  |
+| `timeout-minutes` | number  | `10`            | Job timeout in minutes                                                                                                                   |
 
 ### Installing uv
 
