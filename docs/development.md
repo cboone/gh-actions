@@ -205,7 +205,7 @@ lives in `scripts/check-tool-versions.py`.
 
 ### Platform Support
 
-Only Linux and macOS runners are supported. Each installer uses a `uname -s`
+Only Linux and macOS runners are supported. Repository-owned release-binary installers use a `uname -s`
 case statement with `Linux)` and `Darwin)` branches, plus a `*)` catch-all
 that exits with an error. Windows is not supported.
 
@@ -225,8 +225,9 @@ check (exit non-zero on unformatted code), not a write operation.
   escaping are not supported.
 - Ordinary data and argument inputs must be passed to shell steps via `env:` mappings,
   using quoted variables and explicit argument arrays, not inline expressions.
-  Explicit command inputs (`scrut-setup-cmd` and `scrut-build-cmd` in the scrut,
-  Go and Zig workflows) intentionally execute through `run:`.
+  Explicit command inputs intentionally execute through `run:`:
+  `run-scrut-tests.yml` accepts `scrut-setup-cmd`; `run-go-ci.yml` and
+  `run-zig-ci.yml` accept both `scrut-setup-cmd` and `scrut-build-cmd`.
   Existing direct interpolation of `test-flags` and `codecov-files` in
   `run-go-ci.yml`, and `goreleaser-args` in `release-go-binaries.yml`, is a
   migration gap tracked in [#115](https://github.com/cboone/gh-actions/issues/115),
@@ -394,8 +395,9 @@ this same repository. `run-ci.yml` also runs `actions/install-pinned-tool`,
 and the `set-up-*` actions built on it, from the checkout on Linux amd64,
 Linux arm64 and macOS arm64, including inputs it must reject, and asserts
 that actionlint really does shell out to shellcheck. Its `scrut` job calls
-`run-scrut-tests.yml` with `setup-uv: true` against `tests/scrut/`, whose
-fixture is a PEP 723 script that only runs if uv reached `PATH`.
+`run-scrut-tests.yml` with `setup-uv: true` against the specs in `tests/scrut/`.
+It passes `tests/fixtures/hello.py` through `HELLO_BIN`: that PEP 723
+executable only runs if uv reached `PATH`.
 `actions/install-cspell-dictionaries` is tested on the same three
 runners the same way, through `run-cspell` against a fixture kept
 outside the checkout: a dictionary installed beside `cspell-lib`
