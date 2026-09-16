@@ -15,8 +15,9 @@ and `lint-shell.yml` therefore fetch
 `actions/install-pinned-tool/install-pinned-tool.sh` from
 `job.workflow_repository` at `job.workflow_sha` and run it, the model
 `lint-text.yml` uses for its manifests, which keeps the installer on the
-workflow's own commit. The other reusable workflows inline their tool
-installation. Composite actions reach sibling files in this repo through
+workflow's own commit. `run-scrut-tests.yml` also fetches that installer
+for its optional uv setup. Other tool installations are inlined or use
+SHA-pinned external setup actions. Composite actions reach sibling files in this repo through
 `github.action_path`: `set-up-actionlint`, `set-up-shellcheck` and
 `set-up-shfmt` run `../install-pinned-tool/install-pinned-tool.sh`.
 
@@ -42,7 +43,7 @@ and `lint-github-actions.yml`, and `shfmt-checksums` in `lint-shell.yml`. The
 others sit in case statements in the files that install them.
 
 A tool a workflow depends on is installed here unless its runner-provided
-use is explicitly documented. `create-gh-release-from-changelog.yml` uses
+use is explicitly documented. `actions/create-gh-release` and `create-gh-release-from-changelog.yml` use
 the GitHub-hosted runner's `gh` CLI rather than installing it. Leaving a tool to the image floats
 its version and can fail open: actionlint is the sharp case, since it skips
 every `run:` block and still exits 0 when it cannot find shellcheck, so a job
@@ -126,9 +127,9 @@ anything that runs in CI.
   `package-lock.json` provides per-package sha512 integrity for any
   fresh `npm ci`.
 - **npm `overrides`**: scoped to one dependent, never repo-wide.
-  markdownlint-cli2 pins `smol-toml` to an exact version that carries a
-  DoS advisory (GHSA-7w5x-hrqm-74c2, patched in 1.7.1), and an exact
-  pin leaves no room for npm to resolve the fix on its own. The
+  markdownlint-cli2's upstream dependency pins vulnerable `smol-toml` 1.7.0
+  (GHSA-7w5x-hrqm-74c2, patched in 1.7.1), leaving no room for npm to
+  resolve the fix on its own. This repo overrides that pin to patched 1.7.2. The
   override is nested under `markdownlint-cli2` so it reaches only that
   dependency tree: cspell declares `smol-toml: ^1.8.0` and keeps
   resolving inside its own range. A repo-wide override would force
@@ -144,8 +145,12 @@ not fine for the supply chain feeding 26+ downstream repos.
 
 ### Version Pinning
 
-All tool versions are pinned to exact patch releases. The Rust
-toolchain is the one explicit exception: `rust-version` and
+Repository-controlled tool version defaults use exact patch releases.
+Consumer-controlled toolchains follow their project inputs or files:
+Go uses `go-version` or `go-version-file` (default `go.mod`); Zig uses
+`zig-version`, `zig-version-file`, or `build.zig.zon`; Lean uses `lean-toolchain`.
+Consumers must keep those values pinned to avoid floating toolchains.
+For Rust, `rust-version` and
 `rust-toolchain-file` in `.github/workflows/run-rust-ci.yml` / `.github/workflows/release-rust-binaries.yml` work
 together so the consumer repo controls pinning.
 
@@ -155,9 +160,10 @@ together so the consumer repo controls pinning.
   workflow reads the file's `[toolchain] channel` value. If that
   channel is `"stable"`, it floats with rustup; if it is `"1.84.0"`
   (or similar), it is fully pinned.
-- The workflow fails fast if neither input resolves to a value.
+- If the configured file is absent, the workflow falls back to the consumer's
+  legacy `rust-toolchain` file. It fails fast if none of these sources yields a value.
 
-`set-up-clap-validator` is a second, narrower exception. Its
+`set-up-clap-validator` has a narrower caller-controlled contract. Its
 `rust-version` and `validator-rev` are both required with no default, so
 the caller owns both pins and a caller that forgets one is rejected rather
 than defaulted; that is deliberate, and it overrides the "Accept a
@@ -176,9 +182,11 @@ version.
 
 `.github/dependabot.yml` runs weekly and covers two surfaces:
 
-- **`github-actions`**: every external `uses:` reference in
-  `.github/workflows/` and `actions/*/action.yml`. Dependabot bumps both
-  the SHA and the `# vX.Y.Z` comment.
+- **`github-actions`**: external `uses:` references in `.github/workflows/`
+  and the action directories configured in `.github/dependabot.yml`
+  (currently `actions/create-pull-request` and `actions/set-up-clap-validator`).
+  Add an action directory to that configuration when it gains an external
+  `uses:` reference. Dependabot bumps both the SHA and the `# vX.Y.Z` comment.
 - **`npm`**: `package.json` devDependencies and `package-lock.json`.
 
 Minor/patch updates are grouped into one PR per ecosystem; major
@@ -214,7 +222,9 @@ check (exit non-zero on unformatted code), not a write operation.
 - The Rust reusable workflows split their `*-args` inputs with `read -r -a`
   into a bash array. That handles simple space-delimited flags; quoting and
   escaping are not supported.
-- Inputs are passed to shell steps via `env:` mappings, not inline expressions.
+- Ordinary data inputs are passed to shell steps via `env:` mappings, not inline expressions.
+  Explicit command inputs (`scrut-setup-cmd` and `scrut-build-cmd` in the scrut,
+  Go and Zig workflows) intentionally execute through `run:`.
 - Tools are installed to `RUNNER_TEMP` and added to `GITHUB_PATH`.
 - `actions/install-pinned-tool/install-pinned-tool.sh` stays compatible with
   bash 3.2, the `/bin/bash` on macOS; its header lists what that rules out.
@@ -286,7 +296,8 @@ Composite action, within a job's `steps:`:
     <input>: <value>
 ```
 
-Reusable workflow, at the calling workflow's `jobs:` level:
+Reusable workflow, at the calling workflow's `jobs:` level. Include `secrets:`
+only when the called workflow declares the named secret; otherwise omit it:
 
 ```yaml
 jobs:
@@ -302,7 +313,9 @@ jobs:
 ## Adding a New Action
 
 1. Create `actions/<name>/action.yml` with `using: composite`.
-1. Accept a `version` input with a pinned default.
+1. For downloaded tools, accept a `version` input with a pinned default,
+   subject to the caller-controlled exceptions above. Runner-provided tools
+   such as `actions/create-gh-release` follow their documented exception.
 1. For a release binary, bind
    `${{ github.action_path }}/../install-pinned-tool/install-pinned-tool.sh`
    to an `env:` variable and run it with the tool's URL template and
@@ -312,9 +325,10 @@ jobs:
    `run:`. Set the installer variables the tool does not use to `""` so a
    caller's job-level `env` cannot reach them. The script detects OS and architecture, downloads, verifies the
    SHA-256, installs to `RUNNER_TEMP`, and appends to `GITHUB_PATH`.
-   Anything else detects OS and architecture with `uname -s` / `uname -m`
-   case statements, verifies a SHA-256, installs to `RUNNER_TEMP`, and
-   appends to `GITHUB_PATH` itself.
+   Custom release-binary installers detect OS and architecture with `uname -s` / `uname -m`
+   case statements, verify a SHA-256, install to `RUNNER_TEMP`, and
+   append to `GITHUB_PATH` themselves. Wrapper, npm, Python and source-built
+   actions follow their applicable trust path in the pinning policy above.
 1. For `run-*` actions, add a second step that executes the tool.
 1. Create `actions/<name>/README.md` from the per-component template
    documented under "Documentation layout" above. GitHub renders this
