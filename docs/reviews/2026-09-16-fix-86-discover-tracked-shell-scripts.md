@@ -2,7 +2,7 @@
 
 Base: `main` (merge base: `129cb373`)
 Commits: 3
-Files changed: 5 (2 added, 3 modified, 0 deleted, 0 renamed)
+Files changed: 6 (3 added, 3 modified, 0 deleted, 0 renamed)
 Reviewed through: `701a57e`
 
 ## Summary
@@ -17,9 +17,10 @@ The branch fixes shell discovery so extension-less scripts anywhere in the track
 
 ## File Inventory
 
-### New files (2)
+### New files (3)
 
 - `docs/plans/done/2026-09-16-discover-tracked-shell-scripts.md`
+- `docs/reviews/2026-09-16-fix-86-discover-tracked-shell-scripts.md`
 - `tests/check-shell-discovery.py`
 
 ### Modified files (3)

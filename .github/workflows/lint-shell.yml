@@ -155,7 +155,7 @@ jobs:
           && steps.find-scripts.outputs.found == 'true'
         run: |
           shellcheck --version
-          xargs -0 -r shellcheck -- < "${RUNNER_TEMP}/shell-scripts.txt"
+          xargs -0 shellcheck -- < "${RUNNER_TEMP}/shell-scripts.txt"
 
       - name: Run shfmt check
         if: >-
@@ -164,4 +164,4 @@ jobs:
         run: |
           # No style flags: shfmt reads .editorconfig, and flags such as
           # -i would disable those settings entirely.
-          xargs -0 -r shfmt -d -- < "${RUNNER_TEMP}/shell-scripts.txt"
+          xargs -0 shfmt -d -- < "${RUNNER_TEMP}/shell-scripts.txt"
