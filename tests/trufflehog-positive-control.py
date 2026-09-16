@@ -178,6 +178,21 @@ def main():
                     label = f"{name} {scope}"
                     run_scan(script, clean, scan_env, 0, label + " clean")
                     run_scan(script, planted, scan_env, 183, label + " finding")
+                    if name == "action":
+                        caller_env = {
+                            **scan_env,
+                            "TRUFFLEHOG_ARGS": args + "\n--no-update\n--fail",
+                        }
+                        run_scan(
+                            script, clean, caller_env, 0, label + " caller flags clean"
+                        )
+                        run_scan(
+                            script,
+                            planted,
+                            caller_env,
+                            183,
+                            label + " caller flags finding",
+                        )
                     # Prove the assertion detects the precise defect in #111.
                     defective = script.replace(" --fail", "")
                     if defective == script:

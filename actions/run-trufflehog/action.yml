@@ -76,7 +76,11 @@ runs:
       run: |
         args=()
         while IFS= read -r line; do
-          [[ -n "${line}" ]] && args+=("${line}")
+          # Append enforced boolean flags once, including for existing callers.
+          case "${line}" in
+            --no-update|--no-update=*|--fail|--fail=*) continue ;;
+            *) [[ -n "${line}" ]] && args+=("${line}") ;;
+          esac
         done <<< "${TRUFFLEHOG_ARGS}"
         # Exclude unverified results to limit noise from invalid credentials.
         # Verification errors remain visible through unknown results.

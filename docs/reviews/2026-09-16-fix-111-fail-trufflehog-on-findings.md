@@ -2,7 +2,7 @@
 
 Base: `main` (merge base: `0d53592`)
 Commits: 2
-Files changed: 7 (2 added, 5 modified, 0 deleted, 0 renamed)
+Files changed: 8 (3 added, 5 modified, 0 deleted, 0 renamed)
 Reviewed through: `abeeb9a`
 
 ## Summary
@@ -17,9 +17,10 @@ This branch fixes issue #111 by making both TruffleHog entry points fail when th
 
 ## File Inventory
 
-Added (2):
+Added (3):
 
 - `docs/plans/done/2026-09-16-fail-trufflehog-on-findings.md`
+- `docs/reviews/2026-09-16-fix-111-fail-trufflehog-on-findings.md`
 - `tests/trufflehog-positive-control.py`
 
 Modified (5):
