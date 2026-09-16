@@ -135,7 +135,8 @@ def audit(asset, cache, native_only):
                     smoke = subprocess.run([str(binary), "test", str(spec)], capture_output=True, text=True, timeout=30)
                     execution.update(smoke_returncode=smoke.returncode, smoke_stdout=smoke.stdout.strip(), smoke_stderr=smoke.stderr.strip())
                     smoke_output = smoke.stdout + smoke.stderr
-                    if "1 succeeded" not in smoke_output or "0 failed" not in smoke_output or "0 skipped" not in smoke_output:
+                    counts = re.findall(r"(?<!\d)(\d+) succeeded, (\d+) failed and (\d+) skipped\b", smoke_output)
+                    if counts != [("1", "0", "0")]:
                         raise ValueError(f"Expected one executed, successful snapshot test for {asset['name']}: {smoke_output}")
             except OSError as error:
                 execution.update(errno=error.errno, error=str(error))

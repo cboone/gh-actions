@@ -65,12 +65,18 @@ def main():
 
         inspected = auditor.inspect_binary(Path(executable))
         other_os = "linux" if host_os == "macos" else "macos"
+        real_run = subprocess.run
+
+        def reject_binary_invocation(command, *args, **kwargs):
+            assert Path(command[0]).name != "scrut", command
+            return real_run(command, *args, **kwargs)
+
         with patch.object(auditor, "inspect_binary", return_value=(other_os, *inspected[1:])):
-            rejected(valid, "Executable OS mismatch")
+            with patch.object(auditor.subprocess, "run", side_effect=reject_binary_invocation):
+                rejected(valid, "Executable OS mismatch")
         print("Wrong executable OS with matching architecture: rejected before binary invocation")
 
-        real_run = subprocess.run
-        for scenario in ["skipped-fence", "failed-assertion"]:
+        for scenario in ["skipped-fence", "failed-assertion", "extra-cases"]:
             measurement = {}
 
             def planted_run(command, *args, **kwargs):
@@ -79,8 +85,10 @@ def main():
                     content = spec.read_text()
                     if scenario == "skipped-fence":
                         content = content.replace("```scrut", "```console")
-                    else:
+                    elif scenario == "failed-assertion":
                         content = content.replace("\nscrut works\n```", "\nunexpected output\n```")
+                    else:
+                        content = content + '\n' + content[content.index("```scrut"):] * 10
                     spec.write_text(content)
                     completed = real_run(command, *args, **kwargs)
                     measurement["returncode"] = completed.returncode
@@ -90,9 +98,9 @@ def main():
 
             with patch.object(auditor.subprocess, "run", side_effect=planted_run):
                 rejected(valid, "Expected one executed, successful snapshot test")
-            expected_exit = 0 if scenario == "skipped-fence" else 50
+            expected_exit = 50 if scenario == "failed-assertion" else 0
             assert measurement["returncode"] == expected_exit, measurement
-            expected_count = "0 testcase(s)" if scenario == "skipped-fence" else "1 failed"
+            expected_count = {"skipped-fence": "0 testcase(s)", "failed-assertion": "1 failed", "extra-cases": "11 succeeded"}[scenario]
             assert expected_count in measurement["output"], measurement
             print(f"{scenario}: Scrut exit {expected_exit}; auditor rejected the defect")
 
