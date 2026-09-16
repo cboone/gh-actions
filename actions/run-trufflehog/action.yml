@@ -78,4 +78,6 @@ runs:
         while IFS= read -r line; do
           [[ -n "${line}" ]] && args+=("${line}")
         done <<< "${TRUFFLEHOG_ARGS}"
-        trufflehog "${args[@]}" --results=verified,unknown
+        # Exclude unverified results to limit noise from invalid credentials.
+        # Verification errors remain visible through unknown results.
+        trufflehog "${args[@]}" --results=verified,unknown --fail
