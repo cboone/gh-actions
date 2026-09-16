@@ -37,6 +37,75 @@ jobs:
       run-cspell: true
       run-yamllint: true
 
+  # Fixtures copy the production conditions, while replacing installations
+  # and lint commands with controlled exits. Only the outer invocation allows
+  # an expected failure; inner steps retain normal failure propagation.
+  text-lint-scheduling:
+    name: Text lint scheduling (${{ matrix.scenario }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - success
+          - early-failure
+          - all-fail
+          - setup-failure
+          - disable-markdownlint
+          - disable-prettier
+          - disable-cspell
+          - disable-yamllint
+          - all-disabled
+          - yamllint-only
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.15.0"
+
+      - name: Install hash-pinned fixture dependencies
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
+
+      - name: Generate scheduling fixture
+        id: fixture
+        env:
+          SCENARIO: ${{ matrix.scenario }}
+        run: node tests/fixtures/generate-text-lint-scheduling.mjs "${SCENARIO}"
+
+      - name: Exercise production scheduling conditions
+        id: exercise
+        continue-on-error: true
+        uses: ./.local/text-lint-scheduling
+
+      - name: Check scheduling and failure propagation
+        if: ${{ !cancelled() && steps.fixture.outcome == 'success' }}
+        env:
+          ACTUAL_OUTCOMES: ${{ steps.exercise.outputs.outcomes }}
+          EXPECTED_OUTCOMES: ${{ steps.fixture.outputs.expected-outcomes }}
+          ACTUAL_FAILED: ${{ steps.exercise.outputs.failed }}
+          EXPECTED_FAILED: ${{ steps.fixture.outputs.expected-failed }}
+          ACTUAL_OUTCOME: ${{ steps.exercise.outcome }}
+          EXPECTED_OUTCOME: ${{ steps.fixture.outputs.expected-outcome }}
+        run: |
+          status=0
+          if [[ "${ACTUAL_OUTCOMES}" != "${EXPECTED_OUTCOMES}" ]]; then
+            echo "::error::Step outcomes: ${ACTUAL_OUTCOMES}; expected ${EXPECTED_OUTCOMES}"
+            status=1
+          fi
+          if [[ "${ACTUAL_FAILED}" != "${EXPECTED_FAILED}" ]]; then
+            echo "::error::Accumulated failure: ${ACTUAL_FAILED}; expected ${EXPECTED_FAILED}"
+            status=1
+          fi
+          if [[ "${ACTUAL_OUTCOME}" != "${EXPECTED_OUTCOME}" ]]; then
+            echo "::error::Action outcome: ${ACTUAL_OUTCOME}; expected ${EXPECTED_OUTCOME}"
+            status=1
+          fi
+          exit "${status}"
+
   shell:
     uses: ./.github/workflows/lint-shell.yml
 
