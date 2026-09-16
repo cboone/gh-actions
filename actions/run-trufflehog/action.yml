@@ -80,4 +80,5 @@ runs:
         done <<< "${TRUFFLEHOG_ARGS}"
         # Exclude unverified results to limit noise from invalid credentials.
         # Verification errors remain visible through unknown results.
-        trufflehog "${args[@]}" --results=verified,unknown --fail
+        # Keep the checksum-verified version instead of updating during the scan.
+        trufflehog "${args[@]}" --no-update --results=verified,unknown --fail

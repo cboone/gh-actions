@@ -150,7 +150,7 @@ def main():
             wrapper.parent.mkdir()
             wrapper.write_text(
                 "#!/usr/bin/env bash\n"
-                f"exec {shlex.quote(binary)} --no-update --config "
+                f"exec {shlex.quote(binary)} --config "
                 f'{shlex.quote(str(config))} --include-detectors=CustomRegex "$@"\n'
             )
             wrapper.chmod(0o755)
