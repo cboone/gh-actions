@@ -323,18 +323,6 @@ jobs:
           INSTALL_DIR: ${{ env.CSPELL_INSTALL_DIR }}
         run: bash "${RUNNER_TEMP}/install-cspell-dictionaries.sh"
 
-      - name: Run markdownlint
-        if: inputs.run-markdownlint
-        run: markdownlint-cli2 "**/*.md"
-
-      - name: Run Prettier check
-        if: inputs.run-prettier
-        run: prettier --check .
-
-      - name: Run cspell
-        if: inputs.run-cspell
-        run: cspell .
-
       - name: Install uv
         if: inputs.run-yamllint
         run: |
@@ -388,6 +376,26 @@ jobs:
             --quiet
           printf '%s\n' "${RUNNER_TEMP}/yamllint-venv/bin" >> "${GITHUB_PATH}"
 
+      # This step keeps the default success() gate. A setup failure skips
+      # it, so the linters below cannot run with incomplete setup.
+      - name: Lint tools ready
+        id: lint-tools-ready
+        run: echo "Lint tool setup completed."
+
+      # An explicit status function lets every enabled tool report after
+      # another linter fails, while cancellation and setup failures stop them.
+      - name: Run markdownlint
+        if: ${{ !cancelled() && steps.lint-tools-ready.outcome == 'success' && inputs.run-markdownlint }}
+        run: markdownlint-cli2 "**/*.md"
+
+      - name: Run Prettier check
+        if: ${{ !cancelled() && steps.lint-tools-ready.outcome == 'success' && inputs.run-prettier }}
+        run: prettier --check .
+
+      - name: Run cspell
+        if: ${{ !cancelled() && steps.lint-tools-ready.outcome == 'success' && inputs.run-cspell }}
+        run: cspell .
+
       - name: Run yamllint
-        if: inputs.run-yamllint
+        if: ${{ !cancelled() && steps.lint-tools-ready.outcome == 'success' && inputs.run-yamllint }}
         run: yamllint .
