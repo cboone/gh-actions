@@ -214,6 +214,7 @@ that exits with an error. Windows is not supported.
 Consuming Go repos must provide Makefile targets for each enabled run-go-ci.yml
 job: `vet`, `test`, `lint`, `build`, `fmt`. The `fmt` target must be a format
 check (exit non-zero on unformatted code), not a write operation.
+The consumer's `lint` target runs only `golangci-lint run ./...`.
 
 ### Shell Conventions
 
