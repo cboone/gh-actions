@@ -117,6 +117,16 @@ jobs:
         HELLO_BIN=./tests/fixtures/hello.py
         UV_PYTHON_PREFERENCE=only-system
 
+  scrut-arm64:
+    uses: ./.github/workflows/run-scrut-tests.yml
+    with:
+      runs-on: ubuntu-24.04-arm
+      setup-uv: true
+      scrut-test-dir: tests/scrut/
+      scrut-env: |
+        HELLO_BIN=./tests/fixtures/hello.py
+        UV_PYTHON_PREFERENCE=only-system
+
   # The action job below proves that an installed dictionary resolves; the two
   # jobs here prove the workflow wiring, which is the half that job cannot
   # reach: lint-text.yml fetches the installer at job.workflow_sha, and only a

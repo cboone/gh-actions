@@ -5,6 +5,14 @@ plugins) that need scrut testing without Go setup or build steps. Installs
 scrut with SHA-256 checksum verification and runs tests against the
 specified directory.
 
+Linux arm64 builds v0.4.3 from source because the upstream arm64 archive
+contains an x86-64 executable. The build pins the source commit and archive
+SHA-256, Rust 1.97.1, and a committed `Cargo.lock` with dependency checksums.
+The build script and lockfile are fetched from the workflow's own repository
+and commit, rather than the consumer checkout. Other supported platforms
+install checksum-pinned release binaries. Only version 0.4.3 is supported.
+See [the packaging investigation](https://github.com/cboone/gh-actions/issues/120).
+
 **Permissions:** `contents: read`
 
 ## Inputs

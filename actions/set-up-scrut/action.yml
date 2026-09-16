@@ -13,7 +13,22 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Set up Rust for Linux arm64 source build
+      if: runner.os == 'Linux' && runner.arch == 'ARM64'
+      uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master @ 2026-06-30
+      with:
+        toolchain: "1.97.1"
+
+    - name: Build scrut for Linux arm64
+      if: runner.os == 'Linux' && runner.arch == 'ARM64'
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        BUILD_SCRIPT: ${{ github.action_path }}/build-from-source.sh
+      run: bash "${BUILD_SCRIPT}"
+
     - name: Install scrut
+      if: runner.os != 'Linux' || runner.arch != 'ARM64'
       shell: bash
       env:
         VERSION: ${{ inputs.version }}
