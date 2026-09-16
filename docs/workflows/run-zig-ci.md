@@ -8,6 +8,13 @@ Unlike `run-go-ci.yml`, this workflow runs Zig commands directly (not via
 Makefile targets) since Zig projects idiomatically use `build.zig` as their
 build system.
 
+Formatting checks `build.zig`, `build.zig.zon`, and `src` by default.
+`zig fmt` formats ZON manifests as well as Zig sources. An unformatted or
+missing manifest now fails the default check. Override `fmt-paths` for
+other layouts or projects without a manifest. Paths are space-separated;
+quoting, escaping, glob expansion, and paths containing spaces are not
+supported. Supply at least one path on a single line.
+
 Specify at most one of `zig-version` or `zig-version-file`. If both are set,
 `zig-version` takes precedence. If neither is set, `mlugg/setup-zig` falls
 back to its own auto-detection (reads `minimum_zig_version` from
@@ -17,22 +24,23 @@ back to its own auto-detection (reads `minimum_zig_version` from
 
 ## Inputs
 
-| Name                | Type    | Default         | Description                                          |
-| ------------------- | ------- | --------------- | ---------------------------------------------------- |
-| `zig-version`       | string  | `""`            | Zig version to install (e.g., `"0.15.2"`)            |
-| `zig-version-file`  | string  | `""`            | Path to a `.zon` file with `.minimum_zig_version`    |
-| `runs-on`           | string  | `ubuntu-latest` | Runner label (Windows is not supported)              |
-| `run-test`          | boolean | `true`          | Run `zig build test`                                 |
-| `run-fmt`           | boolean | `true`          | Run `zig fmt --check src/ build.zig`                 |
-| `run-build`         | boolean | `true`          | Run `zig build`                                      |
-| `run-cross-compile` | boolean | `false`         | Build all cross-compilation targets                  |
-| `cross-targets`     | string  | (see below)     | Space-separated Zig target triples                   |
-| `run-scrut`         | boolean | `false`         | Run scrut CLI tests                                  |
-| `scrut-build-cmd`   | string  | `zig build`     | Command to build the binary for scrut tests          |
-| `scrut-env`         | string  | `""`            | Newline-delimited KEY=VALUE env vars for scrut tests |
-| `scrut-test-dir`    | string  | `tests/`        | Directory containing scrut test files                |
-| `scrut-setup-cmd`   | string  | `""`            | Optional shell command to run before scrut tests     |
-| `timeout-minutes`   | number  | `20`            | Job timeout in minutes                               |
+| Name                | Type    | Default                       | Description                                          |
+| ------------------- | ------- | ----------------------------- | ---------------------------------------------------- |
+| `zig-version`       | string  | `""`                          | Zig version to install (e.g., `"0.15.2"`)            |
+| `zig-version-file`  | string  | `""`                          | Path to a `.zon` file with `.minimum_zig_version`    |
+| `runs-on`           | string  | `ubuntu-latest`               | Runner label (Windows is not supported)              |
+| `run-test`          | boolean | `true`                        | Run `zig build test`                                 |
+| `run-fmt`           | boolean | `true`                        | Run `zig fmt --check` on `fmt-paths`                 |
+| `fmt-paths`         | string  | `build.zig build.zig.zon src` | Space-separated paths to format-check                |
+| `run-build`         | boolean | `true`                        | Run `zig build`                                      |
+| `run-cross-compile` | boolean | `false`                       | Build all cross-compilation targets                  |
+| `cross-targets`     | string  | (see below)                   | Space-separated Zig target triples                   |
+| `run-scrut`         | boolean | `false`                       | Run scrut CLI tests                                  |
+| `scrut-build-cmd`   | string  | `zig build`                   | Command to build the binary for scrut tests          |
+| `scrut-env`         | string  | `""`                          | Newline-delimited KEY=VALUE env vars for scrut tests |
+| `scrut-test-dir`    | string  | `tests/`                      | Directory containing scrut test files                |
+| `scrut-setup-cmd`   | string  | `""`                          | Optional shell command to run before scrut tests     |
+| `timeout-minutes`   | number  | `20`                          | Job timeout in minutes                               |
 
 Default `cross-targets`:
 
@@ -62,6 +70,17 @@ jobs:
     with:
       zig-version-file: build.zig.zon
       run-cross-compile: true
+```
+
+With additional source directories and a root-level Zig file:
+
+```yaml
+jobs:
+  ci:
+    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v3.2.0
+    with:
+      zig-version-file: build.zig.zon
+      fmt-paths: "build.zig build.zig.zon src tools tests build_runner.zig"
 ```
 
 With scrut CLI tests:

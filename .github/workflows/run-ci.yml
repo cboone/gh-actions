@@ -5,8 +5,9 @@ name: Run CI
 # fetch path that reads `job.workflow_repository` / `job.workflow_sha`,
 # and `shell` lints install-pinned-tool.sh with the shfmt that script
 # installs; no `paths-ignore` filter here, because the linters these run
-# cover every file in the repo, Markdown and docs included (cspell skips
-# dot-paths such as `.github/`; #93 tracks that).
+# cover files across the repo, Markdown and docs included. cspell includes
+# dot-paths such as `.github/`, respecting `.gitignore` and its configured
+# exclusions.
 # `scrut` exercises the same fetch path through run-scrut-tests.yml's
 # setup-uv input, against the fixture in tests/.
 # `install-pinned-tool` runs that composite action, and the set-up-*
@@ -103,6 +104,11 @@ jobs:
   shell:
     uses: ./.github/workflows/lint-shell.yml
 
+  shellcheck-only:
+    uses: ./.github/workflows/lint-shell.yml
+    with:
+      run-shfmt: false
+
   # The fixture is a PEP 723 script that runs from its shebang alone, so it
   # passes only if setup-uv put uv on PATH. HELLO_BIN is deliberately a `./`
   # path, which exercises scrut-env's relative-to-absolute fixup, and
@@ -122,10 +128,47 @@ jobs:
     with:
       runs-on: ubuntu-24.04-arm
       setup-uv: true
-      scrut-test-dir: tests/scrut/
+      scrut-test-dir: tests/scrut/setup-uv.md
       scrut-env: |
         HELLO_BIN=./tests/fixtures/hello.py
         UV_PYTHON_PREFERENCE=only-system
+
+  # Execute the production Zig formatting step against isolated projects,
+  # including a manifest the previous command silently excluded.
+  zig-format-paths:
+    name: Zig formatting paths (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.15.0"
+
+      - name: Install locked test dependencies
+        run: npm ci
+
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: "0.16.0"
+
+      - uses: ./actions/set-up-scrut
+
+      - name: Check Zig formatting behavior
+        shell: bash
+        env:
+          ZIG_FORMAT_FIXTURE: ${{ github.workspace }}/tests/fixtures/check-zig-format-paths.mjs
+        run: |
+          NODE_BIN="$(command -v node)"
+          export NODE_BIN
+          scrut test tests/scrut/zig-format-paths.md
 
   # The action job below proves that an installed dictionary resolves; the two
   # jobs here prove the workflow wiring, which is the half that job cannot
@@ -256,6 +299,9 @@ jobs:
           os-names: linux=unknown-linux-gnu darwin=apple-darwin
           arch-names: amd64=x86_64 arm64=aarch64
           archive-member: uv-{arch}-{os}/uv
+
+      - name: Check tracked shell discovery and checker execution
+        run: uv run tests/check-shell-discovery.py
 
       # Each binary must resolve to the pinned install rather than a copy
       # the runner image ships, and must report the pinned version. Newlines
@@ -783,6 +829,8 @@ jobs:
       # through the ordinary node_modules walk and prove nothing. --root
       # points cspell's glob root at the fixture, since the files it checks
       # are outside the working directory.
+      # Portuguese dictionary fixture vocabulary; the root config is English.
+      # cspell:ignore Amostra ficheiro contém palavras portuguesas verificação dicionário europeu aceita
       - name: Write a Portuguese fixture outside the checkout
         run: |
           fixture="${RUNNER_TEMP}/cspell-fixture"
@@ -882,6 +930,7 @@ jobs:
           zeros="sha512-$(printf '%086d' 0)=="
           check_rejection wrong-integrity 65 "Integrity verification failed for @cspell/dict-pt-pt@3.0.6" \
             "INSTALL_DIR=${PWD}" "PACKAGES=@cspell/dict-pt-pt@3.0.6  ${zeros}"
+          # cspell:ignore tooshort
           check_rejection malformed-integrity 65 "is not a sha512 integrity" \
             "INSTALL_DIR=${PWD}" "PACKAGES=@cspell/dict-pt-pt@3.0.6  sha512-tooshort"
           check_rejection version-range 64 "is not <name>@<version> with an exact version" \

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `run-zig-ci.yml` now format-checks `build.zig.zon` alongside `build.zig`
+  and `src`. Existing callers with an unformatted or missing manifest now
+  fail the default formatting job. The new `fmt-paths` input accepts a
+  space-separated path list for other project layouts (#106)
+
 ## [3.2.0] - 2026-09-14
 
 ### Added

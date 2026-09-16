@@ -91,6 +91,23 @@ lockfile rather than this gh-actions repo. Requirements when
 `uv pip install --require-hashes` from this repo's
 `requirements/yamllint.txt`).
 
+### cspell file coverage
+
+The workflow runs `cspell .` using the consumer's cspell config. cspell
+excludes dot-paths by default, including `.github/` and root dot-config
+files. To include them and respect `.gitignore`, add these settings to
+the consumer's `cspell.json`:
+
+```json
+{
+  "enableGlobDot": true,
+  "useGitignore": true
+}
+```
+
+`useGitignore` keeps ignored local directories such as `.local/` and
+`.workmux/` out of the scan. Configured `ignorePaths` still apply.
+
 ### Extra cspell dictionaries
 
 cspell bundles English-family dictionaries and a few technical ones, so

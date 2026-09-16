@@ -27,6 +27,7 @@ updates:
       - "/"
       - "/actions/create-pull-request"
       - "/actions/set-up-clap-validator"
+      - "/actions/set-up-scrut"
     schedule:
       interval: weekly
       day: monday
