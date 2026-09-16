@@ -23,6 +23,8 @@ GitHub writes target `cboone/gh-actions`. Upstream `facebookincubator/scrut` is 
 
 ## Validation
 
+The initial implementation CI completed successfully at `88f9aa70c8f8b9199db3de0bf08c1c285eab1796`, including all four native installation entry points. Review identified that the historical audit skipped its smoke fence and normalized permissions. The corrected audit uses a `scrut` fence, requires one executed successful case, preserves permissions and has defect controls for missing execute bits, a skipped fence and a failed snapshot assertion. Local controls also detected weakened audit protections. Corrected native CI evidence is required before the historical snapshot claims are finalized.
+
 - Pinned npm dependencies; Markdown fix/format pass; `make lint`, `make lint-md`, `make format-check`, `make spell`, `make lint-yaml`.
 - ShellCheck, shfmt and Bash syntax checks for modified installer scripts.
 - Local release audit and source-build snapshot execution, with native execution boundaries recorded explicitly.

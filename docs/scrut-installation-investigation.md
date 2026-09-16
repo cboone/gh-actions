@@ -27,7 +27,7 @@ ELF program headers identify `/lib64/ld-linux-x86-64.so.2` as the interpreter in
 
 `otool` identifies a minimum macOS version of 11.0 in all macOS executables. All link `libiconv.2.dylib` and `libSystem.B.dylib`. v0.2.3 and later also link the CoreFoundation framework. SDK versions are 15.2 for v0.2.1 through v0.2.3, 15.0 for v0.3.0, 15.4 for v0.4.0 and 15.5 for v0.4.1 through v0.4.3. Minimum OS load commands alone do not prove execution on older operating systems.
 
-Local execution on macOS 26.6.2 arm64 passed `--version` and a snapshot smoke test for all 16 macOS archives, including incorrectly labeled Intel assets. This confirms execution on arm64, not Intel compatibility. Linux executables were inspected locally without execution because the local OS is macOS.
+Corrected local execution on macOS 26.6.2 arm64 preserved executable permissions and passed `--version` and one executed snapshot smoke case for all 16 macOS archives, including incorrectly labeled Intel assets. This confirms execution on arm64, not Intel compatibility. Linux executables were inspected locally without execution because the local OS is macOS.
 
 The `scrut-release-audit` CI matrix selects each runner's labeled platform and records version execution and snapshot execution, or the expected native architecture rejection for reviewed defective assets. Its artifacts preserve interpreter, direct dependencies, executable format, hashes and execution results. The matrix covers Linux x86-64, Linux arm64, macOS arm64 and [macOS Intel](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 
@@ -83,13 +83,15 @@ Upstream [build.rs](https://github.com/facebookincubator/scrut/blob/04ecce97e63c
 
 ### Audit controls
 
-The audit must reject a non-executable archive member and a smoke specification that executes no cases, even when Scrut returns success. Controls use the real installed binary and production audit function.
+The audit must reject a non-executable archive member and a smoke specification that executes no cases, even when Scrut returns success. [Controls](../tests/check-scrut-release-audit.py) use the real installed binary and production audit function and run in the four-platform installer matrix.
 
-| Planted defect                  | Instrument expected to catch it                          | Observed result     | Regression control          |
-| ------------------------------- | -------------------------------------------------------- | ------------------- | --------------------------- |
-| Archive executable mode is 0644 | Preserved permissions and executable-mode validity check | Pending measurement | Non-executable archive      |
-| Smoke fence is `console`        | Executed smoke-case count                                | Pending measurement | Skipped smoke specification |
-| Smoke expected output differs   | Real Scrut execution and successful-case count           | Pending measurement | Failed smoke assertion      |
+| Planted defect                  | Instrument expected to catch it                          | Observed result                                             | Regression control          |
+| ------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------- | --------------------------- |
+| Archive executable mode is 0644 | Preserved permissions and executable-mode validity check | Rejected before binary invocation                           | Non-executable archive      |
+| Smoke fence is `console`        | Executed smoke-case count                                | Scrut returned 0 with zero cases; auditor rejected it       | Skipped smoke specification |
+| Smoke expected output differs   | Real Scrut execution and successful-case count           | Scrut returned 50 with one failed case; auditor rejected it | Failed smoke assertion      |
+
+The valid archive control preserved mode 0755 and passed version and one snapshot case. Both audit protections were also weakened separately in temporary copies: removing the executed-case guard and restoring unconditional chmod each made the corresponding regression control fail with exit 1. The production auditor remained unchanged during those plants. These measurements were observed locally; native CI repetitions require a completed run.
 
 ## Maintenance and removal criteria
 

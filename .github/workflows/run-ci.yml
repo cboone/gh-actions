@@ -132,6 +132,22 @@ jobs:
           SCRUT_BIN: scrut
         run: scrut test tests/scrut/installation.md
 
+      - name: Install uv for release audit controls
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: uv
+          version: 0.11.8
+          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+          os-names: linux=unknown-linux-gnu darwin=apple-darwin
+          arch-names: amd64=x86_64 arm64=aarch64
+          archive-member: uv-{arch}-{os}/uv
+
+      - name: Check release audit defect controls
+        env:
+          SCRUT_BIN: scrut
+        run: uv run tests/check-scrut-release-audit.py
+
       - name: Reject unsupported Scrut version
         id: unsupported-scrut
         continue-on-error: true

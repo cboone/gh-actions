@@ -8,7 +8,8 @@
     "arch": "aarch64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "502d81e2437d47868bfc69e551cc216aba000c09f0e56b178469e36448b7656e"
+    "binary_sha256": "502d81e2437d47868bfc69e551cc216aba000c09f0e56b178469e36448b7656e",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.3",
@@ -19,7 +20,8 @@
     "arch": "x86_64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "502d81e2437d47868bfc69e551cc216aba000c09f0e56b178469e36448b7656e"
+    "binary_sha256": "502d81e2437d47868bfc69e551cc216aba000c09f0e56b178469e36448b7656e",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.3",
@@ -30,7 +32,8 @@
     "arch": "aarch64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "b369f215ee44a12c39a593197c87be883b1446b2bd4707e8ad6744d0441363eb"
+    "binary_sha256": "b369f215ee44a12c39a593197c87be883b1446b2bd4707e8ad6744d0441363eb",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.3",
@@ -41,7 +44,8 @@
     "arch": "x86_64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "b369f215ee44a12c39a593197c87be883b1446b2bd4707e8ad6744d0441363eb"
+    "binary_sha256": "b369f215ee44a12c39a593197c87be883b1446b2bd4707e8ad6744d0441363eb",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.2",
@@ -52,7 +56,8 @@
     "arch": "aarch64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "a66a34975cafe8aaeef5222222c8e9c4042ecbdd6b256e566080092ca9d20a24"
+    "binary_sha256": "a66a34975cafe8aaeef5222222c8e9c4042ecbdd6b256e566080092ca9d20a24",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.2",
@@ -63,7 +68,8 @@
     "arch": "x86_64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "a66a34975cafe8aaeef5222222c8e9c4042ecbdd6b256e566080092ca9d20a24"
+    "binary_sha256": "a66a34975cafe8aaeef5222222c8e9c4042ecbdd6b256e566080092ca9d20a24",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.2",
@@ -74,7 +80,8 @@
     "arch": "aarch64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "43b88f6a57cc1aaa5faab8f6930d87c3923a759a13b2bfc86f07a3150d5ec6d7"
+    "binary_sha256": "43b88f6a57cc1aaa5faab8f6930d87c3923a759a13b2bfc86f07a3150d5ec6d7",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.2",
@@ -85,7 +92,8 @@
     "arch": "x86_64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "43b88f6a57cc1aaa5faab8f6930d87c3923a759a13b2bfc86f07a3150d5ec6d7"
+    "binary_sha256": "43b88f6a57cc1aaa5faab8f6930d87c3923a759a13b2bfc86f07a3150d5ec6d7",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.1",
@@ -96,7 +104,8 @@
     "arch": "aarch64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "34a234c7609a6d69d91bf9c7956f0cfc54485b7659a2fd327af8296e25cfd874"
+    "binary_sha256": "34a234c7609a6d69d91bf9c7956f0cfc54485b7659a2fd327af8296e25cfd874",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.1",
@@ -107,7 +116,8 @@
     "arch": "x86_64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "34a234c7609a6d69d91bf9c7956f0cfc54485b7659a2fd327af8296e25cfd874"
+    "binary_sha256": "34a234c7609a6d69d91bf9c7956f0cfc54485b7659a2fd327af8296e25cfd874",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.1",
@@ -118,7 +128,8 @@
     "arch": "aarch64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "ad9f82f3f808442dc09223dab842082cebc6fd6dfa48c5d961d0fa341e94f96f"
+    "binary_sha256": "ad9f82f3f808442dc09223dab842082cebc6fd6dfa48c5d961d0fa341e94f96f",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.1",
@@ -129,7 +140,8 @@
     "arch": "x86_64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "ad9f82f3f808442dc09223dab842082cebc6fd6dfa48c5d961d0fa341e94f96f"
+    "binary_sha256": "ad9f82f3f808442dc09223dab842082cebc6fd6dfa48c5d961d0fa341e94f96f",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.0",
@@ -140,7 +152,8 @@
     "arch": "aarch64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "e5cd8c78136512aab6a0642d4ef00ed68a06aef82c6b1174e63b21a0296e9838"
+    "binary_sha256": "e5cd8c78136512aab6a0642d4ef00ed68a06aef82c6b1174e63b21a0296e9838",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.0",
@@ -151,7 +164,8 @@
     "arch": "x86_64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "e5cd8c78136512aab6a0642d4ef00ed68a06aef82c6b1174e63b21a0296e9838"
+    "binary_sha256": "e5cd8c78136512aab6a0642d4ef00ed68a06aef82c6b1174e63b21a0296e9838",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.0",
@@ -162,7 +176,8 @@
     "arch": "aarch64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "37c1c63c82ab1622e3280ab675bd31acc617d6a479c0fd936ef5c97febba1b9f"
+    "binary_sha256": "37c1c63c82ab1622e3280ab675bd31acc617d6a479c0fd936ef5c97febba1b9f",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.4.0",
@@ -173,7 +188,8 @@
     "arch": "x86_64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "37c1c63c82ab1622e3280ab675bd31acc617d6a479c0fd936ef5c97febba1b9f"
+    "binary_sha256": "37c1c63c82ab1622e3280ab675bd31acc617d6a479c0fd936ef5c97febba1b9f",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.3.0",
@@ -184,7 +200,8 @@
     "arch": "aarch64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "f079fe18c3fb518e0649c7a09fbaba27ad7e17351255dc21d27e71bf2f17840a"
+    "binary_sha256": "f079fe18c3fb518e0649c7a09fbaba27ad7e17351255dc21d27e71bf2f17840a",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.3.0",
@@ -195,7 +212,8 @@
     "arch": "x86_64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "f079fe18c3fb518e0649c7a09fbaba27ad7e17351255dc21d27e71bf2f17840a"
+    "binary_sha256": "f079fe18c3fb518e0649c7a09fbaba27ad7e17351255dc21d27e71bf2f17840a",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.3.0",
@@ -206,7 +224,8 @@
     "arch": "aarch64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "317a89553694c9d810ba39b1ed3924044eceeb30e83ab336803e8cda279ffe79"
+    "binary_sha256": "317a89553694c9d810ba39b1ed3924044eceeb30e83ab336803e8cda279ffe79",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.3.0",
@@ -217,7 +236,8 @@
     "arch": "x86_64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "317a89553694c9d810ba39b1ed3924044eceeb30e83ab336803e8cda279ffe79"
+    "binary_sha256": "317a89553694c9d810ba39b1ed3924044eceeb30e83ab336803e8cda279ffe79",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.3",
@@ -228,7 +248,8 @@
     "arch": "aarch64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "c9a6d42be7f56132ed8db1cf8f7fa1fab4ea301b98f85e72386b93b062e88494"
+    "binary_sha256": "c9a6d42be7f56132ed8db1cf8f7fa1fab4ea301b98f85e72386b93b062e88494",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.3",
@@ -239,7 +260,8 @@
     "arch": "x86_64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "c9a6d42be7f56132ed8db1cf8f7fa1fab4ea301b98f85e72386b93b062e88494"
+    "binary_sha256": "c9a6d42be7f56132ed8db1cf8f7fa1fab4ea301b98f85e72386b93b062e88494",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.3",
@@ -250,7 +272,8 @@
     "arch": "aarch64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "0ddea4f52770f7301ac7399315769abda9e79e5b263a6aaf93c34f8ef23e485a"
+    "binary_sha256": "0ddea4f52770f7301ac7399315769abda9e79e5b263a6aaf93c34f8ef23e485a",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.3",
@@ -261,7 +284,8 @@
     "arch": "x86_64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "0ddea4f52770f7301ac7399315769abda9e79e5b263a6aaf93c34f8ef23e485a"
+    "binary_sha256": "0ddea4f52770f7301ac7399315769abda9e79e5b263a6aaf93c34f8ef23e485a",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.2",
@@ -272,7 +296,8 @@
     "arch": "aarch64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "4a8531e4bb6938894f7362d561bed8cc457f70fdf67f76dbd9a53b4a2cff4b0f"
+    "binary_sha256": "4a8531e4bb6938894f7362d561bed8cc457f70fdf67f76dbd9a53b4a2cff4b0f",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.2",
@@ -283,7 +308,8 @@
     "arch": "x86_64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "4a8531e4bb6938894f7362d561bed8cc457f70fdf67f76dbd9a53b4a2cff4b0f"
+    "binary_sha256": "4a8531e4bb6938894f7362d561bed8cc457f70fdf67f76dbd9a53b4a2cff4b0f",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.2",
@@ -294,7 +320,8 @@
     "arch": "aarch64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "ffcbcb0b318e0615e3e239e47478d6db8f4deb76de70fb7470e146e170d6cad2"
+    "binary_sha256": "ffcbcb0b318e0615e3e239e47478d6db8f4deb76de70fb7470e146e170d6cad2",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.2",
@@ -305,7 +332,8 @@
     "arch": "x86_64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "ffcbcb0b318e0615e3e239e47478d6db8f4deb76de70fb7470e146e170d6cad2"
+    "binary_sha256": "ffcbcb0b318e0615e3e239e47478d6db8f4deb76de70fb7470e146e170d6cad2",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.1",
@@ -316,7 +344,8 @@
     "arch": "aarch64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "37569b16305a4201d72a71043d726bd508fdf726009ade2d830d62481326601a"
+    "binary_sha256": "37569b16305a4201d72a71043d726bd508fdf726009ade2d830d62481326601a",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.1",
@@ -327,7 +356,8 @@
     "arch": "aarch64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "72f07e0717490bf594c63fdaa5ee8652e0986f2f77ea47d6e1de0c7ffabc47fd"
+    "binary_sha256": "72f07e0717490bf594c63fdaa5ee8652e0986f2f77ea47d6e1de0c7ffabc47fd",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.1",
@@ -338,7 +368,8 @@
     "arch": "x86_64",
     "actual_os": "macos",
     "actual_arch": "aarch64",
-    "binary_sha256": "37569b16305a4201d72a71043d726bd508fdf726009ade2d830d62481326601a"
+    "binary_sha256": "37569b16305a4201d72a71043d726bd508fdf726009ade2d830d62481326601a",
+    "archive_permissions": "-rwxr-xr-x"
   },
   {
     "version": "v0.2.1",
@@ -349,6 +380,7 @@
     "arch": "x86_64",
     "actual_os": "linux",
     "actual_arch": "x86_64",
-    "binary_sha256": "72f07e0717490bf594c63fdaa5ee8652e0986f2f77ea47d6e1de0c7ffabc47fd"
+    "binary_sha256": "72f07e0717490bf594c63fdaa5ee8652e0986f2f77ea47d6e1de0c7ffabc47fd",
+    "archive_permissions": "-rwxr-xr-x"
   }
 ]

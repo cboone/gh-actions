@@ -412,7 +412,7 @@ executes version and snapshot checks, and records known architecture
 rejections. See [the investigation](scrut-installation-investigation.md)
 for coverage boundaries and completed native execution evidence.
 
-The audit uses runner-provided `file`, `tar`, `zstd` on Linux for the older
+The audit and its controls use runner-provided Python, `file`, `tar`, `zstd` on Linux for the older
 archives, and `otool` on macOS as diagnostic tools. It parses ELF dependency
 headers without executing foreign binaries. These diagnostics are
 deliberately taken from the runner image to describe that environment;
