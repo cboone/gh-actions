@@ -8,6 +8,13 @@ job: `vet`, `test`, `lint`, `build`, `fmt`. The `fmt` target must be a
 format check (exit non-zero when files need formatting), not a write
 operation.
 
+With `run-scrut: true`, Linux arm64 and macOS x86-64 build Scrut v0.4.3 from
+pinned source using Rust 1.97.1 and the repository's reviewed Cargo.lock.
+The helper, lockfile and version script are fetched at the workflow's own
+repository and commit; those source builds require GitHub.com job context.
+Linux x86-64 and macOS arm64 use checksum-verified release binaries. See the
+[investigation and removal criteria](../scrut-installation-investigation.md).
+
 **Permissions:** `contents: read`
 
 ## Inputs

@@ -124,6 +124,19 @@ anything that runs in CI.
   a build counter no version string yields). The action rejects a
   `validator-rev` that is not a full 40-character lowercase SHA, so a tag,
   which can be moved, cannot stand in for the commit.
+- **Scrut source-build exception**: Linux arm64 and macOS x86-64 use
+  v0.4.3 source commit `04ecce97e63c354e0374961ac977cc678d0f3932`, a reviewed
+  SHA-256 for its source archive, Rust `1.97.1` and the committed
+  `actions/set-up-scrut/Cargo.lock`. Upstream's assets contain the wrong
+  architecture and the source commit has no lockfile. Generate and review
+  the lockfile before installation; `cargo build --locked --target <host>`
+  verifies crate checksums and refuses dependency changes on the runner.
+  The committed replacement build script uses `CARGO_PKG_VERSION` instead
+  of a timestamp for version reporting. All three reusable workflows fetch
+  these resources at `job.workflow_repository` and `job.workflow_sha`;
+  the composite action reads them through `github.action_path`.
+  This exception is approved for those two platforms, not a general
+  registry-install fallback. See the [release audit and removal criteria](scrut-installation-investigation.md).
 - **`package.json` devDependencies**: exact versions (no `^`/`~`); the
   `package-lock.json` provides per-package sha512 integrity for any
   fresh `npm ci`.
@@ -388,6 +401,22 @@ removed components), document them in `docs/migrations/vN.md` (parallel to
 Migration section.
 
 ## Testing
+
+Scrut's installation matrix also includes macOS Intel. `scrut-installation`
+calls the standalone workflow; `scrut-language-installers` exercises the
+action and the production Go/Zig installer and execution steps. Its
+fixtures assert the original workflow-owned resource bindings and adapt
+them for a composite test action; language build jobs are outside that
+fixture. `scrut-release-audit` hashes and inspects historical native assets,
+executes version and snapshot checks, and records known architecture
+rejections. See [the investigation](scrut-installation-investigation.md)
+for coverage boundaries and completed native execution evidence.
+
+The audit uses runner-provided `file`, `tar`, `zstd` on Linux for the older
+archives, and `otool` on macOS as diagnostic tools. It parses ELF dependency
+headers without executing foreign binaries. These diagnostics are
+deliberately taken from the runner image to describe that environment;
+Scrut and uv installations retain their checksum/source integrity paths.
 
 The repository self-hosts its own workflows as integration tests. The `run-ci.yml`,
 `scan-for-secrets-with-gitleaks.yml`, and

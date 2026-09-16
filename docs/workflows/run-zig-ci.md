@@ -4,6 +4,13 @@ Run Zig tests, format checking, build verification, cross-compilation
 checks, and scrut CLI tests. Each check runs as a separate job that can be
 toggled on or off.
 
+With `run-scrut: true`, Linux arm64 and macOS x86-64 build Scrut v0.4.3 from
+pinned source using Rust 1.97.1 and the repository's reviewed Cargo.lock.
+The helper, lockfile and version script are fetched at the workflow's own
+repository and commit; those source builds require GitHub.com job context.
+Linux x86-64 and macOS arm64 use checksum-verified release binaries. See the
+[investigation and removal criteria](../scrut-installation-investigation.md).
+
 Unlike `run-go-ci.yml`, this workflow runs Zig commands directly (not via
 Makefile targets) since Zig projects idiomatically use `build.zig` as their
 build system.

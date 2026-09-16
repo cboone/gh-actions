@@ -5,6 +5,14 @@ plugins) that need scrut testing without Go setup or build steps. Installs
 scrut with SHA-256 checksum verification and runs tests against the
 specified directory.
 
+Linux arm64 and macOS x86-64 build v0.4.3 from pinned source with Rust 1.97.1
+and a committed dependency lockfile because upstream's binaries have the
+wrong architecture. The helper, lockfile and version script are fetched at
+this workflow's own repository and commit, requiring GitHub.com job context.
+Linux x86-64 and macOS arm64 retain checksum-verified binary installation.
+Only the pinned version is supported. See the
+[investigation and removal criteria](../scrut-installation-investigation.md).
+
 **Permissions:** `contents: read`
 
 ## Inputs
@@ -37,6 +45,10 @@ the equivalent.
 `setup-uv` needs `job.workflow_repository` and `job.workflow_sha` to fetch its
 pinned installer, and neither is populated on GitHub Enterprise Server. Leave
 `setup-uv` at `false` there and install uv from `scrut-setup-cmd` instead.
+
+The Scrut source build on Linux arm64 and macOS x86-64 independently requires
+that same job context, even when `setup-uv` is false. Those workflow runners
+are not supported on GitHub Enterprise Server.
 
 ## Usage
 

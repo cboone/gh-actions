@@ -13,7 +13,22 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Set up Rust for Scrut source build
+      if: (runner.os == 'Linux' && runner.arch == 'ARM64') || (runner.os == 'macOS' && runner.arch == 'X64')
+      uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master @ 2026-06-30
+      with:
+        toolchain: "1.97.1"
+
+    - name: Build scrut from pinned source
+      if: (runner.os == 'Linux' && runner.arch == 'ARM64') || (runner.os == 'macOS' && runner.arch == 'X64')
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        BUILD_SCRIPT: ${{ github.action_path }}/build-from-source.sh
+      run: bash "${BUILD_SCRIPT}"
+
     - name: Install scrut
+      if: ${{ !((runner.os == 'Linux' && runner.arch == 'ARM64') || (runner.os == 'macOS' && runner.arch == 'X64')) }}
       shell: bash
       env:
         VERSION: ${{ inputs.version }}
@@ -50,8 +65,6 @@ runs:
 
         case "${os}-${arch}" in
           linux-x86_64)  expected="6aefb0bff29b450fbd1b04083eefeae4388d6c9302e31d1a24b7aa9edd03bb35" ;;
-          linux-aarch64) expected="a67117f4320d129c7d7073a5e667dbad25e7a83f31480a633108250fe4069dd5" ;;
-          macos-x86_64)  expected="2589730051127e114e2014916e51e7eaceb01f59ea7bfb2aa59bf36c8fa2cc9e" ;;
           macos-aarch64) expected="3c0bc8d455fddb382e1e9099f5f4a4e0b8e925b19fa588c2176bc046383d9abc" ;;
           *)
             echo "No checksum available for ${os}-${arch}" >&2

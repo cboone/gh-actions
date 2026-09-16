@@ -86,6 +86,112 @@ jobs:
         HELLO_BIN=./tests/fixtures/hello.py
         UV_PYTHON_PREFERENCE=only-system
 
+  scrut-installation:
+    name: Scrut workflow installation (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
+    uses: ./.github/workflows/run-scrut-tests.yml
+    with:
+      runs-on: ${{ matrix.runner }}
+      timeout-minutes: 20
+      scrut-test-dir: tests/scrut/installation.md
+      scrut-env: SCRUT_BIN=scrut
+
+  scrut-language-installers:
+    name: Scrut language installers (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.15.0"
+
+      - name: Install locked fixture dependencies
+        run: npm ci
+
+      - name: Generate production installer fixtures
+        run: node tests/fixtures/generate-scrut-installers.mjs
+
+      - name: Exercise Scrut action installation
+        uses: ./actions/set-up-scrut
+        env:
+          CARGO_BUILD_TARGET: x86_64-unknown-linux-gnu
+
+      - name: Check Scrut action installation and execution
+        env:
+          SCRUT_BIN: scrut
+        run: scrut test tests/scrut/installation.md
+
+      - name: Reject unsupported Scrut version
+        id: unsupported-scrut
+        continue-on-error: true
+        uses: ./actions/set-up-scrut
+        with:
+          version: "0.0.0"
+
+      - name: Check unsupported version was rejected
+        if: ${{ !cancelled() }}
+        env:
+          INSTALL_OUTCOME: ${{ steps.unsupported-scrut.outcome }}
+        run: test "${INSTALL_OUTCOME}" = failure
+
+      # An ambient cross-compilation target must not override the host target.
+      - name: Exercise Go workflow Scrut installation and execution
+        uses: ./.local/scrut-installers/go
+        env:
+          CARGO_BUILD_TARGET: x86_64-unknown-linux-gnu
+
+      - name: Exercise Zig workflow Scrut installation and execution
+        uses: ./.local/scrut-installers/zig
+        env:
+          CARGO_BUILD_TARGET: x86_64-unknown-linux-gnu
+
+  scrut-release-audit:
+    name: Scrut release audit (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: uv
+          version: 0.11.8
+          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+          os-names: linux=unknown-linux-gnu darwin=apple-darwin
+          arch-names: amd64=x86_64 arm64=aarch64
+          archive-member: uv-{arch}-{os}/uv
+
+      - name: Audit native release assets against reviewed hashes
+        env:
+          AUDIT_CACHE: ${{ runner.temp }}/scrut-release-audit
+          AUDIT_OUTPUT: ${{ runner.temp }}/scrut-release-audit.json
+        run: uv run tests/audit-scrut-releases.py --native-only --cache "${AUDIT_CACHE}" --output "${AUDIT_OUTPUT}"
+
+      - name: Save release audit evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scrut-release-audit-${{ matrix.runner }}
+          path: ${{ runner.temp }}/scrut-release-audit.json
+
   # Execute the production Zig formatting step against isolated projects,
   # including a manifest the previous command silently excluded.
   zig-format-paths:
@@ -113,6 +219,11 @@ jobs:
           version: "0.16.0"
 
       - uses: ./actions/set-up-scrut
+
+      - name: Check Scrut installation
+        env:
+          SCRUT_BIN: scrut
+        run: scrut test tests/scrut/installation.md
 
       - name: Check Zig formatting behavior
         shell: bash

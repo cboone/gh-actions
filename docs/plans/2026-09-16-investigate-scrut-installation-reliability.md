@@ -17,6 +17,8 @@ PR #119 remains open at source head `e7fd97e9a761e00e37e5153ce61988e5db7ce93e`. 
 
 The audit found the same architecture-selection defect in macOS x86-64 assets. On 2026-09-16 the user also approved extending the pinned source-build exception to macOS x86-64.
 
+PR #119 subsequently advanced to `3393581e4f1f588344ff3fb16e01e6a5860d1e05`, adding Go/Zig installation repairs, Cargo configuration isolation and both requested changelog entries. This implementation preserves that helper isolation. The #112 changelog entry is already implemented there and should be retained when that PR lands, rather than duplicated here.
+
 GitHub writes target `cboone/gh-actions`. Upstream `facebookincubator/scrut` is read-only for this task.
 
 ## Validation
