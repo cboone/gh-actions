@@ -110,14 +110,6 @@ anything that runs in CI.
   verification, never via `cargo install` (which would trust crates.io
   alone). cargo-llvm-cov in particular was migrated off `cargo install
 --locked` for this reason.
-- **Scrut on Linux arm64**: an approved source-build exception because
-  upstream's v0.4.3 arm64 archive contains an x86-64 executable (#120).
-  `actions/set-up-scrut/build-from-source.sh` pins the source commit,
-  verifies its archive SHA-256, and builds with Rust 1.97.1 and the
-  adjacent committed `Cargo.lock` using `cargo build --locked`.
-  `run-scrut-tests.yml`, `run-go-ci.yml` and `run-zig-ci.yml` fetch both
-  files at `job.workflow_sha`.
-  Other supported platforms retain checksum-pinned release binaries.
 - **clap-validator** (`set-up-clap-validator`): built from source with
   `cargo install --git <repo> --rev <40-char sha> --locked`. This is a
   different trust path from the `cargo install <crate>` the bullet above
@@ -132,6 +124,19 @@ anything that runs in CI.
   a build counter no version string yields). The action rejects a
   `validator-rev` that is not a full 40-character lowercase SHA, so a tag,
   which can be moved, cannot stand in for the commit.
+- **Scrut source-build exception**: Linux arm64 and macOS x86-64 use
+  v0.4.3 source commit `04ecce97e63c354e0374961ac977cc678d0f3932`, a reviewed
+  SHA-256 for its source archive, Rust `1.97.1` and the committed
+  `actions/set-up-scrut/Cargo.lock`. Upstream's assets contain the wrong
+  architecture and the source commit has no lockfile. Generate and review
+  the lockfile before installation; `cargo build --locked --target <host>`
+  verifies crate checksums and refuses dependency changes on the runner.
+  The committed replacement build script uses `CARGO_PKG_VERSION` instead
+  of a timestamp for version reporting. All three reusable workflows fetch
+  these resources at `job.workflow_repository` and `job.workflow_sha`;
+  the composite action reads them through `github.action_path`.
+  This exception is approved for those two platforms, not a general
+  registry-install fallback. See the [release audit and removal criteria](scrut-installation-investigation.md).
 - **`package.json` devDependencies**: exact versions (no `^`/`~`); the
   `package-lock.json` provides per-package sha512 integrity for any
   fresh `npm ci`.
@@ -396,6 +401,22 @@ removed components), document them in `docs/migrations/vN.md` (parallel to
 Migration section.
 
 ## Testing
+
+Scrut's installation matrix also includes macOS Intel. `scrut-installation`
+calls the standalone workflow; `scrut-language-installers` exercises the
+action and the production Go/Zig installer and execution steps. Its
+fixtures assert the original workflow-owned resource bindings and adapt
+them for a composite test action; language build jobs are outside that
+fixture. `scrut-release-audit` hashes and inspects historical native assets,
+executes version and snapshot checks, and records known architecture
+rejections. See [the investigation](scrut-installation-investigation.md)
+for coverage boundaries and completed native execution evidence.
+
+The audit and its controls use runner-provided Python, `file`, `tar`, `zstd` on Linux for the older
+archives, and `otool` on macOS as diagnostic tools. It parses ELF dependency
+headers without executing foreign binaries. These diagnostics are
+deliberately taken from the runner image to describe that environment;
+Scrut and uv installations retain their checksum/source integrity paths.
 
 The repository self-hosts its own workflows as integration tests. The `run-ci.yml`,
 `scan-for-secrets-with-gitleaks.yml`, and

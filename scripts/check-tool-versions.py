@@ -141,7 +141,12 @@ TOOLS: list[Tool] = [
         "scrut",
         "0.4.3",
         lambda: github_latest_release("facebookincubator/scrut"),
-        "Hardcoded SHA-256 checksums must be regenerated on bump.",
+        "Audit all four native release assets before updating their SHA-256 pins. "
+        "Linux arm64 and macOS x86-64 currently build from pinned source: update "
+        "the source commit, archive hash, reviewed Cargo.lock, Rust compiler, "
+        "version script and installation spec together, across set-up-scrut "
+        "and run-scrut-tests/run-go-ci/run-zig-ci. See "
+        "docs/scrut-installation-investigation.md for removal criteria.",
     ),
     Tool(
         "shellcheck",

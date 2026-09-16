@@ -31,18 +31,18 @@ if (process.argv[3] === "--negative") {
   process.exit(0);
 }
 const workflow = parse(readFileSync(`.github/workflows/run-${language}-ci.yml`, "utf8"));
-const names = ["Set up Rust for Linux arm64 source build", "Build scrut for Linux arm64", "Install scrut"];
+const names = ["Set up Rust for Scrut source build", "Build scrut from pinned source", "Install scrut"];
 const steps = workflow.jobs.scrut.steps.filter((step) => names.includes(step.name));
 assert.deepEqual(
   steps.map((step) => step.name),
   names,
 );
 for (const step of steps) {
-  if (step.env?.SOURCE_REPO) {
-    assert.equal(step.env.SOURCE_REPO, "${{ job.workflow_repository }}");
-    assert.equal(step.env.SOURCE_SHA, "${{ job.workflow_sha }}");
-    step.env.SOURCE_REPO = "${{ github.repository }}";
-    step.env.SOURCE_SHA = "${{ github.sha }}";
+  if (step.env?.REQ_REPO) {
+    assert.equal(step.env.REQ_REPO, "${{ job.workflow_repository }}");
+    assert.equal(step.env.REQ_SHA, "${{ job.workflow_sha }}");
+    step.env.REQ_REPO = "${{ github.repository }}";
+    step.env.REQ_SHA = "${{ github.sha }}";
     // These settings must be displaced by the source-build isolation boundary.
     step.env.CARGO_HOME = "${{ github.workspace }}/.local/consumer-cargo";
     step.env.RUSTFLAGS = "--invalid-scrut-fixture";

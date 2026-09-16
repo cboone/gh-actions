@@ -163,7 +163,7 @@ integrity check available for its ecosystem.
 - **Rust tooling**: installed from binary release tarballs with SHA-256
   verification, never via `cargo install` (which would trust crates.io
   alone).
-- **clap-validator**: the one tool built from source, with
+- **clap-validator**: built from source, with
   `cargo install --git <repo> --rev <40-char sha> --locked`. Upstream
   publishes no crate, and its release assets are `.zip` with no Linux
   arm64 build, so `install-pinned-tool`, which extracts from tar and
@@ -171,6 +171,11 @@ integrity check available for its ecosystem.
   source and the lockfile pins its dependency tree, so this is a
   different trust path from `cargo install <crate>` rather than an
   exception to the rule above.
+- **Scrut on Linux arm64 and macOS x86-64**: an approved source-build
+  exception because upstream's release assets contain the wrong architecture.
+  A full source commit, reviewed archive SHA-256, committed dependency
+  checksums and Rust 1.97.1 pin the build. Other supported platforms use
+  release binaries. See the [audit and removal criteria](docs/scrut-installation-investigation.md).
 - **`package.json` devDependencies**: exact versions; `package-lock.json`
   enforces sha512 integrity on every fresh install.
 

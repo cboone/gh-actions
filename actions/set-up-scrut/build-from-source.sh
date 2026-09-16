@@ -24,10 +24,13 @@ function main() {
   fi
   if [[ "${actual}" != "${source_checksum}" ]]; then
     echo "Scrut source archive checksum verification failed." >&2
+    echo "Expected: ${source_checksum}" >&2
+    echo "Actual:   ${actual}" >&2
     exit 1
   fi
   tar -xzf "${archive}" -C "${source_dir}" --strip-components=1
   cp "${script_dir}/Cargo.lock" "${source_dir}/Cargo.lock"
+  cp "${script_dir}/build-version.rs" "${source_dir}/build.rs"
   # Cargo walks the working directory's ancestors as well as CARGO_HOME.
   ancestor="${source_dir}"
   while :; do
@@ -58,12 +61,10 @@ function main() {
   install_dir="${RUNNER_TEMP}/scrut-bin"
   mkdir -p "${install_dir}"
   cp "${source_dir}/target/${host_target}/release/scrut" "${install_dir}/scrut"
-  # Upstream build.rs falls back to a timestamp when archive builds lack Git
-  # metadata. Verify and report this documented limitation rather than treating
-  # the timestamp as proof of the release pin; source bytes establish that pin.
+  # The reviewed build script uses the package version without Git metadata.
   version_output="$("${install_dir}/scrut" --version)"
-  if [[ ! "${version_output}" =~ ^scrut\ [0-9]+$ ]]; then
-    echo "::error::Unexpected Scrut archive-build version: ${version_output}" >&2
+  if [[ "${version_output}" != "scrut ${VERSION}" ]]; then
+    echo "::error::Unexpected Scrut source-build version: ${version_output}" >&2
     exit 1
   fi
   printf '%s\n' "${version_output}"
