@@ -30,6 +30,14 @@ back to its own auto-detection (reads `minimum_zig_version` from
 
 **Permissions:** `contents: read`
 
+Source builds run with a fresh Cargo home outside the consumer checkout,
+reject ancestor Cargo configuration, and clear compiler, target and profile
+overrides. Network proxy and certificate settings remain available.
+
+Upstream's archive build reports a build timestamp in `scrut --version`,
+which the installer validates. The pinned source commit and archive checksum,
+rather than that timestamp, identify v0.4.3. This limitation is tracked in #120.
+
 ## Inputs
 
 | Name                | Type    | Default                       | Description                                          |

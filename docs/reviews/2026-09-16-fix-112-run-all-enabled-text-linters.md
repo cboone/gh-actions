@@ -1,9 +1,9 @@
 # Branch Review: fix/112-run-all-enabled-text-linters
 
-Base: `origin/main` (merge base: `578e623b`)
-Commits reviewed: 9, plus the authorized installer and changelog follow-up
+Base: `origin/main` (merge base: `79b5f39`)
+Commits reviewed: 12, plus the source-build isolation follow-up
 Files changed: 20 (6 added, 14 modified, 0 deleted, 0 renamed)
-Reviewed through: `e7fd97e` and the follow-up working tree
+Reviewed through: `32dcd59` and the isolation follow-up working tree
 
 ## Summary
 
@@ -55,7 +55,7 @@ All four text-lint plan items are implemented: setup ordering, readiness and can
 
 Scheduling preserves normal failure propagation. Only the outer fixture invocation allows an expected failure. Runner assertions cover success, early failure, all tool failures, setup failure, each disabled tool, all disabled tools, and yamllint alone. Cancellation and a deliberately failing reusable-workflow job are not exercised by these fixtures.
 
-The source build verifies bytes before extraction, uses dependency checksums with `--locked`, selects the pinned compiler and native target explicitly, and builds outside the consumer checkout. Helper transport restrictions and the GHES context error are follow-up repairs. The action has actual Linux arm64 execution coverage through the Zig formatting job.
+The source build verifies bytes before extraction, uses dependency checksums with `--locked`, selects the pinned compiler and native target explicitly, and builds in a fresh `/tmp` directory with an isolated Cargo home. It rejects ancestor Cargo configuration and clears Rust compiler, target and profile overrides. Helper transfers restrict initial and redirected protocols to HTTPS; missing GHES workflow-origin contexts receive a targeted error. The action has actual Linux arm64 execution coverage through the Zig formatting job. Upstream's archive build reports a timestamp instead of a release version; the helper validates that output and all four component references document the limitation.
 
 The user authorized the additional Go/Zig installers and changelog scope. Both installers now use the same guarded source-build path; release notes describe text-lint scheduling and all four repaired Scrut installation surfaces. The new runner fixtures extract the Go/Zig workflows' actual installer steps, bind only the workflow-origin contexts to the fixture checkout's commit, and execute the installed tool on Linux arm64. They isolate installer behavior from unrelated language build/test jobs. Fresh CI and exact-head Copilot review remain required.
 
@@ -75,4 +75,5 @@ The source-build helper compiled locally and its executable passed both UV integ
 - PR description scope: expanded to include the authorized source build.
 - Review metadata: refreshed against the complete synchronized diff.
 - Helper HTTPS restrictions and GHES context error: implemented and passed CI at `e7fd97e`.
-- Additional Go/Zig installers and changelog: authorized and implemented; fresh CI pending.
+- Additional Go/Zig installers and changelog: authorized, implemented and passed CI at `32dcd59`.
+- Cargo configuration isolation and timestamp version limitation: implemented; fresh CI pending. Go/Zig installer fixtures now supply conflicting Cargo configuration, compiler flags, wrapper and target settings to verify isolation.

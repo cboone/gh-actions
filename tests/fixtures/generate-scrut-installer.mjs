@@ -19,11 +19,18 @@ for (const step of steps) {
     assert.equal(step.env.SOURCE_SHA, "${{ job.workflow_sha }}");
     step.env.SOURCE_REPO = "${{ github.repository }}";
     step.env.SOURCE_SHA = "${{ github.sha }}";
+    // These settings must be displaced by the source-build isolation boundary.
+    step.env.CARGO_HOME = "${{ github.workspace }}/.local/consumer-cargo";
+    step.env.RUSTFLAGS = "--invalid-scrut-fixture";
+    step.env.RUSTC_WRAPPER = "/nonexistent-scrut-wrapper";
+    step.env.CARGO_BUILD_TARGET = "invalid-scrut-target";
   }
 }
 steps.push({ name: "Verify installed Scrut executes", shell: "bash", run: "scrut --help > /dev/null" });
 const directory = ".local/scrut-installer";
 mkdirSync(directory, { recursive: true });
+mkdirSync(".local/consumer-cargo", { recursive: true });
+writeFileSync(".local/consumer-cargo/config.toml", '[build]\nrustc-wrapper = "/nonexistent-cargo-config-wrapper"\n');
 writeFileSync(
   `${directory}/action.yml`,
   stringify({
