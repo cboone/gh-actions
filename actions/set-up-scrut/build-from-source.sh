@@ -45,7 +45,7 @@ function main() {
   unset RUSTFLAGS CARGO_ENCODED_RUSTFLAGS RUSTC RUSTC_WRAPPER RUSTC_WORKSPACE_WRAPPER
   while IFS='=' read -r name _; do
     case "${name}" in
-      CARGO_BUILD_* | CARGO_TARGET_* | CARGO_PROFILE_*) unset "${name}" ;;
+    CARGO_BUILD_* | CARGO_TARGET_* | CARGO_PROFILE_*) unset "${name}" ;;
     esac
   done < <(env)
   # --locked rejects dependency resolution changes and verifies crate checksums.
