@@ -108,6 +108,8 @@ def audit(asset, cache, native_only):
         if not extracted_mode & 0o111:
             raise ValueError(f"Non-executable archive member in {asset['name']}: {archive_permissions}")
         actual_os, actual_arch, description, dependencies = inspect_binary(binary)
+        if native_only and actual_os != host_os:
+            raise ValueError(f"Executable OS mismatch for {asset['name']}: expected {host_os}, found {actual_os}")
         binary_hash = hashlib.sha256(binary.read_bytes()).hexdigest()
         if "binary_sha256" in asset and binary_hash != asset["binary_sha256"]:
             raise ValueError(f"Executable checksum changed for {asset['name']}")

@@ -63,6 +63,12 @@ def main():
         rejected(asset("non-executable", 0o644), "Non-executable archive member")
         print("Non-executable archive: rejected before binary invocation")
 
+        inspected = auditor.inspect_binary(Path(executable))
+        other_os = "linux" if host_os == "macos" else "macos"
+        with patch.object(auditor, "inspect_binary", return_value=(other_os, *inspected[1:])):
+            rejected(valid, "Executable OS mismatch")
+        print("Wrong executable OS with matching architecture: rejected before binary invocation")
+
         real_run = subprocess.run
         for scenario in ["skipped-fence", "failed-assertion"]:
             measurement = {}
