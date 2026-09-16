@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `lint-text.yml` runs every enabled linter after setup succeeds even when
+  an earlier linter fails, reporting all findings in one run. Any linter
+  failure still fails the job; setup failure and cancellation prevent
+  subsequent checks (#112)
+- Linux arm64 Scrut installation builds pinned v0.4.3 source with Rust
+  1.97.1 and a committed dependency lockfile because the upstream arm64
+  release archive contains an x86-64 executable. This repair covers
+  `set-up-scrut`, `run-scrut-tests.yml`, `run-go-ci.yml` and `run-zig-ci.yml`.
+  Other supported platforms retain checksum-pinned release binaries (#120)
 - `run-zig-ci.yml` now format-checks `build.zig.zon` alongside `build.zig`
   and `src`. Existing callers with an unformatted or missing manifest now
   fail the default formatting job. The new `fmt-paths` input accepts a
