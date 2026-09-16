@@ -21,6 +21,18 @@ ROOT = Path(__file__).resolve().parents[1]
 MARKER = "gh-actions-positive-control-7c926bf41a"
 
 
+def action_version(path):
+    """Read the action's quoted patch-version default without YAML dependencies."""
+    inputs = path.read_text().split("\nruns:", 1)[0]
+    version = re.search(
+        r'(?m)^  version:\n(?:    .*\n)*?    default: "([0-9]+\.[0-9]+\.[0-9]+)"\n',
+        inputs,
+    )
+    if version is None:
+        raise AssertionError(f"Missing quoted patch-version default in {path}")
+    return version[1]
+
+
 def scan_step(path):
     """Read the literal Bash block of the named step without YAML dependencies."""
     content = path.read_text()
@@ -102,9 +114,12 @@ def main():
     binary = shutil.which("trufflehog")
     if binary is None:
         raise AssertionError("trufflehog must be installed")
+    expected_version = action_version(ROOT / "actions/run-trufflehog/action.yml")
     version = subprocess.check_output([binary, "--version"], text=True).strip()
-    if version != "trufflehog 3.95.2":
-        raise AssertionError(f"Expected pinned trufflehog 3.95.2, got {version}")
+    if version != f"trufflehog {expected_version}":
+        raise AssertionError(
+            f"Expected pinned trufflehog {expected_version}, got {version}"
+        )
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Verifier)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

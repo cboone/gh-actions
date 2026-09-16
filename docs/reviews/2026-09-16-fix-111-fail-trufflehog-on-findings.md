@@ -57,7 +57,7 @@ Hosted CI execution remains pending: no PR or Actions run was found for this bra
 
 The production change is small and preserves argument boundaries and error propagation. Documentation clearly describes the gate's coverage. The control tests actual source commands rather than copied invocations, asserts the specific findings exit code, and checks that the precise original defect is detected. Temporary fixtures, bounded subprocess calls, and server cleanup keep the test isolated from the checkout.
 
-Optional maintenance suggestion: the control hardcodes TruffleHog 3.95.2 separately from the action default. Future version updates must change both or CI will fail at the version assertion. Reading the expected version from the action metadata, or documenting this additional update surface alongside the version tracker, would reduce that maintenance coupling. This does not affect correctness at the current pin.
+Review item 1 (code-change): **resolved**. The control reads the expected TruffleHog version from the action's quoted patch-version default, removing the duplicate pin. Missing or invalid defaults produce a clear assertion error. The reader remains dependency-free, consistent with the scan-step extraction.
 
 Validation performed during review:
 
@@ -65,4 +65,11 @@ Validation performed during review:
 - Positive control with TruffleHog 3.95.2 on macOS arm64: all four combinations returned 0 for clean scans and 183 for findings; removal of `--fail` was detected in every combination.
 - Repository status: `cboone/gh-actions` is active and is not a fork; the checkout was clean before review.
 
-To address review items, run `/address-review docs/reviews/2026-09-16-fix-111-fail-trufflehog-on-findings.md`.
+## Review Resolution
+
+Total items: 1. Resolved: 1. Skipped: 0.
+
+- Item 1: derive the expected version from action metadata. Updated `tests/trufflehog-positive-control.py` and confirmed that version extraction follows a changed pin and rejects missing or invalid defaults using temporary fixtures.
+- The full positive control passed again with TruffleHog 3.95.2 across both entry points and scopes, including detection of removal of `--fail`.
+- Ruff lint and format checks passed for the modified Python control. Markdown lint, Prettier and spelling checks passed for this review and the modified control where applicable.
+- Hosted CI confirmation remains pending and was outside this local review-resolution task.
