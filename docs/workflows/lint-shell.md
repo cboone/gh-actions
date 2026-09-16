@@ -4,7 +4,7 @@ Run ShellCheck and shfmt on tracked shell scripts. Discovery uses shfmt's
 shell extensions and shebang detection throughout the tracked tree, including
 extension-less scripts in any directory. Untracked build output is excluded.
 Discovery requires the Git index provided by the workflow's checkout step;
-full Git history is not required. Submodule contents are not included.
+full Git history is not required. Submodule contents and symlinks are not included.
 
 shfmt is installed before discovery whenever either checker is enabled,
 including with `run-shfmt: false`. An empty discovered set emits a notice and
@@ -15,7 +15,8 @@ The format check uses `shfmt -d` without style flags so it reads
 `.editorconfig`. Adding a style flag such as `-i 2` disables those settings.
 
 Discovery checks each tracked regular file with `shfmt -f` and retains its
-original path in a NUL-separated manifest for both checkers. This avoids a
+original path in a NUL-separated manifest for both checkers, except that a file
+named exactly `-` is passed as `./-` so it cannot be interpreted as stdin. This avoids a
 shfmt 3.13.1 bug where `-f=0` lists explicitly supplied non-shell files too.
 
 Both tools are installed from their release assets and verified against the

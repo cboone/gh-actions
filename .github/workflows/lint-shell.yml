@@ -115,9 +115,13 @@ jobs:
           git ls-files -z > "${RUNNER_TEMP}/tracked-files.txt"
           : > "${RUNNER_TEMP}/shell-scripts.txt"
           while IFS= read -r -d '' path; do
-            # A tracked submodule is a directory; do not walk its contents.
-            if [[ ! -f "${path}" ]]; then
+            # Exclude submodule directories and symlinks to untracked files.
+            if [[ ! -f "${path}" || -L "${path}" ]]; then
               continue
+            fi
+            # A bare '-' means stdin to the checkers, even after '--'.
+            if [[ "${path}" == '-' ]]; then
+              path="./-"
             fi
             shfmt -f -- "${path}" > "${RUNNER_TEMP}/shell-candidate.txt"
             if [[ -s "${RUNNER_TEMP}/shell-candidate.txt" ]]; then

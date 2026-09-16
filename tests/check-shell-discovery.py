@@ -79,6 +79,7 @@ def main():
             "ordinary.sh": "printf '%s\\n' hello\n",
             "ordinary.bash": good,
             "-leading-dash": good,
+            "-": good,
             "tools/posix": "#!/bin/sh\nprintf '%s\\n' hello\n",
         }
         for name, contents in scripts.items():
@@ -86,10 +87,12 @@ def main():
         write(root, "README.txt", "Sample data\n")
         write(root, "tools/program", "#!/usr/bin/env python3\nprint('hello')\n")
         write(root, ".editorconfig", "root = true\n[*]\nindent_style = space\nindent_size = 2\n")
+        (root / "linked.sh").symlink_to("generated.sh")
         subprocess.run(["git", "add", "--", "."], cwd=root, env=env, check=True)
         # These must remain invisible even though a directory walk finds them.
         write(root, "cmake/untracked", good)
         write(root, "node_modules/untracked.sh", good)
+        write(root, "generated.sh", good)
         # A submodule entry names a directory rather than files within it.
         subprocess.run(
             ["git", "update-index", "--add", "--cacheinfo",
@@ -103,7 +106,8 @@ def main():
         assert found.returncode == 0, found.stderr
         paths = (runtime / "shell-scripts.txt").read_bytes().split(b"\0")
         assert paths[-1] == b""
-        assert set(os.fsdecode(path) for path in paths[:-1]) == set(scripts), paths
+        expected = {"./-" if name == "-" else name for name in scripts}
+        assert set(os.fsdecode(path) for path in paths[:-1]) == expected, paths
         assert Path(env["GITHUB_OUTPUT"]).read_text() == "found=true\n"
         assert not Path(env["GITHUB_STEP_SUMMARY"]).read_text()
         print("Tracked discovery: nested shebangs, extensions and unusual paths confirmed")
@@ -135,6 +139,20 @@ def main():
         checked = execute("Run ShellCheck", root, env)
         assert checked.returncode == 0, checked.stdout + checked.stderr
         print("ShellCheck: extension-less defect reported; corrected set passes")
+
+        write(root, "-", "#!/usr/bin/env bash\nvalue=$1\necho $value\n")
+        checked = execute("Run ShellCheck", root, env)
+        assert checked.returncode != 0 and "SC2086" in checked.stdout, checked
+        write(root, "-", good)
+        checked = execute("Run ShellCheck", root, env)
+        assert checked.returncode == 0, checked.stdout + checked.stderr
+        write(root, "-", "#!/usr/bin/env bash\nif true; then\n    echo hello\nfi\n")
+        formatted = execute("Run shfmt check", root, env)
+        assert formatted.returncode != 0, formatted
+        write(root, "-", good)
+        formatted = execute("Run shfmt check", root, env)
+        assert formatted.returncode == 0, formatted.stdout + formatted.stderr
+        print("Literal dash filename: both checkers report defects and accept corrections")
 
         write(root, "tools/nested/path with spaces", "#!/usr/bin/env bash\nif true; then\n    echo hello\nfi\n")
         formatted = execute("Run shfmt check", root, env)
