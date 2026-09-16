@@ -13,6 +13,11 @@ and commit, rather than the consumer checkout. Other supported platforms
 install checksum-pinned release binaries. Only version 0.4.3 is supported.
 See [the packaging investigation](https://github.com/cboone/gh-actions/issues/120).
 
+Linux arm64 source builds require the workflow repository and commit contexts,
+which are unavailable on GitHub Enterprise Server (GHES). The workflow rejects
+that case with a targeted error. GHES callers can install Scrut using the
+`set-up-scrut` composite action instead.
+
 **Permissions:** `contents: read`
 
 ## Inputs

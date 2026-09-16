@@ -13,7 +13,7 @@ function main() {
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   source_dir="$(mktemp -d "${RUNNER_TEMP}/scrut-source.XXXXXX")"
   archive="${source_dir}/source.tar.gz"
-  curl -sSfL -o "${archive}" "https://github.com/facebookincubator/scrut/archive/${source_rev}.tar.gz"
+  curl -sSfL --proto '=https' --proto-redir '=https' -o "${archive}" "https://github.com/facebookincubator/scrut/archive/${source_rev}.tar.gz"
   if command -v sha256sum >/dev/null 2>&1; then
     actual="$(sha256sum "${archive}" | awk '{print $1}')"
   else

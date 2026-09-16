@@ -130,10 +130,15 @@ jobs:
           SOURCE_REPO: ${{ job.workflow_repository }}
           SOURCE_SHA: ${{ job.workflow_sha }}
         run: |
+          if [[ -z "${SOURCE_REPO}" || -z "${SOURCE_SHA}" ]]; then
+            echo "::error::Linux arm64 source builds require job.workflow_repository and job.workflow_sha."
+            echo "::error::These contexts are unavailable on GHES; install Scrut with the set-up-scrut action instead."
+            exit 1
+          fi
           build_dir="$(mktemp -d "${RUNNER_TEMP}/scrut-build.XXXXXX")"
           source_url="https://raw.githubusercontent.com/${SOURCE_REPO}/${SOURCE_SHA}/actions/set-up-scrut"
           for file in build-from-source.sh Cargo.lock; do
-            curl -sSfL -o "${build_dir}/${file}" "${source_url}/${file}"
+            curl -sSfL --proto '=https' --proto-redir '=https' -o "${build_dir}/${file}" "${source_url}/${file}"
           done
           bash "${build_dir}/build-from-source.sh"
 

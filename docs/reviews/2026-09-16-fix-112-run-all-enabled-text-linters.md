@@ -1,68 +1,72 @@
 # Branch Review: fix/112-run-all-enabled-text-linters
 
-Base: `origin/main` (merge base: `129cb373`)
-Commits: 2
-Files changed: 3 (1 added, 2 modified, 0 deleted, 0 renamed)
-Reviewed through: `905694f`
+Base: `origin/main` (merge base: `578e623b`)
+Commits reviewed: 8
+Files changed: 14 (5 added, 9 modified, 0 deleted, 0 renamed)
+Reviewed through: `eabe636`
 
 ## Summary
 
-This branch lets every enabled text linter report findings after an earlier linter fails. It moves yamllint setup before the checks and adds a shared readiness gate, preserving setup-failure handling, cancellation handling, and a failing job result when any linter fails.
+Every enabled text linter reports findings after an earlier linter fails, provided setup succeeds and the run is not cancelled. The branch also contains an explicitly authorized Linux arm64 Scrut source-build repair, introduced after CI exposed an incorrectly packaged upstream executable. Issue [#120](https://github.com/cboone/gh-actions/issues/120) tracks the broader packaging investigation.
 
 ## Changes by Area
 
-- **Workflow execution:** `.github/workflows/lint-text.yml` moves uv and yamllint installation ahead of all checks. A default-success readiness step separates setup from execution; each linter requires readiness, its enabled input, and an uncancelled run.
-- **Documentation:** `docs/workflows/lint-text.md` explains reporting and failure behavior. `docs/plans/done/2026-09-16-run-all-enabled-text-linters.md` records the approved approach and local validation.
+- **Text lint execution:** yamllint setup precedes all checks. Readiness and cancellation-aware conditions allow later enabled checks to execute after a lint failure while preserving job failure.
+- **Scheduling coverage:** ten runner-executed composite fixtures copy production conditions and assert readiness, tool outcomes and the composite action's final outcome. The fixture omits the unsupported `failure()` expression in composite step environment values.
+- **Scrut installation:** the action and standalone reusable workflow build source on Linux arm64 with a pinned commit, verified archive SHA-256, Rust 1.97.1 and a committed dependency lockfile. The workflow fetches the helper and lockfile from its own repository and commit. Other platforms retain checksum-pinned binaries.
+- **Integration coverage:** `scrut-arm64` exercises the reusable workflow. The Zig formatting matrix invokes `./actions/set-up-scrut`, including on Linux arm64, and executes the installed tool. The UV-only job selects its own spec file.
+- **Maintenance and documentation:** Dependabot includes the action's Rust setup pin. Component references and the development trust model document the source-build exception. The PR description includes the expanded scope and validation.
 
 ## File Inventory
 
-- **Added (1):** `docs/plans/done/2026-09-16-run-all-enabled-text-linters.md`
-- **Modified (2):** `.github/workflows/lint-text.yml`, `docs/workflows/lint-text.md`
-- **Deleted (0), renamed (0).**
+Added (5):
 
-## Notable Changes
+- `actions/set-up-scrut/Cargo.lock`
+- `actions/set-up-scrut/build-from-source.sh`
+- `docs/plans/done/2026-09-16-run-all-enabled-text-linters.md`
+- `docs/reviews/2026-09-16-fix-112-run-all-enabled-text-linters.md`
+- `tests/fixtures/generate-text-lint-scheduling.mjs`
 
-Step scheduling changes for all four linters. No inputs, defaults, dependency versions, permissions, download verification, or action pins change. The checks retain normal failure propagation through the absence of `continue-on-error`.
+Modified (9):
+
+- `.github/dependabot.yml`
+- `.github/workflows/lint-text.yml`
+- `.github/workflows/run-ci.yml`
+- `.github/workflows/run-scrut-tests.yml`
+- `actions/set-up-scrut/README.md`
+- `actions/set-up-scrut/action.yml`
+- `docs/development.md`
+- `docs/workflows/lint-text.md`
+- `docs/workflows/run-scrut-tests.md`
+
+The earlier package manifest changes no longer differ from the synchronized base branch. This inventory includes the review document itself.
 
 ## Plan Compliance
 
-**Verdict: Good compliance. All 4/4 approved items are done (100%).**
-
-Plan: `docs/plans/done/2026-09-16-run-all-enabled-text-linters.md`.
-
-1. **Done:** uv and hash-pinned yamllint installation now precede every linter run.
-1. **Done:** `Lint tools ready` retains the implicit success gate. All four linter conditions require its successful outcome and combine `!cancelled()` with the corresponding boolean input. Disabled setup steps do not prevent readiness, while a failed setup step does.
-1. **Done:** The workflow reference describes continued reporting, job failure, setup failure, and cancellation.
-1. **Done:** `make lint`, `make lint-yaml`, `make lint-md`, `make format-check`, and `make spell` passed during this review. `git diff --check` also passed. Both branch commits contain GPG signature headers and reference issue #112; local signature trust was not independently established.
-
-There are no partially completed or pending approved items, scope additions, approach deviations, ordering violations, or fidelity concerns. The plan explicitly records runner integration validation as outstanding; local checks do not establish that runtime behavior.
+All four text-lint plan items are implemented: setup ordering, readiness and cancellation gates, user documentation, and local validation. Suggested runner coverage is implemented and passed CI. The Scrut exception is an additional user-authorized scope item, documented in the trust model and tracked in #120.
 
 ## Code Quality Assessment
 
-**Verdict: Ready to merge from code review, with runner integration validation outstanding. No blocking findings.**
+Scheduling preserves normal failure propagation. Only the outer fixture invocation allows an expected failure. Runner assertions cover success, early failure, all tool failures, setup failure, each disabled tool, all disabled tools, and yamllint alone. Cancellation and a deliberately failing reusable-workflow job are not exercised by these fixtures.
 
-The change is focused and readable. The readiness step provides one shared setup boundary without repeating every installer condition. Including a status function removes the implicit success restriction from subsequent checks, while the readiness outcome prevents execution after setup failure. This matches [GitHub's documented status-check semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#status-check-functions). The repeated conditions make each tool's scheduling explicit and are appropriate for four steps.
+The source build verifies bytes before extraction, uses dependency checksums with `--locked`, selects the pinned compiler and native target explicitly, and builds outside the consumer checkout. Helper transport restrictions and the GHES context error are follow-up repairs. The action has actual Linux arm64 execution coverage through the Zig formatting job.
 
-Normal step failure propagation preserves the job's failure result even if subsequent checks succeed. The boolean inputs still disable their respective checks, and cancellation prevents subsequent checks. No new shell input interpolation, security issue, unfinished implementation, or unrelated refactor is visible in the diff.
-
-**Optional suggestion:** Add runner integration coverage for an early lint failure followed by later checks, a setup failure followed by skipped checks, and disabled-tool behavior. No test coverage was added on this branch, and `gh run list` returned no runs for it. Static checks validate syntax and repository consistency but cannot demonstrate the failure-path scheduling on GitHub's runner.
+Outstanding requests concern changelog entries and the inline Scrut installers in `run-go-ci.yml` and `run-zig-ci.yml`, which still consume the incorrectly packaged arm64 archive. Updating those additional files requires a scope decision under the monitoring workflow. The PR is not declared ready while these findings remain pending.
 
 ## Validation
 
-All five repository checks and the branch whitespace check passed. Repository metadata identifies `cboone/gh-actions` as active and not a fork. The working tree was clean before saving this review. This assessment covers the complete three-file branch diff through `905694f`; the review document itself is outside that comparison.
+At `eabe636`, every active PR CI check passed, including all ten scheduling scenarios, both Linux arm64 Scrut entry points changed here, and the other installer matrices. Two trufflehog jobs were intentionally skipped in gitleaks-only runs. Run CI evidence: [run 35115461097](https://github.com/cboone/gh-actions/actions/runs/35115461097).
+
+The source-build helper compiled locally and its executable passed both UV integration checks. All five local repository checks, ShellCheck, shfmt and the whitespace check passed before that push. CI at the reviewed commit does not validate subsequent transport and GHES error changes; those require local validation and fresh CI after push.
 
 ## Review Resolution
 
-- [x] **Item 1, code change:** Add runner integration coverage for continued linting after a lint failure, skipped checks after setup failure, and disabled tools. Implemented in `0ca6408` (`test: cover text linter failure scheduling (#112)`).
-
-`run-ci.yml` now includes ten scheduling scenarios: all checks succeed, the first check fails, all checks fail, yamllint setup fails, each individual tool is disabled, all tools are disabled, and only yamllint is enabled. `tests/fixtures/generate-text-lint-scheduling.mjs` generates composite fixtures from the production workflow's step order and conditions, replacing setup and tool commands with controlled exit codes and binding input references to boolean literals. Expected outcomes are specified separately.
-
-Each scenario asserts readiness and linter step outcomes, accumulated failure status, and the composite action's final outcome. Only the outer test invocation uses `continue-on-error`; production conditions and inner failure propagation are preserved. This tests runner scheduling through a composite action rather than deliberately failing the entire CI job. The existing `text` job remains the integration check for real tool installations and successful lint execution. Cancellation and a deliberately failing reusable-workflow job are not exercised by these fixtures.
-
-The generator declares `yaml` 2.9.0 as an exact development dependency with lockfile integrity. That version already existed in the dependency tree; no package versions changed.
-
-**Validation:** A fresh `npm ci` passed. All ten fixtures generated successfully and their shell commands passed `bash -n`. `make lint`, `make lint-yaml`, `make lint-md`, `make format-check`, and `make spell` passed. npm used a temporary cache because the default cache is outside the writable sandbox.
-
-**Runner status:** Coverage is implemented, but the new runner assertions have not executed. There is no pull request or Actions run for this branch. They will run on the next pull-request CI run or after a push to `main` under the existing workflow triggers.
-
-**Resolution summary:** 1 item resolved, 0 skipped. Runner execution remains pending.
+- Runner scheduling coverage: implemented and passed.
+- Unsupported composite `failure()` environment expression: replaced by the final action outcome assertion and passed.
+- Linux arm64 action and standalone workflow installation: source-build exception implemented and passed.
+- Dependabot coverage: action directory added.
+- UV-only job selecting Zig specs: narrowed to its own spec and passed.
+- PR description scope: expanded to include the authorized source build.
+- Review metadata: refreshed against the complete synchronized diff.
+- Helper HTTPS restrictions and GHES context error: follow-up repairs pending fresh CI.
+- Additional Go/Zig installers and changelog: scope decision pending.
