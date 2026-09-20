@@ -62,6 +62,22 @@ on:
           when run-cspell is false.
         type: string
         default: ""
+      cspell-config:
+        description: |
+          Path to a cspell config file, passed as `--config`. When
+          empty, cspell auto-discovers `cspell.json` / `.cspell.json` /
+          `cspell.config.*` from the working tree. Setting this
+          suppresses the cspell half of `preset`, since an explicit
+          config is the strongest form of a consumer config. Ignored
+          when run-cspell is false.
+        type: string
+        default: ""
+      cspell-files:
+        description: |
+          Files and globs for cspell to check, one per line. Defaults to
+          the whole workspace. Ignored when run-cspell is false.
+        type: string
+        default: "."
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -154,9 +170,17 @@ jobs:
         if: inputs.preset != '' && inputs.run-cspell
         env:
           PRESET: ${{ inputs.preset }}
+          CSPELL_CONFIG: ${{ inputs.cspell-config }}
           REQ_REPO: ${{ job.workflow_repository }}
           REQ_SHA: ${{ job.workflow_sha }}
         run: |
+          # An explicit --config is the strongest form of "the consumer
+          # has its own config", and it would override a dropped-in
+          # preset anyway, so defer to it before fetching anything.
+          if [ -n "${CSPELL_CONFIG}" ]; then
+            echo "Explicit cspell-config set; skipping preset."
+            exit 0
+          fi
           has_local_cspell=0
           for f in cspell.json cspell.jsonc \
                    cspell.config.json cspell.config.jsonc \
@@ -392,9 +416,24 @@ jobs:
         if: ${{ !cancelled() && steps.lint-tools-ready.outcome == 'success' && inputs.run-prettier }}
         run: prettier --check .
 
+      # Mirrors actions/run-cspell's argument assembly: an empty config
+      # leaves auto-discovery alone, and files are newline-delimited so a
+      # glob containing spaces survives.
       - name: Run cspell
         if: ${{ !cancelled() && steps.lint-tools-ready.outcome == 'success' && inputs.run-cspell }}
-        run: cspell .
+        env:
+          CSPELL_CONFIG: ${{ inputs.cspell-config }}
+          CSPELL_FILES: ${{ inputs.cspell-files }}
+        run: |
+          args=()
+          if [ -n "${CSPELL_CONFIG}" ]; then
+            args+=(--config "${CSPELL_CONFIG}")
+          fi
+          files=()
+          while IFS= read -r line; do
+            [ -n "${line}" ] && files+=("${line}")
+          done <<< "${CSPELL_FILES}"
+          cspell "${args[@]}" "${files[@]}"
 
       - name: Run yamllint
         if: ${{ !cancelled() && steps.lint-tools-ready.outcome == 'success' && inputs.run-yamllint }}
