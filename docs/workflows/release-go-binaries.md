@@ -14,6 +14,11 @@ Run GoReleaser to build and publish a Go release.
 | `goreleaser-args`    | string | `release --clean` | Arguments to pass to goreleaser      |
 | `timeout-minutes`    | number | `30`              | Job timeout in minutes               |
 
+`goreleaser-args` is split on whitespace into separate arguments. Quoting,
+escaping, glob expansion and variable expansion are not supported, and a value
+containing a newline fails the job rather than losing every line after the
+first.
+
 ## Secrets
 
 | Name                 | Required | Description                    |

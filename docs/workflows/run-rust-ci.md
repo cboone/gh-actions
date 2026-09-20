@@ -39,6 +39,12 @@ workflow fails fast.
 | `llvm-cov-version`    | string  | `"0.8.5"`             | cargo-llvm-cov version to install (used when `coverage`)  |
 | `timeout-minutes`     | number  | `15`                  | Job timeout in minutes                                    |
 
+`test-args`, `clippy-args` and `extra-components` are split on whitespace into
+separate arguments. Quoting, escaping, glob expansion and variable expansion
+are not supported, and a value containing a newline fails the job rather than
+losing every line after the first. `cargo-features` and `codecov-files` are
+single values and are not split.
+
 ## Secrets
 
 | Name            | Required | Description          |

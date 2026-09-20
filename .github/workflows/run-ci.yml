@@ -378,6 +378,42 @@ jobs:
           export NODE_BIN
           scrut test tests/scrut/zig-format-paths.md
 
+  # Neither run-go-ci.yml nor release-go-binaries.yml is self-hosted here, so
+  # this job runs their production steps directly against hostile input values.
+  # It also asserts the repository-wide rule that no ordinary input reaches a
+  # run: block as an expression, which is the part that stays true only if
+  # something checks it. macOS covers the /bin/bash 3.2 the fixture spawns.
+  workflow-arg-binding:
+    name: Workflow argument binding (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.15.0"
+
+      - name: Install locked test dependencies
+        run: npm ci
+
+      - uses: ./actions/set-up-scrut
+
+      - name: Check argument binding behavior
+        shell: bash
+        env:
+          ARG_BINDING_FIXTURE: ${{ github.workspace }}/tests/fixtures/check-workflow-arg-binding.mjs
+        run: |
+          NODE_BIN="$(command -v node)"
+          export NODE_BIN
+          scrut test tests/scrut/workflow-arg-binding.md
+
   # The action job below proves that an installed dictionary resolves; the two
   # jobs here prove the workflow wiring, which is the half that job cannot
   # reach: lint-text.yml fetches the installer at job.workflow_sha, and only a

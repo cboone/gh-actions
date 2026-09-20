@@ -33,9 +33,10 @@ on:
         default: true
       fmt-paths:
         description: >-
-          Space-separated paths passed to zig fmt --check. Includes
-          build.zig.zon by default because zig fmt also formats ZON.
-          Quoting, escaping, and glob expansion are not supported.
+          Space-separated paths passed to zig fmt --check, on a single
+          line. Includes build.zig.zon by default because zig fmt also
+          formats ZON. Quoting, escaping, and glob expansion are not
+          supported.
         type: string
         default: "build.zig build.zig.zon src"
       run-build:
@@ -48,7 +49,9 @@ on:
         default: false
       cross-targets:
         description: >-
-          Space-separated Zig target triples for cross-compilation.
+          Space-separated Zig target triples for cross-compilation, on a
+          single line. Quoting, escaping and glob expansion are not
+          supported.
         type: string
         default: >-
           x86_64-linux-gnu aarch64-linux-gnu x86_64-macos
@@ -179,6 +182,10 @@ jobs:
         env:
           FMT_PATHS: ${{ inputs.fmt-paths }}
         run: |
+          if [[ "${FMT_PATHS}" == *$'\n'* ]]; then
+            echo "::error::fmt-paths must be a single line of space-separated paths" >&2
+            exit 1
+          fi
           read -r -a paths <<< "${FMT_PATHS}"
           if [[ ${#paths[@]} -eq 0 ]]; then
             echo "::error::fmt-paths must contain at least one path" >&2
@@ -276,7 +283,16 @@ jobs:
         env:
           TARGETS: ${{ inputs.cross-targets }}
         run: |
-          for target in ${TARGETS}; do
+          if [[ "${TARGETS}" == *$'\n'* ]]; then
+            echo "::error::cross-targets must be a single line of space-separated target triples" >&2
+            exit 1
+          fi
+          read -r -a targets <<< "${TARGETS}"
+          if [[ ${#targets[@]} -eq 0 ]]; then
+            echo "::error::cross-targets must contain at least one target triple" >&2
+            exit 1
+          fi
+          for target in "${targets[@]}"; do
             echo "::group::Building for ${target}"
             zig build -Dtarget="${target}" -Doptimize=ReleaseSafe
             echo "::endgroup::"
