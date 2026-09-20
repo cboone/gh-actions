@@ -39,8 +39,28 @@ files suitable for this repo's pinning model; their checksums are committed
 in this repo. shellcheck's and shfmt's are input defaults keyed by asset
 name: `checksums` in `actions/set-up-shellcheck/action.yml` and
 `actions/set-up-shfmt/action.yml`, `shellcheck-checksums` in `lint-shell.yml`
-and `lint-github-actions.yml`, and `shfmt-checksums` in `lint-shell.yml`. The
-others sit in case statements in the files that install them.
+and `lint-github-actions.yml`, and `shfmt-checksums` in `lint-shell.yml`.
+`run-rust-ci.yml`'s `audit-checksums` and `llvm-cov-checksums` are input
+defaults too, keyed by version and target triple rather than by asset name,
+because cargo-llvm-cov's archive name carries no version and so cannot tell
+two releases apart on its own. scrut's sit in case statements in the files
+that install them.
+
+Keying by something the caller cannot vary independently of the download is
+what makes these fail closed: overriding a version without its checksums
+finds no entry and stops before fetching, instead of verifying the new
+archive against the old digest. A `supported_version` guard that rejects
+every version but the committed one achieves the same safety, but makes each
+bump a breaking change for anyone who pinned the input, so prefer a keyed
+table when adding a tool.
+
+scrut keeps its guard in `actions/set-up-scrut/action.yml` and
+`run-scrut-tests.yml`, as `.github/copilot-instructions.md` records. A
+checksum table alone would not make its version caller-settable: two of the
+four supported platforms build from a pinned source commit with a reviewed
+`Cargo.lock` and Rust compiler, so moving that version means moving those
+too. The guard refuses a version this repo cannot actually build rather than
+failing later with a confusing checksum mismatch.
 
 A tool a workflow depends on is installed here unless its runner-provided
 use is explicitly documented. `actions/create-gh-release`, `create-gh-release-from-changelog.yml`,

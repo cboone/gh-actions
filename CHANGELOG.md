@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `run-rust-ci.yml` takes `audit-checksums` and `llvm-cov-checksums`,
+  `<sha256>  <version>  <target triple>` lines defaulting to the committed
+  digests for the pinned versions. cargo-audit and cargo-llvm-cov publish
+  no checksum file upstream, and until now a `supported_version` guard
+  refused every version but the one whose digests this repo shipped, so
+  `audit-version` and `llvm-cov-version` accepted exactly one value each
+  and every bump of either broke any caller that had pinned them. A
+  caller can now move either version by supplying its digests, and a
+  version with no matching entry is still refused before anything is
+  downloaded. **Anyone who pinned `audit-version` or `llvm-cov-version`
+  explicitly must now pass that version's checksums alongside it, or drop
+  the input to take the default** (#61)
+- `run-ci.yml` gains a `rust-tool-installs` job covering those two
+  install blocks on all four supported target triples: the committed
+  defaults install and report their version, an unknown version is
+  refused before any download, and a digest that does not match its
+  archive is refused after one. Nothing previously exercised
+  `run-rust-ci.yml`, so its committed digests reached releases unverified
+  (#61)
+
 ### Changed
 
 - Bump pinned tool defaults to current latest stable releases (#61):
@@ -24,10 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     formats and pre-release resolution)
   - shfmt 3.13.1 → 3.14.1 (new hardcoded SHA-256 checksums; upstream
     still publishes no checksum file)
-  - cargo-audit 0.22.1 → 0.22.2 (new hardcoded SHA-256 checksums)
-  - cargo-llvm-cov 0.8.5 → 0.9.1 (0.x bump treated as breaking; new
-    hardcoded SHA-256 checksums. Its `--show-missing-lines` output change
-    does not reach `run-rust-ci.yml`, which runs `--lcov --output-path`)
+  - cargo-audit 0.22.1 → 0.22.2 (new committed SHA-256 checksums)
+  - cargo-llvm-cov 0.8.5 → 0.9.1 (new committed SHA-256 checksums. Its
+    `--show-missing-lines` output change does not reach `run-rust-ci.yml`,
+    which runs `--lcov --output-path`)
   - Node.js 24 LTS 24.15.0 → 24.21.0
 - Bump reuse 5.0.2 → 6.2.0. Listed separately from the bumps above
   because it is the one that changes what `run-reuse` reports for every

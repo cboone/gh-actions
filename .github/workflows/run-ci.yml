@@ -17,6 +17,9 @@ name: Run CI
 # `set-up-clap-validator` runs that action on the same three runners,
 # covering the cold-cache build, the cache-hit path and the pins it must
 # reject.
+# `rust-tool-installs` exercises run-rust-ci.yml's cargo-audit and
+# cargo-llvm-cov install blocks, which nothing else here reaches, across
+# every target triple their committed checksum tables carry.
 
 on:
   push:
@@ -1122,3 +1125,34 @@ jobs:
           check_rejection cspell-not-installed 64 "cspell is not installed in" \
             "INSTALL_DIR=${RUNNER_TEMP}" "PACKAGES=${PT_PT_PACKAGE}"
           exit "${status}"
+
+  rust-tool-installs:
+    name: Rust tool installs (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: uv
+          version: 0.12.17
+          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+          os-names: linux=unknown-linux-gnu darwin=apple-darwin
+          arch-names: amd64=x86_64 arm64=aarch64
+          archive-member: uv-{arch}-{os}/uv
+
+      # run-rust-ci.yml is never invoked by this workflow, so its committed
+      # cargo-audit and cargo-llvm-cov digests would otherwise reach a
+      # release unexercised. The matrix covers every target triple the two
+      # checksum tables carry.
+      - name: Check the cargo-audit and cargo-llvm-cov installs
+        run: uv run tests/check-rust-tool-installs.py

@@ -10,6 +10,25 @@ workflow reads the channel from `rust-toolchain-file` (default
 file at the repo root. At least one of these must resolve to a value or the
 workflow fails fast.
 
+cargo-deny and cargo-nextest verify their downloads against a checksum file
+their upstreams publish, so overriding `deny-version` or `nextest-version`
+needs nothing else. cargo-audit and cargo-llvm-cov publish no such file, so
+this workflow carries their digests in `audit-checksums` and
+`llvm-cov-checksums`. Overriding either version means passing that version's
+lines too:
+
+```text
+<sha256>  <version>  <target triple>
+```
+
+Entries are keyed by version as well as target because cargo-llvm-cov's
+archive name carries no version, so a file name alone cannot tell two
+releases apart. A version with no matching line is refused before anything is
+downloaded, rather than verified against another release's digest. The four
+supported targets are `x86_64-unknown-linux-gnu`,
+`aarch64-unknown-linux-gnu`, `x86_64-apple-darwin` and
+`aarch64-apple-darwin`.
+
 **Permissions:** `contents: read`
 
 ## Inputs
@@ -30,6 +49,7 @@ workflow fails fast.
 | `deny-version`        | string  | `"0.20.2"`            | cargo-deny version to install                             |
 | `run-audit`           | boolean | `false`               | Run cargo audit                                           |
 | `audit-version`       | string  | `"0.22.2"`            | cargo-audit version to install                            |
+| `audit-checksums`     | string  | the v0.22.2 archives  | `<sha256>  <version>  <target>` lines for cargo-audit     |
 | `run-typos`           | boolean | `false`               | Run typos spell checking                                  |
 | `cargo-features`      | string  | `""`                  | Cargo features passed via --features                      |
 | `extra-components`    | string  | `""`                  | Extra rustup components to install                        |
@@ -37,6 +57,7 @@ workflow fails fast.
 | `codecov-cli-version` | string  | `"11.3.1"`            | Codecov CLI version to install                            |
 | `codecov-files`       | string  | `lcov.info`           | Coverage file path (used for llvm-cov and Codecov upload) |
 | `llvm-cov-version`    | string  | `"0.9.1"`             | cargo-llvm-cov version to install (used when `coverage`)  |
+| `llvm-cov-checksums`  | string  | the v0.9.1 archives   | `<sha256>  <version>  <target>` lines for cargo-llvm-cov  |
 | `timeout-minutes`     | number  | `15`                  | Job timeout in minutes                                    |
 
 ## Secrets

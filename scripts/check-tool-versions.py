@@ -177,13 +177,23 @@ TOOLS: list[Tool] = [
         "cargo-audit",
         "0.22.2",
         lambda: github_latest_matching("rustsec/rustsec", r"cargo-audit/v(\d+\.\d+\.\d+)"),
-        "Hardcoded SHA-256 checksums must be regenerated on bump.",
+        "Committed SHA-256 lines must be regenerated on bump: the "
+        "`audit-checksums` default in run-rust-ci.yml, whose entries are keyed "
+        "by version and target triple, so the version in each line moves too. "
+        "Bump the `audit-version` default beside it and the row in "
+        "docs/workflows/run-rust-ci.md. tests/check-rust-tool-installs.py "
+        "covers the result.",
     ),
     Tool(
         "cargo-llvm-cov",
         "0.9.1",
         lambda: github_latest_release("taiki-e/cargo-llvm-cov"),
-        "Hardcoded SHA-256 checksums must be regenerated on bump.",
+        "Committed SHA-256 lines must be regenerated on bump: the "
+        "`llvm-cov-checksums` default in run-rust-ci.yml, whose entries are "
+        "keyed by version and target triple because the archive name carries "
+        "no version. Bump the `llvm-cov-version` default beside it and the row "
+        "in docs/workflows/run-rust-ci.md. "
+        "tests/check-rust-tool-installs.py covers the result.",
     ),
     Tool("yamllint", "1.38.0", lambda: pypi_latest("yamllint"),
          "requirements/yamllint.txt must be regenerated with `uv pip compile --generate-hashes`."),
