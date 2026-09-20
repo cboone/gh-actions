@@ -86,7 +86,7 @@ configurable.
 ```yaml
 - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
   with:
-    node-version: "24.15.0"
+    node-version: "24.21.0"
 - run: npm ci
 - uses: cboone/gh-actions/actions/install-cspell-dictionaries@v3.2.0
   with:

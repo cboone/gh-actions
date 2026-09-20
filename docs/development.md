@@ -188,7 +188,7 @@ repo ships no value for either. The `VALIDATOR_REV` and `RUST_VERSION` in
 as its shfmt 3.13.1 fixtures.
 
 `node-version` defaults to a specific Node 24 LTS release
-(`"24.15.0"`) in `.github/workflows/lint-text.yml`, `.github/workflows/publish-to-npm.yml`, and
+(`"24.21.0"`) in `.github/workflows/lint-text.yml`, `.github/workflows/publish-to-npm.yml`, and
 `.github/workflows/deploy-to-pages.yml`; callers may override with their own pinned
 version.
 

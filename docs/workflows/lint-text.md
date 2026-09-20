@@ -14,7 +14,7 @@ and cancellation stops subsequent checks.
 
 | Name                    | Type    | Default     | Description                                                               |
 | ----------------------- | ------- | ----------- | ------------------------------------------------------------------------- |
-| `node-version`          | string  | `"24.15.0"` | Node.js version to install                                                |
+| `node-version`          | string  | `"24.21.0"` | Node.js version to install                                                |
 | `run-markdownlint`      | boolean | `true`      | Run markdownlint-cli2                                                     |
 | `run-prettier`          | boolean | `true`      | Run Prettier format check                                                 |
 | `run-cspell`            | boolean | `false`     | Run cspell spell checker                                                  |

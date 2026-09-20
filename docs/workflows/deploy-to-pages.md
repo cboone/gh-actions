@@ -28,7 +28,7 @@ before the action can report its own clearer error.
 | `setup-go`        | boolean | `false`         | Set up Go before building            |
 | `go-version-file` | string  | `go.mod`        | File to read the Go version from     |
 | `setup-node`      | boolean | `false`         | Set up Node.js before building       |
-| `node-version`    | string  | `"24.15.0"`     | Node.js version to install           |
+| `node-version`    | string  | `"24.21.0"`     | Node.js version to install           |
 | `timeout-minutes` | number  | `15`            | Job timeout in minutes               |
 
 ## Usage
