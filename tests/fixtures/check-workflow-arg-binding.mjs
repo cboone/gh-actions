@@ -4,11 +4,34 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assertExactlyOne, loadWorkflow, runSteps, runStepScript, stepOf } from "./workflow-steps.mjs";
 
-// The only `run:` blocks allowed to interpolate an expression. The first six
-// are the documented shell-command inputs, which accept a whole command by
-// design. The last two are ternaries whose branches are the string constants
-// `npm ci` and `npm install`; no caller value reaches the shell.
-const INTERPOLATION_ALLOWLIST = new Set(["deploy-to-pages.yml::build::Build site", "run-go-ci.yml::scrut::Scrut test setup", "run-go-ci.yml::scrut::Build binary for scrut tests", "run-scrut-tests.yml::scrut::Scrut test setup", "run-zig-ci.yml::scrut::Scrut test setup", "run-zig-ci.yml::scrut::Build binary for scrut tests", "deploy-to-pages.yml::build::Install npm dependencies", "publish-to-npm.yml::publish::Install dependencies"]);
+// The only expressions any `run:` block may interpolate, listed per step. The
+// first six are the documented shell-command inputs, which accept a whole
+// command by design. The last two are ternaries whose branches are the string
+// constants `npm ci` and `npm install`; no caller value reaches the shell.
+//
+// Each step's expressions are named individually rather than the step being
+// allowlisted wholesale, so adding an ordinary data input beside a sanctioned
+// command input is still reported. Allowlisting the step alone would let one
+// exemption cover every later expression added to it.
+const NPM_TERNARY = "steps.npm-cache.outputs.cache-dependency-path != '' && 'npm ci' || 'npm install'";
+const INTERPOLATION_ALLOWLIST = new Map([
+  ["deploy-to-pages.yml::build::Build site", ["inputs.build-command"]],
+  ["run-go-ci.yml::scrut::Scrut test setup", ["inputs.scrut-setup-cmd"]],
+  ["run-go-ci.yml::scrut::Build binary for scrut tests", ["inputs.scrut-build-cmd"]],
+  ["run-scrut-tests.yml::scrut::Scrut test setup", ["inputs.scrut-setup-cmd"]],
+  ["run-zig-ci.yml::scrut::Scrut test setup", ["inputs.scrut-setup-cmd"]],
+  ["run-zig-ci.yml::scrut::Build binary for scrut tests", ["inputs.scrut-build-cmd"]],
+  ["deploy-to-pages.yml::build::Install npm dependencies", [NPM_TERNARY]],
+  ["publish-to-npm.yml::publish::Install dependencies", [NPM_TERNARY]],
+]);
+
+// Whitespace inside an expression is insignificant, and the npm ternaries span
+// several lines, so compare on a single-spaced form.
+const EXPRESSION = /\$\{\{([\s\S]*?)\}\}/g;
+
+function expressionsIn(run) {
+  return [...run.matchAll(EXPRESSION)].map(([, inner]) => inner.replace(/\s+/g, " ").trim());
+}
 
 // `create-gh-release` tokenizes a line the enclosing `while IFS= read -r line`
 // loop already split, so that line cannot contain a newline and needs no guard.
@@ -88,19 +111,36 @@ function expectNoSideEffects(...names) {
 }
 
 const scenarios = {
-  // Every `run:` block is free of expressions except the documented interfaces.
+  // Every `run:` block is free of expressions except the documented interfaces,
+  // checked expression by expression rather than step by step.
   policy() {
     const keys = [];
-    const found = [];
+    const seen = new Map();
+    const unexpected = [];
     for (const { key, step } of runSteps()) {
       keys.push(key);
-      if (step.run.includes("${{")) found.push(key);
+      const expressions = expressionsIn(step.run);
+      if (expressions.length === 0) continue;
+      const allowed = INTERPOLATION_ALLOWLIST.get(key) ?? [];
+      seen.set(key, expressions);
+      for (const expression of expressions) {
+        if (!allowed.includes(expression)) unexpected.push(`${key}: \${{ ${expression} }}`);
+      }
     }
-    const unexpected = found.filter((key) => !INTERPOLATION_ALLOWLIST.has(key));
     assert.deepEqual(unexpected, [], `run: blocks interpolating an expression outside the allowlist:\n  ${unexpected.join("\n  ")}`);
-    const stale = [...INTERPOLATION_ALLOWLIST].filter((key) => !found.includes(key));
-    assert.deepEqual(stale, [], `allowlist entries no longer interpolating, so the allowlist is too wide:\n  ${stale.join("\n  ")}`);
-    assertExactlyOne(INTERPOLATION_ALLOWLIST, keys, "allowlist entries");
+    const stale = [];
+    for (const [key, allowed] of INTERPOLATION_ALLOWLIST) {
+      const expressions = seen.get(key);
+      if (!expressions) {
+        stale.push(`${key} (interpolates nothing now)`);
+        continue;
+      }
+      for (const expression of allowed) {
+        if (!expressions.includes(expression)) stale.push(`${key}: \${{ ${expression} }}`);
+      }
+    }
+    assert.deepEqual(stale, [], `allowlist entries no longer present, so the allowlist is too wide:\n  ${stale.join("\n  ")}`);
+    assertExactlyOne([...INTERPOLATION_ALLOWLIST.keys()], keys, "allowlist entries");
   },
 
   // The migrated steps declare the bindings the shell code reads.
