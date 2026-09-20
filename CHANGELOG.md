@@ -7,8 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `run-trufflehog` gains an `allowlist` input, and `scan-for-secrets.yml` a
+  `trufflehog-allowlist` input, each naming a JSON file of reviewed findings.
+  An entry matches one finding and only that finding: `commit`, `path`, `line`
+  and `detector` must all be equal, so moving a fixture or changing any one
+  field fails the scan again. This permits a deliberate credential-shaped
+  string in a commit that must not be rewritten, without excluding its file,
+  suppressing the detector, or printing the finding (#123)
+
+  Full-history scanning stays strict. A verified finding is never allowlisted,
+  so a fixture that turns into a live credential fails even when its tuple is
+  listed. Entries key on a commit, so a working-tree finding never matches one.
+  An unused entry warns rather than fails, keeping a stale entry visible
+  without breaking a scan that legitimately no longer reaches it. A malformed
+  allowlist is refused rather than applied loosely: every field is required,
+  unknown keys are rejected, and `commit` must be a full 40-character lowercase
+  SHA, because a short SHA or a ref can come to mean something else.
+
+  Findings never reach the log. With an allowlist configured, the scan writes
+  its JSON to a private temporary file that the checker reads and the step
+  deletes, and the report names only the detector, verification state, commit,
+  path and line. Matching uses the runner's `jq`, whose absence fails the step
+  before scanning rather than skipping the check.
+
+  The gate fails closed on disagreement. If TruffleHog reports results but the
+  checker finds none in the file, the step fails instead of reading that as a
+  clean scan. With an allowlist set, output formats that would replace the
+  JSON being matched are refused rather than silently dropped.
+
 ### Fixed
 
+- TruffleHog scans fail on reported findings. `run-trufflehog` and
+  `scan-for-secrets.yml` pass `--fail`, so a scan reporting a verified or
+  unknown result exits 183 instead of succeeding. Callers already passing
+  `--fail` or `--no-update` through `args` no longer produce a duplicate flag.
+  These fixes landed after v3.2.0 and appear in a release here for the first
+  time (#111)
+- TruffleHog scans keep the checksum-verified version they installed.
+  `--no-update` stops the binary from replacing the pinned 3.95.2 mid-scan with
+  whatever upstream had published, which defeated both the pin and its checksum
+  (#111)
 - `lint-text.yml` runs every enabled linter after setup succeeds even when
   an earlier linter fails, reporting all findings in one run. Any linter
   failure still fails the job; setup failure and cancellation prevent
