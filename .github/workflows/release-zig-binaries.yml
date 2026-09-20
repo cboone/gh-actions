@@ -23,7 +23,8 @@ on:
         required: true
       targets:
         description: >-
-          Space-separated Zig target triples to build.
+          Space-separated Zig target triples to build, on a single line.
+          Quoting, escaping and glob expansion are not supported.
         type: string
         default: >-
           x86_64-linux-gnu aarch64-linux-gnu x86_64-macos
@@ -97,11 +98,21 @@ jobs:
           OPTIMIZE: ${{ inputs.optimize }}
           TAG: ${{ github.ref_name }}
         run: |
+          if [[ "${TARGETS}" == *$'\n'* ]]; then
+            echo "::error::targets must be a single line of space-separated target triples" >&2
+            exit 1
+          fi
+          read -r -a targets <<< "${TARGETS}"
+          if [[ ${#targets[@]} -eq 0 ]]; then
+            echo "::error::targets must contain at least one target triple" >&2
+            exit 1
+          fi
+
           version="${TAG#v}"
           dist_dir="${RUNNER_TEMP}/dist"
           mkdir -p "${dist_dir}"
 
-          for target in ${TARGETS}; do
+          for target in "${targets[@]}"; do
             echo "::group::Building for ${target}"
             zig build -Dtarget="${target}" -Doptimize="${OPTIMIZE}"
 

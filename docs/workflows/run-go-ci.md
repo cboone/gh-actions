@@ -46,6 +46,11 @@ the installer validates that exact version before exposing the executable.
 | `codecov-files`         | string  | `coverage.out`   | Coverage file path for Codecov upload                      |
 | `timeout-minutes`       | number  | `15`             | Job timeout in minutes                                     |
 
+`test-flags` is split on whitespace into separate arguments. Quoting,
+escaping, glob expansion and variable expansion are not supported, and a value
+containing a newline fails the job rather than losing every line after the
+first. `codecov-files` is a single path and may contain spaces.
+
 ## Secrets
 
 | Name            | Required | Description          |

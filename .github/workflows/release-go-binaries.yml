@@ -18,7 +18,9 @@ on:
         type: string
         default: "2.15.4"
       goreleaser-args:
-        description: Arguments to pass to goreleaser.
+        description: >-
+          Space-separated arguments to pass to goreleaser, on a single
+          line. Quoting, escaping and glob expansion are not supported.
         type: string
         default: release --clean
       timeout-minutes:
@@ -98,7 +100,19 @@ jobs:
           printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: Run GoReleaser
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: goreleaser ${{ inputs.goreleaser-args }}
+          GORELEASER_ARGS: ${{ inputs.goreleaser-args }}
+        run: |
+          if [[ "${GORELEASER_ARGS}" == *$'\n'* ]]; then
+            echo "::error::goreleaser-args must be a single line of space-separated arguments" >&2
+            exit 1
+          fi
+          args=(goreleaser)
+          read -r -a extra <<< "${GORELEASER_ARGS}"
+          if [[ ${#extra[@]} -gt 0 ]]; then
+            args+=("${extra[@]}")
+          fi
+          "${args[@]}"

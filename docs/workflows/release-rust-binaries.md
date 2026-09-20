@@ -31,6 +31,11 @@ workflow fails fast.
 | `homebrew-depends-on`   | string  | `""`                  | Newline-delimited Homebrew `depends_on` declarations                                        |
 | `timeout-minutes`       | number  | `30`                  | Job timeout in minutes                                                                      |
 
+`build-args` is split on whitespace into separate arguments. Quoting,
+escaping, glob expansion and variable expansion are not supported, and a value
+containing a newline fails the job rather than losing every line after the
+first. `targets` is a JSON array and is parsed as one.
+
 ## Secrets
 
 | Name                 | Required | Description                    |

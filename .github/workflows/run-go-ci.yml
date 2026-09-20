@@ -62,7 +62,10 @@ on:
         type: boolean
         default: false
       test-flags:
-        description: Flags for go test (only used when coverage is enabled).
+        description: >-
+          Space-separated flags for go test, on a single line, used only
+          when coverage is enabled. Quoting, escaping and glob expansion
+          are not supported.
         type: string
         default: "-race"
       coverage:
@@ -112,9 +115,22 @@ jobs:
 
       - name: Run tests with coverage
         if: ${{ inputs.coverage }}
-        run: >-
-          go test -v ${{ inputs.test-flags }}
-          -coverprofile=${{ inputs.codecov-files }} ./...
+        shell: bash
+        env:
+          TEST_FLAGS: ${{ inputs.test-flags }}
+          CODECOV_FILE: ${{ inputs.codecov-files }}
+        run: |
+          if [[ "${TEST_FLAGS}" == *$'\n'* ]]; then
+            echo "::error::test-flags must be a single line of space-separated flags" >&2
+            exit 1
+          fi
+          args=(go test -v)
+          read -r -a extra <<< "${TEST_FLAGS}"
+          if [[ ${#extra[@]} -gt 0 ]]; then
+            args+=("${extra[@]}")
+          fi
+          args+=("-coverprofile=${CODECOV_FILE}" ./...)
+          "${args[@]}"
 
       - name: Upload coverage to Codecov
         if: inputs.coverage
@@ -122,6 +138,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           CODECOV_CLI_VERSION: ${{ inputs.codecov-cli-version }}
+          CODECOV_FILE: ${{ inputs.codecov-files }}
         run: |
           # Unset empty token so the CLI uses tokenless mode for public repos
           # instead of treating the empty string as an invalid token.
@@ -156,7 +173,7 @@ jobs:
           fi
           chmod +x "${codecov_bin}"
           "${codecov_bin}" upload-process \
-            --file "${{ inputs.codecov-files }}" \
+            --file "${CODECOV_FILE}" \
             --disable-search
 
   lint:
