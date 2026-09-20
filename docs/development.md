@@ -448,7 +448,11 @@ three runners, covering the install, the cache-hit path, and the pins
 
 `tests/trufflehog-positive-control.py` extracts the literal `Run trufflehog`
 step from both the action and `scan-for-secrets.yml` and executes it against
-disposable histories built with `git fast-import`. Beyond the #111 controls, it
+disposable histories built with `git fast-import`. It runs on `ubuntu-latest`
+and `macos-latest`, because the allowlist checker is a shell script reading a
+jq program and macOS runs it under bash 3.2 with a BSD userland. Linux arm64
+is omitted deliberately: for this code it is the same GNU userland as amd64,
+unlike the installer matrices, which cover architecture rather than userland. Beyond the #111 controls, it
 covers the allowlist: that the exact reviewed tuple is accepted, that changing
 any one of commit, path, line or detector fails, that a verified finding is
 refused even when its tuple is listed, that a malformed allowlist is rejected

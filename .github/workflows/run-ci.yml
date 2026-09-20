@@ -30,11 +30,20 @@ concurrency:
 
 jobs:
   trufflehog-positive-control:
-    name: TruffleHog positive control
-    runs-on: ubuntu-latest
+    name: TruffleHog positive control (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # The allowlist checker is a shell script reading a jq program, and
+        # the action supports macOS, so it runs there under bash 3.2 and a
+        # BSD userland. Linux arm64 is omitted deliberately: it is the same
+        # GNU userland as amd64 for this code, unlike the installers, whose
+        # matrix covers architecture rather than userland.
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
