@@ -27,7 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   version with no matching entry is still refused before anything is
   downloaded. **Anyone who pinned `audit-version` or `llvm-cov-version`
   explicitly must now pass that version's checksums alongside it, or drop
-  the input to take the default** (#61)
+  the input to take the default**. See
+  [the v4 migration guide](docs/migrations/v4.md#rust-tool-versions-now-need-their-checksums)
+  (#61)
 - `run-ci.yml` gains a `rust-tool-installs` job covering those two
   install blocks on all four supported target triples: the committed
   defaults install and report their version, an unknown version is
