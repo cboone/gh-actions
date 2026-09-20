@@ -500,6 +500,27 @@ def check_malformed_findings(base, findings, entry):
         path.write_text(json.dumps(malformed) + "\n")
         run_checker(CHECKER, path, allowlist, 2, f"findings rejected: {label}")
 
+    # The location fields are one source's tuple. Read field by field, a Git
+    # commit could pair with a Filesystem path and line and match an entry
+    # written for something else, so carrying both sources is refused.
+    mixed = json.loads(json.dumps(source))
+    mixed["SourceMetadata"]["Data"] = {
+        "Git": {"commit": entry["commit"]},
+        "Filesystem": {"file": entry["path"], "line": entry["line"]},
+    }
+    path = base / "findings-mixed-source.json"
+    path.write_text(json.dumps(mixed) + "\n")
+    run_checker(CHECKER, path, allowlist, 2, "findings rejected: mixed source")
+
+    # A git finding missing its path cannot borrow one, so it cannot match.
+    partial = json.loads(json.dumps(source))
+    partial["SourceMetadata"]["Data"] = {"Git": {"commit": entry["commit"]}}
+    path = base / "findings-partial-git.json"
+    path.write_text(json.dumps(partial) + "\n")
+    output = run_checker(CHECKER, path, allowlist, 1, "partial git metadata blocks")
+    if "path=none" not in output:
+        raise AssertionError(f"the missing path was not reported\n{output}")
+
     # Git permits a newline in a filename, so a finding must not be able to
     # write its own report lines either.
     injected = json.loads(json.dumps(source))

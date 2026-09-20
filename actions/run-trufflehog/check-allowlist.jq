@@ -147,14 +147,37 @@ def validate_finding($index):
 
 # Safe metadata only. A finding with no recognized source metadata keeps a
 # null commit, which no entry can match, so it is blocked rather than skipped.
+#
+# The location fields are one source's tuple, so they are read from one source
+# rather than resolved field by field. A per-field fallback could pair a Git
+# commit with a Filesystem path and line, yielding a tuple that describes no
+# finding and that an entry written for something else could match.
 def describe:
   (.SourceMetadata.Data // {}) as $data
+  | ($data | has("Git")) as $git
+  | ($data | has("Filesystem")) as $filesystem
+  | if $git and $filesystem then
+      error(
+        "invalid findings: a finding carries both Git and Filesystem source "
+        + "metadata, so the checker cannot establish which one locates it"
+      )
+    else . end
   | {
       detector: .DetectorName,
       verified: .Verified,
-      commit: ($data.Git.commit // null),
-      path: ($data.Git.file // $data.Filesystem.file // null),
-      line: ($data.Git.line // $data.Filesystem.line // null),
+      commit: (if $git then ($data.Git.commit // null) else null end),
+      path: (
+        if $git then ($data.Git.file // null)
+        elif $filesystem then ($data.Filesystem.file // null)
+        else null
+        end
+      ),
+      line: (
+        if $git then ($data.Git.line // null)
+        elif $filesystem then ($data.Filesystem.line // null)
+        else null
+        end
+      ),
     };
 
 def matches($finding):
