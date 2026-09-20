@@ -406,6 +406,46 @@ def check_expected_findings(base, findings, entry):
     run_checker(CHECKER, findings, forged, 2, "allowlist rejects a forged reason")
 
 
+def check_no_command_injection(base, entry):
+    """Nothing the allowlist carries can open a workflow command line."""
+    empty = base / "no-findings.json"
+    empty.write_text("")
+
+    # The runner percent-decodes a workflow command's data, so an entry field
+    # holding the text "%0A" would become a newline the schema never sees.
+    percent = write_allowlist(
+        base / "allow-percent.json",
+        {
+            "version": 1,
+            "entries": [{**entry, "path": "fixture%0A::error::FORGED-DATA"}],
+        },
+    )
+    output = run_checker(CHECKER, empty, percent, 0, "percent escapes cannot inject")
+    if "%250A" not in output:
+        raise AssertionError(f"the percent sign was not encoded\n{output}")
+
+    # A key name is not a value, so field validation never sees it, and it
+    # reaches the log through jq's diagnostic rather than the report.
+    injected = base / "allow-injected-key.json"
+    injected.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "entries": [{**entry, "bad\n::error::FORGED-KEY": 1}],
+            }
+        )
+    )
+    output = run_checker(CHECKER, empty, injected, 2, "a key name cannot inject")
+
+    for label, text in (
+        ("percent", "FORGED-DATA"),
+        ("key name", "FORGED-KEY"),
+    ):
+        for line in output.splitlines():
+            if line.strip().startswith("::") and text in line:
+                raise AssertionError(f"{label} opened a workflow command\n{output}")
+
+
 def check_malformed_findings(base, findings, entry):
     """A finding the checker cannot read fails closed rather than matching."""
     allowlist = write_allowlist(
@@ -537,6 +577,7 @@ def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow)
     check_rejections(base, findings, entry)
     check_expected_findings(base, findings, entry)
     check_malformed_findings(base, findings, entry)
+    check_no_command_injection(base, entry)
     check_verified_never_allowlisted(base, custom_wrapper_dir, planted)
     check_planted_defect(base, findings, entry)
 

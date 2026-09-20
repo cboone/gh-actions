@@ -37,7 +37,7 @@ def validate_entry($index):
   | if keys != entry_keys then
       reject(
         "entry \($index) must have exactly the keys \(entry_keys | join(", "))"
-        + "; found \(keys | join(", "))"
+        + "; found \(keys | tojson)"
       )
     else . end
   | if ($entry.reason | type) != "string" or ($entry.reason | length) == 0 then
@@ -83,7 +83,7 @@ def validate_allowlist:
   | if keys != ["entries", "version"] then
       reject(
         "the document must have exactly the keys entries, version; "
-        + "found \(keys | join(", "))"
+        + "found \(keys | tojson)"
       )
     else . end
   | if $document.version != 1 then
@@ -114,6 +114,13 @@ def validate_allowlist:
 # which could open with "::" and be read as a workflow command. Make CR and LF
 # visible instead of emitting them.
 def one_line: tostring | gsub("\r"; "\\r") | gsub("\n"; "\\n");
+
+# Data inside a workflow command is percent-decoded by the runner, so a field
+# holding the text "%0A" would become a real newline and start a second
+# command even though the schema rejects an actual newline. Encode it the way
+# escape_data does in the shell steps: percent first, then CR and LF.
+def command_data:
+  tostring | gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A");
 
 # A finding this program cannot read is not a clean finding. Reading a missing
 # or non-boolean Verified as "not verified" would let an entry cover it, so
@@ -163,11 +170,13 @@ def render($finding):
   + " path=\($finding.path // "none" | one_line)"
   + " line=\($finding.line // "none" | one_line)";
 
+# Only the unused-entry warning uses this, and that line is a workflow
+# command, so its fields need command_data rather than one_line.
 def render_entry($index; $entry):
-  "entry \($index): detector=\($entry.detector | one_line)"
-  + " commit=\($entry.commit | one_line)"
-  + " path=\($entry.path | one_line)"
-  + " line=\($entry.line | one_line)";
+  "entry \($index): detector=\($entry.detector | command_data)"
+  + " commit=\($entry.commit | command_data)"
+  + " path=\($entry.path | command_data)"
+  + " line=\($entry.line | command_data)";
 
 # `matched` records the entry a finding's tuple hit, whatever the verdict, so
 # an entry that stopped a verified finding is not also reported as stale.

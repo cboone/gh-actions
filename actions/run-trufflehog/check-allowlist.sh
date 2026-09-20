@@ -25,6 +25,18 @@ set -euo pipefail
 readonly EXIT_BLOCKED=1
 readonly EXIT_INVALID=2
 
+# Script scope rather than local to main: the EXIT trap runs after main's
+# locals are gone, and under set -u it would abort on an unbound name.
+diagnostics=""
+
+function cleanup() {
+  if [[ -n "${diagnostics}" ]]; then
+    rm -f "${diagnostics}"
+  fi
+}
+
+trap cleanup EXIT
+
 function usage() {
   echo "Usage: ${0##*/} --findings <path> --allowlist <path> [--expect-findings]" >&2
 }
@@ -125,16 +137,28 @@ function main() {
     fail_invalid "TruffleHog's findings were not valid JSON; the scan output cannot be matched."
   fi
 
+  # jq's diagnostics repeat allowlist text, including key names, so they are
+  # captured rather than streamed: a key holding a newline would otherwise
+  # print a continuation line opening with "::", which the runner reads as a
+  # workflow command.
+  diagnostics="$(mktemp "${TMPDIR:-/tmp}/trufflehog-allowlist-error.XXXXXX")"
+
   local report
   local status=0
   report="$(
     jq -r \
       --slurpfile allowlist "${allowlist}" \
       --slurpfile findings "${findings}" \
-      -n -f "${program}"
+      -n -f "${program}" 2>"${diagnostics}"
   )" || status=$?
 
   if [[ "${status}" -ne 0 ]]; then
+    # Each line is encoded and given fixed leading text, so neither the
+    # diagnostic nor anything quoted inside it can open a workflow command.
+    local line
+    while IFS= read -r line; do
+      printf 'checker: %s\n' "$(escape_data "${line}")" >&2
+    done <"${diagnostics}"
     fail_invalid "Could not match TruffleHog findings against ${allowlist}; see the jq error above."
   fi
 
