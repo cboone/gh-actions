@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "reason": "CI fixture for #123. This repository's history holds no reviewed finding, so the entry deliberately matches nothing: it proves the workflow fetches the checker, validates the allowlist and reports an unused entry without failing the scan.",
+      "detector": "URI",
+      "commit": "abeeb9aa2edc985860147c4d013f429a96a8eeb1",
+      "path": "actions/run-trufflehog/action.yml",
+      "line": 1
+    }
+  ]
+}

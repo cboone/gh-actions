@@ -55,6 +55,18 @@ jobs:
       - name: Check findings fail both TruffleHog entry points
         run: uv run --script tests/trufflehog-positive-control.py
 
+  # The control above runs the extracted scan step directly, so it never
+  # reaches the fetch step, which needs real workflow context. This call
+  # covers that path: it fetches the checker from job.workflow_repository at
+  # job.workflow_sha, validates the fixture allowlist and reports its
+  # deliberately unmatched entry as unused, without failing the scan.
+  trufflehog-allowlist:
+    name: TruffleHog allowlist
+    uses: ./.github/workflows/scan-for-secrets.yml
+    with:
+      tool: trufflehog
+      trufflehog-allowlist: tests/fixtures/trufflehog-allowlist.json
+
   actionlint:
     uses: ./.github/workflows/lint-github-actions.yml
 
