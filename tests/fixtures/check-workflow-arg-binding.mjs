@@ -1,57 +1,27 @@
 import assert from "node:assert/strict";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
-import { parse } from "yaml";
-
-// Read the production steps rather than duplicating their shell logic, then
-// execute them the way a runner does: `shell: bash` is
-// `bash --noprofile --norc -e -o pipefail`, without -u.
-const repoRoot = new URL("../../", import.meta.url);
-const workflowDir = new URL(".github/workflows/", repoRoot);
-const actionsDir = new URL("actions/", repoRoot);
+import { assertExactlyOne, loadWorkflow, runSteps, runStepScript, stepOf } from "./workflow-steps.mjs";
 
 // The only `run:` blocks allowed to interpolate an expression. The first six
 // are the documented shell-command inputs, which accept a whole command by
 // design. The last two are ternaries whose branches are the string constants
 // `npm ci` and `npm install`; no caller value reaches the shell.
-const INTERPOLATION_ALLOWLIST = new Set(["deploy-to-pages.yml::Build site", "run-go-ci.yml::Scrut test setup", "run-go-ci.yml::Build binary for scrut tests", "run-scrut-tests.yml::Scrut test setup", "run-zig-ci.yml::Scrut test setup", "run-zig-ci.yml::Build binary for scrut tests", "deploy-to-pages.yml::Install npm dependencies", "publish-to-npm.yml::Install dependencies"]);
+const INTERPOLATION_ALLOWLIST = new Set(["deploy-to-pages.yml::build::Build site", "run-go-ci.yml::scrut::Scrut test setup", "run-go-ci.yml::scrut::Build binary for scrut tests", "run-scrut-tests.yml::scrut::Scrut test setup", "run-zig-ci.yml::scrut::Scrut test setup", "run-zig-ci.yml::scrut::Build binary for scrut tests", "deploy-to-pages.yml::build::Install npm dependencies", "publish-to-npm.yml::publish::Install dependencies"]);
 
 // `create-gh-release` tokenizes a line the enclosing `while IFS= read -r line`
 // loop already split, so that line cannot contain a newline and needs no guard.
-const NEWLINE_GUARD_EXEMPT = new Set(["actions/create-gh-release/action.yml::Create GitHub Release"]);
+const NEWLINE_GUARD_EXEMPT = new Set(["actions/create-gh-release/action.yml::runs::Create GitHub Release"]);
 
-function loadWorkflow(name) {
-  return parse(readFileSync(new URL(name, workflowDir), "utf8"));
-}
+// Any `read` that fills an array from a here-string, however it is spelled:
+// `read -r -a x`, `read -ra x`, `IFS=" " read -a x`, braced or bare variable.
+// Keying off one exact spelling would let an equivalent rewrite drop the guard
+// requirement, which is the whole protection for the sites no scenario runs.
+const ARRAY_READ = /\bread\b[^\n|;]*?-[A-Za-z]*a[A-Za-z]*\s+(\w+)[^\n|;]*<<<\s*"?\$\{?(\w+)\}?"?/g;
 
-function stepOf(workflow, job, name) {
-  const step = workflow.jobs[job].steps.find((entry) => entry.name === name);
-  assert.ok(step, `${job}/${name} not found`);
-  return step;
-}
-
-// Every `run:` block in the repository, keyed as `<file>::<step name>`.
-function* runSteps() {
-  for (const file of readdirSync(workflowDir).filter((name) => name.endsWith(".yml"))) {
-    const doc = parse(readFileSync(new URL(file, workflowDir), "utf8"));
-    for (const job of Object.values(doc.jobs ?? {})) {
-      for (const step of job.steps ?? []) {
-        if (typeof step.run === "string") yield { key: `${file}::${step.name ?? "(unnamed)"}`, step };
-      }
-    }
-  }
-  for (const entry of readdirSync(actionsDir, { withFileTypes: true }).filter((item) => item.isDirectory())) {
-    const path = new URL(`${entry.name}/action.yml`, actionsDir);
-    if (!existsSync(path)) continue;
-    const doc = parse(readFileSync(path, "utf8"));
-    for (const step of doc.runs?.steps ?? []) {
-      if (typeof step.run === "string") {
-        yield { key: `actions/${entry.name}/action.yml::${step.name ?? "(unnamed)"}`, step };
-      }
-    }
-  }
+function newlineGuardFor(variable) {
+  return `[[ "\${${variable}}" == *$'\\n'* ]]`;
 }
 
 const goCi = loadWorkflow("run-go-ci.yml");
@@ -59,6 +29,8 @@ const rustCi = loadWorkflow("run-rust-ci.yml");
 const goRelease = loadWorkflow("release-go-binaries.yml");
 const coverageStep = stepOf(goCi, "test", "Run tests with coverage");
 const goreleaserStep = stepOf(goRelease, "release", "Run GoReleaser");
+const goUploadStep = stepOf(goCi, "test", "Upload coverage to Codecov");
+const rustUploadStep = stepOf(rustCi, "test", "Upload coverage to Codecov");
 
 // Defaults come from the workflows so the scenarios cannot drift from what
 // callers actually get.
@@ -80,15 +52,12 @@ function installStub(name) {
 
 function runStep(step, env) {
   rmSync(argvFile, { force: true });
-  const result = spawnSync("/bin/bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step.run], {
+  const result = runStepScript(step.run, {
     cwd: root,
     env: { ...process.env, ...env, PATH: `${binDir}:${process.env.PATH}`, ARGV_FILE: argvFile },
-    encoding: "utf8",
   });
-  assert.ifError(result.error);
-  const output = (result.stdout + result.stderr).replaceAll("::error::", "error: ");
   const argv = existsSync(argvFile) ? readFileSync(argvFile, "utf8").split("\n").slice(0, -1) : null;
-  return { status: result.status, output, argv };
+  return { ...result, argv };
 }
 
 function goTest({ flags = defaultTestFlags, file = defaultCodecovFile } = {}) {
@@ -121,22 +90,25 @@ function expectNoSideEffects(...names) {
 const scenarios = {
   // Every `run:` block is free of expressions except the documented interfaces.
   policy() {
+    const keys = [];
     const found = [];
     for (const { key, step } of runSteps()) {
+      keys.push(key);
       if (step.run.includes("${{")) found.push(key);
     }
     const unexpected = found.filter((key) => !INTERPOLATION_ALLOWLIST.has(key));
     assert.deepEqual(unexpected, [], `run: blocks interpolating an expression outside the allowlist:\n  ${unexpected.join("\n  ")}`);
     const stale = [...INTERPOLATION_ALLOWLIST].filter((key) => !found.includes(key));
     assert.deepEqual(stale, [], `allowlist entries no longer interpolating, so the allowlist is too wide:\n  ${stale.join("\n  ")}`);
+    assertExactlyOne(INTERPOLATION_ALLOWLIST, keys, "allowlist entries");
   },
 
   // The migrated steps declare the bindings the shell code reads.
   bindings() {
     const expected = [
       [coverageStep, { TEST_FLAGS: "${{ inputs.test-flags }}", CODECOV_FILE: "${{ inputs.codecov-files }}" }],
-      [stepOf(goCi, "test", "Upload coverage to Codecov"), { CODECOV_FILE: "${{ inputs.codecov-files }}" }],
-      [stepOf(rustCi, "test", "Upload coverage to Codecov"), { CODECOV_FILE: "${{ inputs.codecov-files }}" }],
+      [goUploadStep, { CODECOV_FILE: "${{ inputs.codecov-files }}" }],
+      [rustUploadStep, { CODECOV_FILE: "${{ inputs.codecov-files }}" }],
       [goreleaserStep, { GORELEASER_ARGS: "${{ inputs.goreleaser-args }}" }],
     ];
     for (const [step, bindings] of expected) {
@@ -147,20 +119,41 @@ const scenarios = {
     assert.equal(coverageStep.shell, "bash");
     assert.equal(goreleaserStep.shell, "bash");
     assert.ok(coverageStep.run.includes('"-coverprofile=${CODECOV_FILE}"'), "the coverage path must be quoted");
-    assert.ok(stepOf(goCi, "test", "Upload coverage to Codecov").run.includes('--file "${CODECOV_FILE}"'));
-    assert.ok(stepOf(rustCi, "test", "Upload coverage to Codecov").run.includes('--file "${CODECOV_FILE}"'));
+    assert.ok(goUploadStep.run.includes('--file "${CODECOV_FILE}"'));
+    assert.ok(rustUploadStep.run.includes('--file "${CODECOV_FILE}"'));
   },
 
   // Splitting behaves the same everywhere, so no site silently drops a line.
+  // Every split must also expand its array quoted; actionlint's shellcheck pass
+  // reports SC2068/SC2206 when it does not, and this repeats the rule here so a
+  // workflow that skipped that lint would still be caught.
   guards() {
     const missing = [];
+    const unquoted = [];
+    const keys = [];
     for (const { key, step } of runSteps()) {
+      keys.push(key);
       if (NEWLINE_GUARD_EXEMPT.has(key)) continue;
-      for (const [, variable] of step.run.matchAll(/read -r -a \w+ <<< "\$\{(\w+)\}"/g)) {
-        if (!step.run.includes(`[[ "\${${variable}}" == *$'\\n'* ]]`)) missing.push(`${key} (${variable})`);
+      for (const [, array, variable] of step.run.matchAll(ARRAY_READ)) {
+        if (!step.run.includes(newlineGuardFor(variable))) missing.push(`${key} (${variable})`);
+        const bare = new RegExp(`(?<!")\\$\\{${array}\\[@\\]\\}(?!")`);
+        if (bare.test(step.run)) unquoted.push(`${key} (${array})`);
       }
     }
-    assert.deepEqual(missing, [], `read -r -a without a newline guard:\n  ${missing.join("\n  ")}`);
+    assert.deepEqual(missing, [], `read into an array without a newline guard:\n  ${missing.join("\n  ")}`);
+    assert.deepEqual(unquoted, [], `array expanded unquoted, so it re-splits and globs:\n  ${unquoted.join("\n  ")}`);
+    assertExactlyOne(NEWLINE_GUARD_EXEMPT, keys, "newline-guard exemptions");
+  },
+
+  // Each site the scenarios below cannot execute is still known to be guarded,
+  // so a silent removal shows up as a missing site rather than a passing run.
+  coverage() {
+    const guarded = new Set();
+    for (const { key, step } of runSteps()) {
+      if (NEWLINE_GUARD_EXEMPT.has(key)) continue;
+      for (const [, , variable] of step.run.matchAll(ARRAY_READ)) guarded.add(`${key} (${variable})`);
+    }
+    assert.deepEqual([...guarded].sort(), ["release-go-binaries.yml::release::Run GoReleaser (GORELEASER_ARGS)", "release-rust-binaries.yml::build::Build (BUILD_ARGS)", "release-zig-binaries.yml::release::Build and package (TARGETS)", "run-go-ci.yml::test::Run tests with coverage (TEST_FLAGS)", "run-rust-ci.yml::test::Install extra components (COMPONENTS)", "run-rust-ci.yml::test::Run tests (TEST_ARGS)", "run-rust-ci.yml::test::Run tests with coverage (TEST_ARGS)", "run-zig-ci.yml::cross-compile::Cross compile (TARGETS)", "run-zig-ci.yml::format::Check formatting (FMT_PATHS)", "run-rust-ci.yml::lint::Run clippy (CLIPPY_ARGS)"].sort(), "the set of guarded split sites changed; update this list and say why in docs/development.md");
   },
 
   defaults() {

@@ -1,15 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { parse } from "yaml";
+import { loadWorkflow, runStepScript, stepOf } from "./workflow-steps.mjs";
 
 // Read the production step and default rather than duplicating their shell logic.
-const workflowPath = new URL("../../.github/workflows/run-zig-ci.yml", import.meta.url);
-const workflow = parse(readFileSync(workflowPath, "utf8"));
+const workflow = loadWorkflow("run-zig-ci.yml");
 const defaultPaths = workflow.on.workflow_call.inputs["fmt-paths"].default;
-const step = workflow.jobs.format.steps.find((entry) => entry.name === "Check formatting");
+const step = stepOf(workflow, "format", "Check formatting");
 assert.equal(step.shell, "bash");
 assert.equal(step.env.FMT_PATHS, "${{ inputs.fmt-paths }}");
 
@@ -25,14 +24,8 @@ function zig(...args) {
 }
 
 function check(paths, expectedStatus, diagnostic = "") {
-  const result = spawnSync("/bin/bash", ["-euo", "pipefail", "-c", step.run], {
-    cwd: root,
-    env: { ...process.env, FMT_PATHS: paths },
-    encoding: "utf8",
-  });
-  assert.ifError(result.error);
-  const output = (result.stdout + result.stderr).replaceAll("::error::", "error: ");
-  assert.equal(result.status, expectedStatus, output);
+  const { status, output } = runStepScript(step.run, { cwd: root, env: { ...process.env, FMT_PATHS: paths } });
+  assert.equal(status, expectedStatus, output);
   assert.ok(output.includes(diagnostic), output);
 }
 
@@ -79,6 +72,11 @@ try {
       break;
     case "whitespace":
       check("   \t  ", 1, "fmt-paths must contain at least one path");
+      break;
+    case "multiline":
+      // `read -r -a` stops at the first newline, so without the guard this
+      // would format-check build.zig alone and report success.
+      check("build.zig\nbuild.zig.zon src", 1, "fmt-paths must be a single line");
       break;
     default:
       throw new Error(`Unknown scenario: ${scenario}`);

@@ -19,11 +19,18 @@ $ "${NODE_BIN}" "${ARG_BINDING_FIXTURE}" bindings
 bindings: passed
 ```
 
-## Every argument split rejects embedded newlines
+## Every argument split rejects embedded newlines and expands quoted
 
 ```scrut
 $ "${NODE_BIN}" "${ARG_BINDING_FIXTURE}" guards
 guards: passed
+```
+
+## The set of guarded split sites is the documented one
+
+```scrut
+$ "${NODE_BIN}" "${ARG_BINDING_FIXTURE}" coverage
+coverage: passed
 ```
 
 ## Shipped defaults produce the expected argument vector
