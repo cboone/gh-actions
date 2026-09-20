@@ -129,7 +129,7 @@ TOOLS: list[Tool] = [
         notes=(
             "Bump every pin together: UV_VERSION in lint-text.yml and "
             "check-tool-versions.yml, the uv-version default in run-reuse's "
-            "action.yml and in run-scrut-tests.yml, and all four installs and the "
+            "action.yml and in run-scrut-tests.yml, and every install and the "
             "asserted version in run-ci.yml. The documented defaults have to match: "
             "the input tables in actions/run-reuse/README.md and "
             "docs/workflows/run-scrut-tests.md, and the example in "

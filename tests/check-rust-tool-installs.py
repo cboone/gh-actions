@@ -121,11 +121,19 @@ def check(tool, spec):
                 capture_output=True,
                 text=True,
             )
-            combined = f"{reported.stdout} {reported.stderr}".replace("\n", " ")
-            if version not in combined:
+            combined = f"{reported.stdout} {reported.stderr}".replace("\n", " ").strip()
+            # The version has to be a whole token: a substring test would let
+            # 0.9.1 pass against a future 0.9.10. A non-zero exit fails even
+            # when the version still prints, so a binary that reports its
+            # version while erroring cannot look like a good install.
+            exact_version = re.compile(rf"(?<![\w.]){re.escape(version)}(?![\w.])")
+            if reported.returncode != 0:
                 failures.append(
-                    f"{tool}: installed binary reports '{combined.strip()}', "
-                    f"expected {version}"
+                    f"{tool}: version check exited {reported.returncode}: {combined}"
+                )
+            elif not exact_version.search(combined):
+                failures.append(
+                    f"{tool}: installed binary reports '{combined}', expected {version}"
                 )
             else:
                 print(f"  {tool}: committed defaults install and report {version}")
