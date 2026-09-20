@@ -29,15 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     hardcoded SHA-256 checksums. Its `--show-missing-lines` output change
     does not reach `run-rust-ci.yml`, which runs `--lcov --output-path`)
   - Node.js 24 LTS 24.15.0 → 24.21.0
-- reuse 5.0.2 → 6.2.0 (major bump) changes what `run-reuse` reports for
-  every consumer. `reuse lint` now reads entire files rather than the
-  first 4 KiB, so REUSE information deeper in a file is found and may need
+- Bump reuse 5.0.2 → 6.2.0. Listed separately from the bumps above
+  because it is the one that changes what `run-reuse` reports for every
+  consumer. `reuse lint` now reads entire files rather than the first
+  4 KiB, so REUSE information deeper in a file is found and may need
   `REUSE-IgnoreStart` and `REUSE-IgnoreEnd` to suppress; a new Invalid
   SPDX License Expressions criterion can fail a repository that previously
   passed; and the Bad licenses criterion now examines only `LICENSES/`.
-  `requirements/reuse.txt` was regenerated, dropping `binaryornot` and
-  adding `python-magic`, with `charset-normalizer` remaining as the
-  fallback encoding module (#61)
+  `requirements/reuse.in` now asks for `reuse[charset-normalizer]`, since
+  reuse 6 requires `python-magic` against the runner's `libmagic`, which
+  no manifest can pin, and needs a declared fallback when that import
+  fails (#61)
 - `lint-shell.yml` still discovers shell scripts one tracked path at a
   time. shfmt 3.14.1 fixes the `-f=0` defect that motivated the loop, but
   `shfmt-version` is caller-overridable, so an older shfmt can still reach

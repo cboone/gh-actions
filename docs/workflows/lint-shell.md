@@ -16,10 +16,11 @@ The format check uses `shfmt -d` without style flags so it reads
 
 Discovery checks each tracked regular file with `shfmt -f` and retains its
 original path in a NUL-separated manifest for both checkers, except that a file
-named exactly `-` is passed as `./-` so it cannot be interpreted as stdin. A
-single batched `-f=0` call would be cheaper, but shfmt only stopped listing
-explicitly supplied non-shell files in that mode at 3.14.1, and `shfmt-version`
-is caller-overridable, so per-file `-f` stays correct for any pin.
+named exactly `-` is passed as `./-` so it cannot be interpreted as stdin.
+Passing every path to `shfmt -f=0` once, the NUL-separated find mode the
+manifest wants, would be cheaper; that mode listed explicitly supplied
+non-shell files until 3.14.1, and `shfmt-version` is caller-overridable, so an
+older pin still reaches it. Per-file `-f` is correct on every version.
 Collapsing the loop is tracked in [#124](https://github.com/cboone/gh-actions/issues/124).
 
 Both tools are installed from their release assets and verified against the

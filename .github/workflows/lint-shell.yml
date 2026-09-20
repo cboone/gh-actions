@@ -110,11 +110,12 @@ jobs:
         if: inputs.run-shellcheck || inputs.run-shfmt
         run: |
           # Discover one tracked path at a time, retaining the original path
-          # in a NUL-separated manifest. A single batched -f=0 call would be
-          # cheaper, but shfmt only stopped listing explicitly supplied
-          # non-shell files in that mode at 3.14.1, and shfmt-version is
-          # caller-overridable, so per-file -f stays correct for any pin.
-          # Collapsing the loop is tracked in #124.
+          # in a NUL-separated manifest. Passing every path to `shfmt -f=0`
+          # once, the NUL-separated find mode this manifest wants, would be
+          # cheaper; that mode listed explicitly supplied non-shell files
+          # until 3.14.1, and shfmt-version is caller-overridable, so an
+          # older pin still reaches it. Per-file -f is correct on every
+          # version. Collapsing the loop is tracked in #124.
           git ls-files -z > "${RUNNER_TEMP}/tracked-files.txt"
           : > "${RUNNER_TEMP}/shell-scripts.txt"
           while IFS= read -r -d '' path; do

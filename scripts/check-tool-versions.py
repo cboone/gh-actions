@@ -129,7 +129,7 @@ TOOLS: list[Tool] = [
         notes=(
             "Bump every pin together: UV_VERSION in lint-text.yml and "
             "check-tool-versions.yml, the uv-version default in run-reuse's "
-            "action.yml and in run-scrut-tests.yml, and both the install and the "
+            "action.yml and in run-scrut-tests.yml, and all four installs and the "
             "asserted version in run-ci.yml. The documented defaults have to match: "
             "the input tables in actions/run-reuse/README.md and "
             "docs/workflows/run-scrut-tests.md, and the example in "
@@ -164,10 +164,14 @@ TOOLS: list[Tool] = [
         lambda: github_latest_release("mvdan/sh"),
         "Committed SHA-256 lines must be regenerated on bump: the `checksums` "
         "default in actions/set-up-shfmt and `shfmt-checksums` in lint-shell.yml. "
-        "run-ci.yml's wrapper check asserts the set-up-shfmt default version; "
-        "bump it too. Its remaining shfmt 3.13.1 lines, and the 3.15.0 in its "
-        "version-bumped-without-checksums rejection case, are test fixtures "
-        "and can stay.",
+        "Bump the `version` defaults beside them, the `checksums` description "
+        "prose in set-up-shfmt's action.yml, and run-ci.yml's wrapper check, "
+        "which asserts the set-up-shfmt default. The documented defaults have to "
+        "match: the input tables in actions/set-up-shfmt/README.md and "
+        "docs/workflows/lint-shell.md, and the example and `gh api` recipe in "
+        "actions/install-pinned-tool/README.md. Grep the outgoing version to "
+        "catch any that moved. run-ci.yml's remaining 3.13.1 lines are "
+        "install-pinned-tool test fixtures and can stay.",
     ),
     Tool(
         "cargo-audit",
