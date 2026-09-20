@@ -434,6 +434,7 @@ outside the checkout: a dictionary installed beside `cspell-lib`
 resolves from a config anywhere else in the tree, so a fixture inside
 the workspace would resolve through the ordinary `node_modules` walk and
 assert nothing.
+
 The workflow-level jobs `text-extra-dicts` and `text-extra-dicts-consumer`
 use a second, committed fixture at `tests/fixtures/cspell-extra-dict/`,
 because a `uses:` job has no steps and its `with:` cannot name a path
@@ -445,6 +446,8 @@ appears in no manifest in this repo, so the fixture's lone import
 resolves only when the install step actually ran, which is what makes a
 skipped step fail instead of passing green. Keep the fixture directory
 in the root `cspell.json` `ignorePaths`, or the `text` job and
-`make spell` would spell-check Portuguese with an English config. `run-ci.yml` runs `actions/set-up-clap-validator` on those same
+`make spell` would spell-check Portuguese with an English config.
+
+`run-ci.yml` runs `actions/set-up-clap-validator` on those same
 three runners, covering the install, the cache-hit path, and the pins
 `check-pins.sh` must reject. There is no unit test framework.
