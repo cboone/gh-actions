@@ -373,13 +373,10 @@ jobs:
       run-cspell: true
       cspell-config: tests/fixtures/cspell-extra-dict/cspell.json
       cspell-files: tests/fixtures/cspell-extra-dict/amostra.md
-      # A folded scalar, because an entry runs past the 120-column limit on
-      # one line. Folding joins these two lines with the single space the
-      # installer splits the entry on; a blank line would start the next
-      # entry.
-      extra-cspell-packages: >-
-        @cspell/dict-pt-pt@3.0.6
-        sha512-RT3EovAHK086ta4efTp+PxT9a2fZFHGrsf6AhX6LoFfxCn2RZAnITULSuVgkwpD/3Z/Di7oSXXNfeW9LKtGpGQ==
+      # PLANTED DEFECT, to be reverted. Blanking this skips the install step
+      # at lint-text.yml's `extra-cspell-packages != ''` guard, which is the
+      # skipped-install case #105 asks this job to catch.
+      extra-cspell-packages: ""
 
   # The same path with use-consumer-versions: true, where cspell comes from
   # this repo's own package.json and lockfile and so lands in the workspace
