@@ -285,3 +285,30 @@ property of reuse 6.2.0, and the default path is what CI will exercise.
 Checksum regeneration used both sources the plan called for. All twelve
 digests agreed between the release asset metadata and a locally computed
 hash of the downloaded asset.
+
+## After review
+
+Review of the branch surfaced two things this plan had not anticipated.
+
+**The reuse fallback was incidental.** reuse 6 requires `python-magic`
+unconditionally, against a `libmagic` no manifest can pin, and treats the
+encoding fallbacks as extras. The regenerated manifest carried
+`charset-normalizer` only as a transitive dependency of `python-debian`, so
+a later compile dropping that edge would have left reuse with no encoding
+module, failing only on runners without `libmagic`. `requirements/reuse.in`
+now asks for `reuse[charset-normalizer]`, and the trust model records the
+boundary.
+
+**The `supported_version` guards made every bump breaking.** cargo-audit and
+cargo-llvm-cov exposed version inputs that accepted exactly one value, so
+bumping either tool broke any caller who had pinned it, permanently and on
+every future bump. They now take `audit-checksums` and `llvm-cov-checksums`
+keyed by version and target triple, the contract `set-up-shfmt` already uses,
+and `tests/check-rust-tool-installs.py` covers the result on all four target
+triples. Nothing had exercised `run-rust-ci.yml` before, so those digests had
+been reaching releases unverified.
+
+Both changes were confirmed by planting the defect each check claims to
+catch: dropping the version from the lookup key turns the new suite red, and
+a planted `SC2086` confirms actionlint examines the new shell rather than
+skipping it for want of shellcheck.
