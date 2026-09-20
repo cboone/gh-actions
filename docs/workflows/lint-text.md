@@ -22,6 +22,8 @@ and cancellation stops subsequent checks.
 | `preset`                | string  | `""`        | Optional preset config bundle (see below)                                 |
 | `use-consumer-versions` | boolean | `false`     | Install npm-based lint tools from the consumer's own lockfile (see below) |
 | `extra-cspell-packages` | string  | `""`        | Extra cspell dictionary packages to install (see below)                   |
+| `cspell-config`         | string  | `""`        | Path to a cspell config file (auto-discovered when empty)                 |
+| `cspell-files`          | string  | `"."`       | Files and globs for cspell to check, one per line                         |
 | `timeout-minutes`       | number  | `10`        | Job timeout in minutes                                                    |
 
 ### Preset configs
@@ -56,6 +58,13 @@ Precedence per tool:
 3. Otherwise, the tool runs with its built-in defaults.
 
 The full preset sources live at `presets/<name>/` in this repo.
+
+Setting `cspell-config` sits above all three for cspell: an explicit
+`--config` is the strongest form of a consumer config, so the cspell
+preset is skipped without being fetched. The markdownlint preset is
+unaffected, so `preset` plus `cspell-config` is a supported combination
+for a repo that wants the preset's markdownlint rules and its own
+spelling config.
 
 ### Tool versions: pinned vs. consumer
 
@@ -93,10 +102,22 @@ lockfile rather than this gh-actions repo. Requirements when
 
 ### cspell file coverage
 
-The workflow runs `cspell .` using the consumer's cspell config. cspell
-excludes dot-paths by default, including `.github/` and root dot-config
-files. To include them and respect `.gitignore`, add these settings to
-the consumer's `cspell.json`:
+By default the workflow runs `cspell .` using the consumer's cspell
+config. `cspell-config` passes `--config <path>` instead of relying on
+auto-discovery, and `cspell-files` replaces the `.` argument with
+newline-delimited files and globs, so an argument containing spaces
+survives:
+
+```yaml
+cspell-config: config/cspell.json
+cspell-files: |
+  docs
+  README.md
+```
+
+cspell excludes dot-paths by default, including `.github/` and root
+dot-config files. To include them and respect `.gitignore`, add these
+settings to the consumer's `cspell.json`:
 
 ```json
 {
@@ -252,4 +273,19 @@ jobs:
       run-cspell: true
       extra-cspell-packages: |
         @cspell/dict-pt-pt@3.0.6  sha512-RT3EovAHK086ta4efTp+PxT9a2fZFHGrsf6AhX6LoFfxCn2RZAnITULSuVgkwpD/3Z/Di7oSXXNfeW9LKtGpGQ==
+```
+
+Repo whose cspell config is not at a name cspell auto-discovers, and
+which spell-checks only part of the tree:
+
+```yaml
+jobs:
+  text:
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.2.0
+    with:
+      run-cspell: true
+      cspell-config: config/cspell.json
+      cspell-files: |
+        docs
+        README.md
 ```
