@@ -2,10 +2,16 @@
 
 Install trufflehog binary and run a scan.
 
-Reported findings fail the action (TruffleHog exit code 183). The scan reports
-verified credentials and unknown results caused by verification errors.
-Unverified results are excluded to limit noise from invalid credentials, so
-revoked credentials and detections without verification are outside this gate.
+Reported findings fail the action. The scan reports verified credentials and
+unknown results caused by verification errors. Unverified results are excluded
+to limit noise from invalid credentials, so revoked credentials and detections
+without verification are outside this gate.
+
+Without `allowlist`, any reported finding fails the step with TruffleHog's own
+exit code 183. With `allowlist` set, the step instead fails on the first
+finding no entry covers, and the exit code is the checker's: `1` for a finding
+that is not allowlisted, `2` for an allowlist or scan output it could not use.
+A finding an entry does cover does not fail the step.
 
 `--no-update` and `--fail` are always set by this action and stripped from
 `args`, so the pinned, checksum-verified binary cannot update itself mid-scan
