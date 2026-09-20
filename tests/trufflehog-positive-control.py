@@ -512,6 +512,21 @@ def check_malformed_findings(base, findings, entry):
     path.write_text(json.dumps(mixed) + "\n")
     run_checker(CHECKER, path, allowlist, 2, "findings rejected: mixed source")
 
+    # Rendering calls tostring, so a location field of the wrong type would
+    # dump whatever structure the scanner emitted into the report. Only the
+    # type name may reach the diagnostic.
+    for label, git in (
+        ("object commit", {"commit": {"RawV2": ALLOWLIST_MARKER}, "file": "a", "line": 1}),
+        ("array path", {"commit": "b" * 40, "file": [ALLOWLIST_MARKER], "line": 1}),
+        ("string line", {"commit": "b" * 40, "file": "a", "line": ALLOWLIST_MARKER}),
+    ):
+        malformed = json.loads(json.dumps(source))
+        malformed["SourceMetadata"]["Data"] = {"Git": git}
+        path = base / f"findings-{label.replace(' ', '-')}.json"
+        path.write_text(json.dumps(malformed) + "\n")
+        # run_checker already asserts the marker never reaches the output.
+        run_checker(CHECKER, path, allowlist, 2, f"findings rejected: {label}")
+
     # A git finding missing its path cannot borrow one, so it cannot match.
     partial = json.loads(json.dumps(source))
     partial["SourceMetadata"]["Data"] = {"Git": {"commit": entry["commit"]}}

@@ -152,6 +152,20 @@ def validate_finding($index):
 # rather than resolved field by field. A per-field fallback could pair a Git
 # commit with a Filesystem path and line, yielding a tuple that describes no
 # finding and that an entry written for something else could match.
+#
+# A location field that is not the type it claims cannot be rendered safely:
+# one_line and command_data call tostring, which would dump whatever structure
+# the scanner emitted, and that structure is the credential material the
+# report exists to keep out of the log. Only the type name reaches the error.
+def check_location($field; $value; $wanted):
+  if $value == null or ($value | type) == $wanted then .
+  else
+    error(
+      "invalid findings: a finding's \($field) is a \($value | type) rather "
+      + "than a \($wanted), so the checker cannot render it safely"
+    )
+  end;
+
 def describe:
   (.SourceMetadata.Data // {}) as $data
   | ($data | has("Git")) as $git
@@ -162,22 +176,28 @@ def describe:
         + "metadata, so the checker cannot establish which one locates it"
       )
     else . end
+  | (if $git then ($data.Git.commit // null) else null end) as $commit
+  | (
+      if $git then ($data.Git.file // null)
+      elif $filesystem then ($data.Filesystem.file // null)
+      else null
+      end
+    ) as $path
+  | (
+      if $git then ($data.Git.line // null)
+      elif $filesystem then ($data.Filesystem.line // null)
+      else null
+      end
+    ) as $line
+  | check_location("commit"; $commit; "string")
+  | check_location("path"; $path; "string")
+  | check_location("line"; $line; "number")
   | {
       detector: .DetectorName,
       verified: .Verified,
-      commit: (if $git then ($data.Git.commit // null) else null end),
-      path: (
-        if $git then ($data.Git.file // null)
-        elif $filesystem then ($data.Filesystem.file // null)
-        else null
-        end
-      ),
-      line: (
-        if $git then ($data.Git.line // null)
-        elif $filesystem then ($data.Filesystem.line // null)
-        else null
-        end
-      ),
+      commit: $commit,
+      path: $path,
+      line: $line,
     };
 
 def matches($finding):
