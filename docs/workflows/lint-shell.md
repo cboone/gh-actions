@@ -20,6 +20,7 @@ named exactly `-` is passed as `./-` so it cannot be interpreted as stdin. A
 single batched `-f=0` call would be cheaper, but shfmt only stopped listing
 explicitly supplied non-shell files in that mode at 3.14.1, and `shfmt-version`
 is caller-overridable, so per-file `-f` stays correct for any pin.
+Collapsing the loop is tracked in [#124](https://github.com/cboone/gh-actions/issues/124).
 
 Both tools are installed from their release assets and verified against the
 committed SHA-256 in `shellcheck-checksums` and `shfmt-checksums`. To use

@@ -257,7 +257,7 @@ The plan file is committed and retained, per the convention for `cboone` reposit
   documentation fix.
 - If shfmt 3.14.1 fixed `-f=0`, the per-file discovery loop in `lint-shell.yml`
   could collapse back to a single batched call. That is a behavior change with its
-  own test surface and belongs in its own issue.
+  own test surface and belongs in its own issue. Filed as #124.
 
 ## Outcome
 
