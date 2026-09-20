@@ -78,6 +78,20 @@ anything that runs in CI.
   commit the workflow file itself came from, so a tampered PyPI
   response cannot pass the per-package hash check. `actions/run-reuse` reads
   its manifest through `github.action_path`, keeping it on the action's commit.
+
+  One dependency falls outside that boundary. reuse 6 requires
+  `python-magic`, a `ctypes` wrapper around the runner image's `libmagic`,
+  which no manifest can hash-pin. reuse falls back to another encoding
+  module when `import magic` fails, as it does on a runner without
+  `libmagic`, so `requirements/reuse.in` asks for
+  `reuse[charset-normalizer]` rather than bare `reuse`: that extra is what
+  guarantees a fallback is installed. Without it, `charset-normalizer`
+  reaches the manifest only as a transitive dependency of `python-debian`,
+  and a later compile that drops that edge would leave reuse with no
+  encoding module. Encoding detection can therefore differ between a runner
+  that supplies `libmagic` and one that does not; `REUSE_ENCODING_MODULE`
+  pins the choice.
+
 - **npm tools running in workflows** (markdownlint-cli2, prettier,
   cspell): installed via `npm ci` against the workflow repository's
   `package-lock.json`, fetched at the same `job.workflow_repository`
