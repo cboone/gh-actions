@@ -171,13 +171,13 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         "cargo-audit",
-        "0.22.1",
+        "0.22.2",
         lambda: github_latest_matching("rustsec/rustsec", r"cargo-audit/v(\d+\.\d+\.\d+)"),
         "Hardcoded SHA-256 checksums must be regenerated on bump.",
     ),
     Tool(
         "cargo-llvm-cov",
-        "0.8.5",
+        "0.9.1",
         lambda: github_latest_release("taiki-e/cargo-llvm-cov"),
         "Hardcoded SHA-256 checksums must be regenerated on bump.",
     ),
