@@ -234,18 +234,29 @@ The consumer's `lint` target runs only `golangci-lint run ./...`.
 - Composite actions read an `args` input one argument per line, with a
   `while IFS= read -r` loop into a bash array, so an argument may contain
   spaces.
-- The Rust reusable workflows split their `*-args` inputs with `read -r -a`
-  into a bash array. That handles simple space-delimited flags; quoting and
-  escaping are not supported.
+- The reusable workflows split every argument, flag, path-list and target-list
+  input with `read -r -a` into a bash array, then expand that array quoted.
+  That handles simple space-delimited values; quoting, escaping, glob
+  expansion and variable expansion are not supported, and a value containing a
+  newline is rejected with an `::error::` diagnostic rather than silently
+  truncated to its first line, because `read` stops at the first newline. The
+  inputs are `test-flags` (`run-go-ci.yml`), `goreleaser-args`
+  (`release-go-binaries.yml`), `test-args`, `clippy-args` and
+  `extra-components` (`run-rust-ci.yml`), `build-args`
+  (`release-rust-binaries.yml`), `fmt-paths` and `cross-targets`
+  (`run-zig-ci.yml`), and `targets` (`release-zig-binaries.yml`).
 - Ordinary data and argument inputs must be passed to shell steps via `env:` mappings,
   using quoted variables and explicit argument arrays, not inline expressions.
   Explicit command inputs intentionally execute through `run:`:
   `run-scrut-tests.yml` accepts `scrut-setup-cmd`; `run-go-ci.yml` and
-  `run-zig-ci.yml` accept both `scrut-setup-cmd` and `scrut-build-cmd`.
-  Existing direct interpolation of `test-flags` and `codecov-files` in
-  `run-go-ci.yml`, and `goreleaser-args` in `release-go-binaries.yml`, is a
-  migration gap tracked in [#115](https://github.com/cboone/gh-actions/issues/115),
-  not an exception for ordinary data or argument inputs.
+  `run-zig-ci.yml` accept both `scrut-setup-cmd` and `scrut-build-cmd`;
+  `deploy-to-pages.yml` accepts `build-command`. Those six steps, and the two
+  ternaries in `deploy-to-pages.yml` and `publish-to-npm.yml` that select
+  between the literals `npm ci` and `npm install`, are the complete set of
+  `run:` blocks allowed to contain an expression. The
+  `workflow-arg-binding` CI job enforces that list; widening it means editing
+  the allowlist in `tests/fixtures/check-workflow-arg-binding.mjs` and saying
+  why here.
 - Release binaries install under `RUNNER_TEMP`. Tools called by name are added
   to `GITHUB_PATH`; the Go and Rust Codecov binaries use absolute paths instead.
   npm tools follow their lockfile trust path: `actions/run-cspell` installs
@@ -428,6 +439,21 @@ that actionlint really does shell out to shellcheck. Its `scrut` job calls
 `run-scrut-tests.yml` with `setup-uv: true` against the specs in `tests/scrut/`.
 It passes `tests/fixtures/hello.py` through `HELLO_BIN`: that PEP 723
 executable only runs if uv reached `PATH`.
+The `workflow-arg-binding` job covers the argument-binding rules above on
+Linux and macOS, the latter for the bash 3.2 at `/bin/bash` that the fixture
+spawns. `tests/fixtures/check-workflow-arg-binding.mjs` reads the production
+steps, their `env:` bindings and their input defaults out of the workflows, so
+it cannot drift from what callers get. Three scenarios are static: no `run:`
+block interpolates an expression outside the documented allowlist, the migrated
+steps declare the bindings their shell code reads, and every `read -r -a` has
+its newline guard. The rest execute the `run-go-ci.yml` coverage step and the
+`release-go-binaries.yml` GoReleaser step against stub executables that record
+their argument vector, asserting that paths with spaces stay one argument and
+that metacharacters, command substitutions, variables and globs arrive
+literally and leave no file behind. The two Codecov steps are asserted
+statically rather than executed, because their `run:` blocks download and
+checksum the Codecov CLI.
+
 `actions/install-cspell-dictionaries` is tested on the same three
 runners the same way, through `run-cspell` against a fixture kept
 outside the checkout: a dictionary installed beside `cspell-lib`
