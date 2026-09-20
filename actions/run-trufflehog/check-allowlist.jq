@@ -108,13 +108,43 @@ def validate_allowlist:
     else . end
   | $entries;
 
+# Finding metadata comes from the scanned repository and from TruffleHog, so
+# it is not this program's to trust. Git permits a newline in a filename, and
+# a rendered newline would let a finding write its own report lines, one of
+# which could open with "::" and be read as a workflow command. Make CR and LF
+# visible instead of emitting them.
+def one_line: tostring | gsub("\r"; "\\r") | gsub("\n"; "\\n");
+
+# A finding this program cannot read is not a clean finding. Reading a missing
+# or non-boolean Verified as "not verified" would let an entry cover it, so
+# the two fields the verdict turns on are required to be what they claim.
+def validate_finding($index):
+  . as $finding
+  | if type != "object" then
+      error("invalid findings: finding \($index) is a \(type), not an object")
+    else . end
+  | if ($finding.DetectorName | type) != "string"
+      or ($finding.DetectorName | length) == 0 then
+      error(
+        "invalid findings: finding \($index) carries no DetectorName string, "
+        + "so the checker cannot establish which detector reported it"
+      )
+    else . end
+  | if ($finding.Verified | type) != "boolean" then
+      error(
+        "invalid findings: finding \($index) has a "
+        + "\($finding.Verified | type) Verified field rather than a boolean, "
+        + "so the checker cannot establish whether it was verified"
+      )
+    else . end;
+
 # Safe metadata only. A finding with no recognized source metadata keeps a
 # null commit, which no entry can match, so it is blocked rather than skipped.
 def describe:
   (.SourceMetadata.Data // {}) as $data
   | {
-      detector: (.DetectorName // null),
-      verified: (.Verified == true),
+      detector: .DetectorName,
+      verified: .Verified,
       commit: ($data.Git.commit // null),
       path: ($data.Git.file // $data.Filesystem.file // null),
       line: ($data.Git.line // $data.Filesystem.line // null),
@@ -127,30 +157,24 @@ def matches($finding):
   and .detector == $finding.detector;
 
 def render($finding):
-  "detector=\($finding.detector // "none")"
+  "detector=\($finding.detector | one_line)"
   + " verified=\($finding.verified)"
-  + " commit=\($finding.commit // "none")"
-  + " path=\($finding.path // "none")"
-  + " line=\($finding.line // "none")";
+  + " commit=\($finding.commit // "none" | one_line)"
+  + " path=\($finding.path // "none" | one_line)"
+  + " line=\($finding.line // "none" | one_line)";
 
 def render_entry($index; $entry):
-  "entry \($index): detector=\($entry.detector)"
-  + " commit=\($entry.commit)"
-  + " path=\($entry.path)"
-  + " line=\($entry.line)";
+  "entry \($index): detector=\($entry.detector | one_line)"
+  + " commit=\($entry.commit | one_line)"
+  + " path=\($entry.path | one_line)"
+  + " line=\($entry.line | one_line)";
 
 # `matched` records the entry a finding's tuple hit, whatever the verdict, so
 # an entry that stopped a verified finding is not also reported as stale.
 def verdict($entries):
   . as $finding
   | ([$entries | to_entries[] | select(.value | matches($finding))] | .[0]) as $match
-  | if $finding.detector == null then
-      {
-        state: "blocked",
-        matched: null,
-        text: "blocked: \(render($finding)) (the finding carries no detector name)",
-      }
-    elif $finding.verified then
+  | if $finding.verified then
       {
         state: "blocked",
         matched: ($match | if . == null then null else .key end),
@@ -182,7 +206,15 @@ def verdict($entries):
     end;
 
 ($allowlist | validate_allowlist) as $entries
-| [$findings[] | describe | verdict($entries)] as $verdicts
+| [
+    $findings
+    | to_entries[]
+    | .key as $index
+    | .value
+    | validate_finding($index)
+    | describe
+    | verdict($entries)
+  ] as $verdicts
 | [$verdicts[] | select(.matched != null) | .matched] as $used
 | ($verdicts | map(select(.state == "allowed")) | length) as $allowed
 | ($verdicts | map(select(.state == "blocked")) | length) as $blocked

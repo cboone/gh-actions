@@ -83,6 +83,20 @@ runs:
         TRUFFLEHOG_ALLOWLIST: ${{ inputs.allowlist }}
         ALLOWLIST_CHECKER: ${{ github.action_path }}/check-allowlist.sh
       run: |
+        # Encode a workflow-command annotation's data, mirroring the helper in
+        # install-pinned-tool.sh. Messages below repeat caller-supplied args
+        # and paths, and a CR or LF in one would otherwise start a line the
+        # runner reads as another workflow command.
+        escape_data() {
+          local text="${1}"
+          local percent='%'
+          local cr=$'\r'
+          local lf=$'\n'
+          text="${text//"${percent}"/%25}"
+          text="${text//"${cr}"/%0D}"
+          text="${text//"${lf}"/%0A}"
+          printf '%s' "${text}"
+        }
         args=()
         while IFS= read -r line; do
           # Append enforced boolean flags once, including for existing callers.
@@ -99,7 +113,7 @@ runs:
               --json-legacy|--json-legacy=*|--sarif|--sarif=*|--github-actions|--github-actions=*)
                 msg="${line} replaces the JSON output the allowlist is matched"
                 msg="${msg} against. Remove it, or leave allowlist unset."
-                echo "::error::${msg}" >&2
+                printf '::error::%s\n' "$(escape_data "${msg}")" >&2
                 exit 1
                 ;;
             esac
@@ -121,7 +135,8 @@ runs:
           exit 1
         fi
         if [[ ! -f "${TRUFFLEHOG_ALLOWLIST}" ]]; then
-          echo "::error::allowlist '${TRUFFLEHOG_ALLOWLIST}' is not a file in the checkout." >&2
+          msg="allowlist '${TRUFFLEHOG_ALLOWLIST}' is not a file in the checkout."
+          printf '::error::%s\n' "$(escape_data "${msg}")" >&2
           exit 1
         fi
         # Findings carry raw credential material, so they land in a private

@@ -406,6 +406,44 @@ def check_expected_findings(base, findings, entry):
     run_checker(CHECKER, findings, forged, 2, "allowlist rejects a forged reason")
 
 
+def check_malformed_findings(base, findings, entry):
+    """A finding the checker cannot read fails closed rather than matching."""
+    allowlist = write_allowlist(
+        base / "allow-malformed.json", {"version": 1, "entries": [entry]}
+    )
+    source = json.loads(findings.read_text().splitlines()[0])
+
+    # Verified decides whether an entry may cover a finding at all, so a
+    # missing or non-boolean value must not read as "not verified".
+    for label, mutate in (
+        ("missing Verified", lambda f: f.pop("Verified")),
+        ("non-boolean Verified", lambda f: f.update({"Verified": "false"})),
+        ("missing DetectorName", lambda f: f.pop("DetectorName")),
+        ("non-string DetectorName", lambda f: f.update({"DetectorName": 17})),
+    ):
+        malformed = json.loads(json.dumps(source))
+        mutate(malformed)
+        path = base / f"findings-{label.replace(' ', '-')}.json"
+        path.write_text(json.dumps(malformed) + "\n")
+        run_checker(CHECKER, path, allowlist, 2, f"findings rejected: {label}")
+
+    # Git permits a newline in a filename, so a finding must not be able to
+    # write its own report lines either.
+    injected = json.loads(json.dumps(source))
+    injected["SourceMetadata"]["Data"]["Git"]["file"] = "sample.txt\n::error::forged"
+    path = base / "findings-injected-path.json"
+    path.write_text(json.dumps(injected) + "\n")
+    output = run_checker(CHECKER, path, allowlist, 1, "finding path cannot inject lines")
+    # The runner reads a line as a workflow command only when it starts with
+    # "::" after leading whitespace, so the escaped text staying inside a line
+    # is the property that matters, not its absence from the report.
+    for line in output.splitlines():
+        if line.strip().startswith("::") and "forged" in line:
+            raise AssertionError(f"a finding forged a workflow command\n{output}")
+    if "sample.txt\\n::error::forged" not in output:
+        raise AssertionError(f"the newline was not rendered visibly\n{output}")
+
+
 def check_action_output_flags(base, env, action, repo):
     """The action owns the output format the allowlist is matched against."""
     allowlist = base / "allow-exact.json"
@@ -498,6 +536,7 @@ def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow)
     check_matching(base, findings, entry)
     check_rejections(base, findings, entry)
     check_expected_findings(base, findings, entry)
+    check_malformed_findings(base, findings, entry)
     check_verified_never_allowlisted(base, custom_wrapper_dir, planted)
     check_planted_defect(base, findings, entry)
 

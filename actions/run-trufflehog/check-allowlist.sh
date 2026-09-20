@@ -29,8 +29,28 @@ function usage() {
   echo "Usage: ${0##*/} --findings <path> --allowlist <path> [--expect-findings]" >&2
 }
 
+# Encode a workflow-command annotation's data, mirroring the helper in
+# install-pinned-tool.sh. Deliberately duplicated rather than shared: the
+# reusable workflow fetches each of these scripts individually, so a common
+# file would add a fetch and a failure mode for no benefit.
+# Arguments:
+#   $1 - text
+function escape_data() {
+  local text="${1}"
+  local percent='%'
+  local cr=$'\r'
+  local lf=$'\n'
+  text="${text//"${percent}"/%25}"
+  text="${text//"${cr}"/%0D}"
+  text="${text//"${lf}"/%0A}"
+  printf '%s' "${text}"
+}
+
+# The message repeats caller-supplied paths, so it is encoded before it
+# reaches an annotation: a CR or LF in a path would otherwise start a line the
+# runner reads as another workflow command.
 function fail_invalid() {
-  echo "::error::${1}" >&2
+  printf '::error::%s\n' "$(escape_data "${1}")" >&2
   exit "${EXIT_INVALID}"
 }
 
