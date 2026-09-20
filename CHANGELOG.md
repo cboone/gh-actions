@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `lint-text.yml` accepts `cspell-config` and `cspell-files`, matching the
+  `config` and `files` inputs `run-cspell` already has. `cspell-config`
+  passes `--config` instead of relying on auto-discovery and suppresses the
+  cspell half of `preset`; `cspell-files` replaces the `.` argument with
+  newline-delimited files and globs. Both default to today's behavior. The
+  extra-dictionary self-tests now use them to assert that a skipped install
+  fails the job (#105)
+
 ### Changed
 
 - **Breaking:** Every ordinary data and argument input now reaches its shell
