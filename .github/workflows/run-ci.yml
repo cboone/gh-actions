@@ -385,19 +385,25 @@ jobs:
   # What they catch, because each makes the job fail: a fetch that 404s, an
   # entry the installer rejects, a digest mismatch, and a CSPELL_INSTALL_DIR
   # that is empty or points somewhere without cspell, which the installer
-  # refuses with `cspell is not installed in ...`. What they cannot catch is
-  # the install step being skipped outright, since a skipped step is green.
-  # Closing that needs an assertion between the install and the cspell run,
-  # and a caller cannot place one: a `uses:` job has no steps of its own, and
-  # cspell here reads this repo's root cspell.json, which imports no extra
-  # dictionary and is shared with the `text` job and `make spell`, neither of
-  # which installs one. #105 tracks the input that would make it expressible.
+  # refuses with `cspell is not installed in ...`.
+  #
+  # They also catch the install step being skipped outright, which a skipped
+  # step's green status would otherwise hide. cspell-config points them at a
+  # committed fixture whose only import is the dictionary, so an install that
+  # did not happen leaves that import unresolvable and the job fails.
+  # @cspell/dict-pt-pt is in no manifest here, so it is present only because
+  # the install step put it there: beside the pinned cspell in RUNNER_TEMP
+  # below, and in the workspace under use-consumer-versions. cspell-files
+  # keeps the run on the fixture's Portuguese sample, since the fixture config
+  # deliberately carries none of this repo's word list.
   text-extra-dicts:
     uses: ./.github/workflows/lint-text.yml
     with:
       run-markdownlint: false
       run-prettier: false
       run-cspell: true
+      cspell-config: tests/fixtures/cspell-extra-dict/cspell.json
+      cspell-files: tests/fixtures/cspell-extra-dict/amostra.md
       # A folded scalar, because an entry runs past the 120-column limit on
       # one line. Folding joins these two lines with the single space the
       # installer splits the entry on; a blank line would start the next
@@ -414,6 +420,12 @@ jobs:
   # that directory is what makes a wrong value fail here rather than pass
   # quietly. yamllint stays off because npm ci puts a node_modules tree in the
   # workspace that `yamllint .` would walk.
+  #
+  # The fixture import resolves through that workspace tree here, by the
+  # ordinary node_modules walk rather than from cspell-lib's own directory.
+  # That is the mechanism this mode actually uses, and the assertion still
+  # holds: npm ci installs what the lockfile pins, which is not the
+  # dictionary, so only the install step can have put it there.
   text-extra-dicts-consumer:
     uses: ./.github/workflows/lint-text.yml
     with:
@@ -422,6 +434,8 @@ jobs:
       run-cspell: true
       run-yamllint: false
       use-consumer-versions: true
+      cspell-config: tests/fixtures/cspell-extra-dict/cspell.json
+      cspell-files: tests/fixtures/cspell-extra-dict/amostra.md
       extra-cspell-packages: >-
         @cspell/dict-pt-pt@3.0.6
         sha512-RT3EovAHK086ta4efTp+PxT9a2fZFHGrsf6AhX6LoFfxCn2RZAnITULSuVgkwpD/3Z/Di7oSXXNfeW9LKtGpGQ==

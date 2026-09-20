@@ -1,0 +1,5 @@
+{
+  "version": "0.2",
+  "language": "en,pt-PT",
+  "import": ["@cspell/dict-pt-pt/cspell-ext.json"]
+}
