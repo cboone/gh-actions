@@ -406,6 +406,21 @@ def check_expected_findings(base, findings, entry):
     run_checker(CHECKER, findings, forged, 2, "allowlist rejects a forged reason")
 
 
+def assert_no_injected_command(output, marker, label):
+    """The planted text must never open a line.
+
+    A line is a workflow command only when it starts with "::" after leading
+    whitespace, so encoded text sitting inside a legitimate annotation is
+    inert. Asserting the marker is absent altogether would fail on exactly
+    the output that proves the encoding worked.
+    """
+    for line in output.splitlines():
+        if line.strip().startswith(f"::error::{marker}"):
+            raise AssertionError(
+                f"{label}: a line opened with the planted command\n{output}"
+            )
+
+
 def check_no_command_injection(base, entry):
     """Nothing the allowlist carries can open a workflow command line."""
     empty = base / "no-findings.json"
@@ -423,6 +438,7 @@ def check_no_command_injection(base, entry):
     output = run_checker(CHECKER, empty, percent, 0, "percent escapes cannot inject")
     if "%250A" not in output:
         raise AssertionError(f"the percent sign was not encoded\n{output}")
+    assert_no_injected_command(output, "FORGED-DATA", "percent escapes")
 
     # A key name is not a value, so field validation never sees it, and it
     # reaches the log through jq's diagnostic rather than the report.
@@ -436,14 +452,31 @@ def check_no_command_injection(base, entry):
         )
     )
     output = run_checker(CHECKER, empty, injected, 2, "a key name cannot inject")
+    assert_no_injected_command(output, "FORGED-KEY", "key name")
 
-    for label, text in (
-        ("percent", "FORGED-DATA"),
-        ("key name", "FORGED-KEY"),
-    ):
-        for line in output.splitlines():
-            if line.strip().startswith("::") and text in line:
-                raise AssertionError(f"{label} opened a workflow command\n{output}")
+
+def check_step_annotation_escaping(env, action, repo):
+    """The step's own annotations encode the caller input they repeat."""
+    label = "action encodes an allowlist path in its annotation"
+    result = run_scan(
+        action,
+        repo,
+        {
+            **env,
+            "SCAN_SCOPE": "full-history",
+            "TRUFFLEHOG_ARGS": "git\nfile://.",
+            # Never a real file, so the step fails on the missing allowlist
+            # before scanning, which is the annotation under test.
+            "TRUFFLEHOG_ALLOWLIST": "missing.json\n::error::FORGED-PATH",
+            "ALLOWLIST_CHECKER": str(CHECKER),
+        },
+        1,
+        label,
+    )
+    output = result.stdout + result.stderr
+    assert_no_injected_command(output, "FORGED-PATH", label)
+    if "%0A" not in output:
+        raise AssertionError(f"{label}: the newline was not encoded\n{output}")
 
 
 def check_malformed_findings(base, findings, entry):
@@ -477,9 +510,7 @@ def check_malformed_findings(base, findings, entry):
     # The runner reads a line as a workflow command only when it starts with
     # "::" after leading whitespace, so the escaped text staying inside a line
     # is the property that matters, not its absence from the report.
-    for line in output.splitlines():
-        if line.strip().startswith("::") and "forged" in line:
-            raise AssertionError(f"a finding forged a workflow command\n{output}")
+    assert_no_injected_command(output, "forged", "finding path")
     if "sample.txt\\n::error::forged" not in output:
         raise AssertionError(f"the newline was not rendered visibly\n{output}")
 
@@ -594,6 +625,7 @@ def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow)
     env = {**os.environ, "PATH": f"{uri_dir}{os.pathsep}{os.environ['PATH']}"}
     check_action_output_flags(base, env, action, repo)
     check_working_tree_never_matches(base, env, action, entry)
+    check_step_annotation_escaping(env, action, repo)
     exact = base / "allow-exact.json"
     wrong = base / "allow-wrong-line.json"
     for name, script in (("action", action), ("workflow", workflow)):
