@@ -244,7 +244,13 @@ The consumer's `lint` target runs only `golangci-lint run ./...`.
   (`release-go-binaries.yml`), `test-args`, `clippy-args` and
   `extra-components` (`run-rust-ci.yml`), `build-args`
   (`release-rust-binaries.yml`), `fmt-paths` and `cross-targets`
-  (`run-zig-ci.yml`), and `targets` (`release-zig-binaries.yml`).
+  (`run-zig-ci.yml`), and `targets` (`release-zig-binaries.yml`). Sites where
+  the list is optional append it under `[[ ${#array[@]} -gt 0 ]]`. Under the
+  runner's `bash --noprofile --norc -e -o pipefail` that test is redundant,
+  because appending an empty array adds nothing; it is there so the same code
+  is correct if a step or fixture ever runs under `set -u`, where expanding an
+  empty array aborts on bash 3.2. Sites where the list is required test
+  `-eq 0` instead and fail with a diagnostic, which is not redundant.
 - Ordinary data and argument inputs must be passed to shell steps via `env:` mappings,
   using quoted variables and explicit argument arrays, not inline expressions.
   Explicit command inputs intentionally execute through `run:`:
@@ -439,6 +445,7 @@ that actionlint really does shell out to shellcheck. Its `scrut` job calls
 `run-scrut-tests.yml` with `setup-uv: true` against the specs in `tests/scrut/`.
 It passes `tests/fixtures/hello.py` through `HELLO_BIN`: that PEP 723
 executable only runs if uv reached `PATH`.
+
 The `workflow-arg-binding` job covers the argument-binding rules above on
 Linux and macOS, the latter for the bash 3.2 at `/bin/bash` that the fixture
 spawns. `tests/fixtures/check-workflow-arg-binding.mjs` reads the production
