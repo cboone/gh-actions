@@ -45,7 +45,7 @@ jobs:
         uses: ./actions/install-pinned-tool
         with:
           tool: uv
-          version: 0.11.8
+          version: 0.12.17
           url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
           checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
           os-names: linux=unknown-linux-gnu darwin=apple-darwin
@@ -232,7 +232,7 @@ jobs:
         uses: ./actions/install-pinned-tool
         with:
           tool: uv
-          version: 0.11.8
+          version: 0.12.17
           url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
           checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
           os-names: linux=unknown-linux-gnu darwin=apple-darwin
@@ -285,7 +285,7 @@ jobs:
         uses: ./actions/install-pinned-tool
         with:
           tool: uv
-          version: 0.11.8
+          version: 0.12.17
           url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
           checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
           os-names: linux=unknown-linux-gnu darwin=apple-darwin
@@ -469,7 +469,7 @@ jobs:
         uses: ./actions/install-pinned-tool
         with:
           tool: uv
-          version: 0.11.8
+          version: 0.12.17
           url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
           checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
           os-names: linux=unknown-linux-gnu darwin=apple-darwin
@@ -490,7 +490,7 @@ jobs:
           status=0
           for spec in "shfmt 3.13.1 --version" "shfmt-single 3.13.1 --version" \
             "actionlint 1.7.12 -version" "shellcheck 0.11.0 --version" \
-            "uv 0.11.8 --version"; do
+            "uv 0.12.17 --version"; do
             read -r tool want flag <<< "${spec}"
             resolved="$(command -v "${tool}" || true)"
             if [ "${resolved}" != "${RUNNER_TEMP}/${tool}-bin/${tool}" ]; then

@@ -124,7 +124,7 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         "uv",
-        "0.11.8",
+        "0.12.17",
         lambda: github_latest_release("astral-sh/uv"),
         notes=(
             "Bump every pin together: UV_VERSION in lint-text.yml and "

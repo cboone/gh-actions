@@ -131,7 +131,7 @@ A nested member and a per-asset `.sha256` file:
 - uses: cboone/gh-actions/actions/install-pinned-tool@v3.2.0
   with:
     tool: uv
-    version: 0.11.8
+    version: 0.12.17
     url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
     checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
     os-names: linux=unknown-linux-gnu darwin=apple-darwin
