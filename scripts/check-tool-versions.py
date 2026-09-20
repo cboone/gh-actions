@@ -160,12 +160,14 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         "shfmt",
-        "3.13.1",
+        "3.14.1",
         lambda: github_latest_release("mvdan/sh"),
         "Committed SHA-256 lines must be regenerated on bump: the `checksums` "
         "default in actions/set-up-shfmt and `shfmt-checksums` in lint-shell.yml. "
         "run-ci.yml's wrapper check asserts the set-up-shfmt default version; "
-        "bump it too. Its other shfmt 3.13.1 lines are test fixtures and can stay.",
+        "bump it too. Its remaining shfmt 3.13.1 lines, and the 3.15.0 in its "
+        "version-bumped-without-checksums rejection case, are test fixtures "
+        "and can stay.",
     ),
     Tool(
         "cargo-audit",

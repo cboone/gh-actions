@@ -535,7 +535,7 @@ jobs:
       - name: Check the wrapper installs
         run: |
           status=0
-          for spec in "shfmt 3.13.1 --version" "actionlint 1.7.12 -version" \
+          for spec in "shfmt 3.14.1 --version" "actionlint 1.7.12 -version" \
             "shellcheck 0.11.0 --version"; do
             read -r tool want flag <<< "${spec}"
             resolved="$(command -v "${tool}" || true)"
@@ -647,8 +647,8 @@ jobs:
           check_rejection wrong-checksum 65 "Checksum verification failed for shfmt_v3.13.1_" \
             TOOL=shfmt VERSION=3.13.1 "URL_TEMPLATE=${SHFMT_URL}" \
             CHECKSUM=0000000000000000000000000000000000000000000000000000000000000000
-          check_rejection version-bumped-without-checksums 65 "No checksum entry for shfmt_v3.14.1_" \
-            TOOL=shfmt VERSION=3.14.1 "URL_TEMPLATE=${SHFMT_URL}" \
+          check_rejection version-bumped-without-checksums 65 "No checksum entry for shfmt_v3.15.0_" \
+            TOOL=shfmt VERSION=3.15.0 "URL_TEMPLATE=${SHFMT_URL}" \
             "CHECKSUMS=${SHFMT_SHA256}  shfmt_v3.13.1_linux_amd64"
           check_rejection no-checksum-source 64 "Set exactly one of checksum, checksums and checksums-url-template" \
             TOOL=shfmt VERSION=3.13.1 "URL_TEMPLATE=${SHFMT_URL}"
