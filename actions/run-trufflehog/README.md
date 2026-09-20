@@ -8,10 +8,11 @@ to limit noise from invalid credentials, so revoked credentials and detections
 without verification are outside this gate.
 
 Without `allowlist`, any reported finding fails the step with TruffleHog's own
-exit code 183. With `allowlist` set, the step instead fails on the first
-finding no entry covers, and the exit code is the checker's: `1` for a finding
-that is not allowlisted, `2` for an allowlist or scan output it could not use.
-A finding an entry does cover does not fail the step.
+exit code 183. With `allowlist` set, the exit code is the checker's instead:
+`0` when every finding is allowed, `1` when any finding is not, and `2` for an
+allowlist or scan output it could not use. Only an indeterminate finding whose
+commit, path, line and detector all match an entry is allowed. A verified
+finding fails even when an entry matches it, as the rules below set out.
 
 `--no-update` and `--fail` are always set by this action and stripped from
 `args`, so the pinned, checksum-verified binary cannot update itself mid-scan
@@ -80,11 +81,14 @@ Three rules keep the gate strict:
   without breaking a scan that legitimately no longer reaches it.
 
 The report names the detector, verification state, commit, path and line of
-every finding, and nothing else. Raw, decoded and structured values stay out
-of the log: the scan writes them to a private temporary file that the checker
-reads and the step deletes, and the checker never reads the fields that carry
-them. A findings file that does not parse is reported as such without
-reproducing what failed to parse.
+every finding, and nothing else the scan read. An allowed finding also names
+the entry that covered it and that entry's `reason`, so the log says why it
+was permitted; both come from your own reviewed allowlist file, not from the
+scanned content. Raw, decoded and structured values stay out of the log: the
+scan writes them to a private temporary file that the checker reads and the
+step deletes, and the checker never reads the fields that carry them. A
+findings file that does not parse is reported as such without reproducing what
+failed to parse.
 
 If TruffleHog reports results but the checker sees none in the file, the two
 disagree and the step fails rather than treating the scan as clean.
