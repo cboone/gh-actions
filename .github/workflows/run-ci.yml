@@ -50,11 +50,12 @@ jobs:
       - name: Install pinned TruffleHog and scan the checkout
         uses: ./actions/run-trufflehog
 
-      # The control below overrides ALLOWLIST_CHECKER to reach the copy in
-      # the checkout, so nothing else exercises the action's own default,
-      # ${{ github.action_path }}/check-allowlist.sh. This runs the real
-      # binding: the fixture entry matches nothing in a clean tree, so the
-      # checker reports it unused and the step passes.
+      # tests/trufflehog-positive-control.py, run further down, sets
+      # ALLOWLIST_CHECKER to the copy in the checkout, so it never reaches the
+      # action's own default, ${{ github.action_path }}/check-allowlist.sh.
+      # This step leaves that default in place and so is the only thing that
+      # exercises it. The fixture entry matches nothing in a clean tree, so
+      # the checker reports it unused and the step passes.
       - name: Run the action's own allowlist binding
         uses: ./actions/run-trufflehog
         with:
