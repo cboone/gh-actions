@@ -11,7 +11,7 @@ revoked credentials and detections without verification are outside this gate.
 
 | Name      | Type   | Default     | Description                                   |
 | --------- | ------ | ----------- | --------------------------------------------- |
-| `version` | string | `3.95.2`    | trufflehog version to install                 |
+| `version` | string | `3.97.5`    | trufflehog version to install                 |
 | `args`    | string | (see below) | Arguments to pass to trufflehog, one per line |
 
 Default `args`:

@@ -21,20 +21,20 @@ workflow fails fast.
 | `runs-on`             | string  | `ubuntu-latest`       | Runner label (Windows is not supported)                   |
 | `run-test`            | boolean | `true`                | Run cargo test                                            |
 | `use-nextest`         | boolean | `false`               | Use cargo-nextest instead of cargo test                   |
-| `nextest-version`     | string  | `"0.9.133"`           | cargo-nextest version to install                          |
+| `nextest-version`     | string  | `"0.9.145"`           | cargo-nextest version to install                          |
 | `test-args`           | string  | `""`                  | Additional arguments for cargo test or nextest            |
 | `run-lint`            | boolean | `true`                | Run cargo clippy                                          |
 | `clippy-args`         | string  | `"-D warnings"`       | Arguments passed to clippy after `--`                     |
 | `run-format-check`    | boolean | `true`                | Run cargo fmt --check                                     |
 | `run-deny`            | boolean | `false`               | Run cargo deny check (requires deny.toml)                 |
-| `deny-version`        | string  | `"0.19.4"`            | cargo-deny version to install                             |
+| `deny-version`        | string  | `"0.20.2"`            | cargo-deny version to install                             |
 | `run-audit`           | boolean | `false`               | Run cargo audit                                           |
 | `audit-version`       | string  | `"0.22.2"`            | cargo-audit version to install                            |
 | `run-typos`           | boolean | `false`               | Run typos spell checking                                  |
 | `cargo-features`      | string  | `""`                  | Cargo features passed via --features                      |
 | `extra-components`    | string  | `""`                  | Extra rustup components to install                        |
 | `coverage`            | boolean | `false`               | Generate coverage and upload to Codecov                   |
-| `codecov-cli-version` | string  | `"11.2.8"`            | Codecov CLI version to install                            |
+| `codecov-cli-version` | string  | `"11.3.1"`            | Codecov CLI version to install                            |
 | `codecov-files`       | string  | `lcov.info`           | Coverage file path (used for llvm-cov and Codecov upload) |
 | `llvm-cov-version`    | string  | `"0.9.1"`             | cargo-llvm-cov version to install (used when `coverage`)  |
 | `timeout-minutes`     | number  | `15`                  | Job timeout in minutes                                    |

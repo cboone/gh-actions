@@ -110,16 +110,16 @@ TOOLS: list[Tool] = [
             "check asserts the set-up-actionlint default version; bump it too."
         ),
     ),
-    Tool("golangci-lint", "2.11.4", lambda: github_latest_release("golangci/golangci-lint")),
+    Tool("golangci-lint", "2.13.2", lambda: github_latest_release("golangci/golangci-lint")),
     Tool("gitleaks", "8.30.1", lambda: github_latest_release("gitleaks/gitleaks")),
-    Tool("trufflehog", "3.95.2", lambda: github_latest_release("trufflesecurity/trufflehog")),
-    Tool("goreleaser", "2.15.4", lambda: github_latest_release("goreleaser/goreleaser")),
+    Tool("trufflehog", "3.97.5", lambda: github_latest_release("trufflesecurity/trufflehog")),
+    Tool("goreleaser", "2.18.2", lambda: github_latest_release("goreleaser/goreleaser")),
     Tool("markscribe", "0.8.1", lambda: github_latest_release("charmbracelet/markscribe")),
-    Tool("codecov CLI", "11.2.8", lambda: github_latest_release("codecov/codecov-cli")),
-    Tool("cargo-deny", "0.19.4", lambda: github_latest_release("EmbarkStudios/cargo-deny")),
+    Tool("codecov CLI", "11.3.1", lambda: github_latest_release("codecov/codecov-cli")),
+    Tool("cargo-deny", "0.20.2", lambda: github_latest_release("EmbarkStudios/cargo-deny")),
     Tool(
         "cargo-nextest",
-        "0.9.133",
+        "0.9.145",
         lambda: github_latest_matching("nextest-rs/nextest", r"cargo-nextest-(\d+\.\d+\.\d+)"),
     ),
     Tool(

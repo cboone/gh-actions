@@ -36,7 +36,7 @@ on:
       nextest-version:
         description: cargo-nextest version to install.
         type: string
-        default: "0.9.133"
+        default: "0.9.145"
       test-args:
         description: >-
           Additional arguments passed to cargo test or cargo nextest run.
@@ -64,7 +64,7 @@ on:
       deny-version:
         description: cargo-deny version to install.
         type: string
-        default: "0.19.4"
+        default: "0.20.2"
       run-audit:
         description: Run cargo audit.
         type: boolean
@@ -95,7 +95,7 @@ on:
       codecov-cli-version:
         description: Codecov CLI version to install.
         type: string
-        default: "11.2.8"
+        default: "11.3.1"
       codecov-files:
         description: Coverage file path (used for llvm-cov output and Codecov upload).
         type: string

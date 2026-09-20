@@ -6,13 +6,13 @@ Install GoReleaser binary with a pinned version.
 
 | Name      | Type   | Default  | Description                   |
 | --------- | ------ | -------- | ----------------------------- |
-| `version` | string | `2.15.4` | GoReleaser version to install |
+| `version` | string | `2.18.2` | GoReleaser version to install |
 
 ## Usage
 
 ```yaml
 - uses: cboone/gh-actions/actions/set-up-goreleaser@v3.2.0
   with:
-    version: "2.15.4"
+    version: "2.18.2"
 - run: goreleaser release --clean
 ```
