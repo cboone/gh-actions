@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Bump pinned tool defaults to current latest stable releases (#61):
+  - golangci-lint 2.11.4 → 2.13.2
+  - trufflehog 3.95.2 → 3.97.5
+  - GoReleaser 2.15.4 → 2.18.2
+  - codecov CLI 11.2.8 → 11.3.1
+  - cargo-deny 0.19.4 → 0.20.2 (0.x bump treated as breaking; the CLI
+    refactor dropped deprecated flags this repo never passes, and the new
+    `bans.std-replacements` lint can report findings against a consumer's
+    `deny.toml`)
+  - cargo-nextest 0.9.133 → 0.9.145
+  - uv 0.11.8 → 0.12.17 (0.x bump; the surface used here is unaffected by
+    0.12.0's changes to `uv init`, legacy source distribution archive
+    formats and pre-release resolution)
+  - shfmt 3.13.1 → 3.14.1 (new hardcoded SHA-256 checksums; upstream
+    still publishes no checksum file)
+  - cargo-audit 0.22.1 → 0.22.2 (new hardcoded SHA-256 checksums)
+  - cargo-llvm-cov 0.8.5 → 0.9.1 (0.x bump treated as breaking; new
+    hardcoded SHA-256 checksums. Its `--show-missing-lines` output change
+    does not reach `run-rust-ci.yml`, which runs `--lcov --output-path`)
+  - Node.js 24 LTS 24.15.0 → 24.21.0
+- reuse 5.0.2 → 6.2.0 (major bump) changes what `run-reuse` reports for
+  every consumer. `reuse lint` now reads entire files rather than the
+  first 4 KiB, so REUSE information deeper in a file is found and may need
+  `REUSE-IgnoreStart` and `REUSE-IgnoreEnd` to suppress; a new Invalid
+  SPDX License Expressions criterion can fail a repository that previously
+  passed; and the Bad licenses criterion now examines only `LICENSES/`.
+  `requirements/reuse.txt` was regenerated, dropping `binaryornot` and
+  adding `python-magic`, with `charset-normalizer` remaining as the
+  fallback encoding module (#61)
+- `lint-shell.yml` still discovers shell scripts one tracked path at a
+  time. shfmt 3.14.1 fixes the `-f=0` defect that motivated the loop, but
+  `shfmt-version` is caller-overridable, so an older shfmt can still reach
+  that code path (#61)
+
 ### Fixed
 
 - `lint-text.yml` runs every enabled linter after setup succeeds even when
