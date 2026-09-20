@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+### Changed
 
-- Every ordinary data and argument input now reaches its shell step through an
-  `env:` mapping instead of being interpolated into `run:` shell source.
+- **Breaking:** Every ordinary data and argument input now reaches its shell
+  step through an `env:` mapping instead of being interpolated into `run:`
+  shell source.
   `test-flags` and `codecov-files` in `run-go-ci.yml`, `codecov-files` in
   `run-rust-ci.yml`, and `goreleaser-args` in `release-go-binaries.yml` were
   the remaining sites, so a caller-supplied value can no longer execute a
@@ -19,26 +20,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `run:`, and the new `workflow-arg-binding` CI job enforces that allowlist
   against every workflow and action (#115, #95)
 
-  Values previously expanded by the runner now arrive literally, which is the
-  point of the change. A glob such as `--config configs/*.yml` is passed
-  through unexpanded; name the file instead, or let the tool glob. `$VAR`,
-  `$(command)`, backticks and `~` are no longer expanded; set the value from
-  the caller's own expression. Quoting inside the value never worked and still
-  does not: `--foo "a b"` tokenizes to `--foo`, `"a`, `b"`. Conversely,
-  `codecov-files` may now contain spaces, which previously broke the command.
+  Values the shell previously expanded now arrive literally, so a caller
+  passing one must update their workflow file. A glob such as
+  `--config configs/*.yml` is passed through unexpanded; name the file
+  instead, or let the tool glob. `$VAR`, `$(command)`, backticks and `~` are
+  no longer expanded; set the value from the caller's own expression. Quoting
+  inside the value never worked and still does not: `--foo "a b"` tokenizes to
+  `--foo`, `"a`, `b"`. Conversely, `codecov-files` may now contain spaces,
+  which previously broke the command. See
+  [the v4 migration guide](docs/migrations/v4.md)
 
-- Argument, flag, path-list and target-list inputs now reject a value
-  containing a newline with an `::error::` diagnostic instead of silently
-  using only its first line. `read -r -a` stops at the first newline, so a
-  multi-line `test-flags`, `goreleaser-args`, `test-args`, `clippy-args`,
+- **Breaking:** Argument, flag, path-list and target-list inputs now reject a
+  value containing a newline with an `::error::` diagnostic instead of
+  silently using only its first line. `read -r -a` stops at the first newline,
+  so a multi-line `test-flags`, `goreleaser-args`, `test-args`, `clippy-args`,
   `extra-components`, `build-args`, `fmt-paths`, `cross-targets` or `targets`
   previously lost every line after the first (#115)
 
-- `run-zig-ci.yml`'s `cross-targets` and `release-zig-binaries.yml`'s `targets`
-  now split into an explicit quoted array rather than relying on unquoted word
-  splitting, which glob-expanded each target triple against the working
-  directory. Both also fail on an empty list instead of silently building
-  nothing (#115)
+- **Breaking:** `run-zig-ci.yml`'s `cross-targets` and
+  `release-zig-binaries.yml`'s `targets` now split into an explicit quoted
+  array rather than relying on unquoted word splitting, which glob-expanded
+  each target triple against the working directory. Both now reject an empty
+  or whitespace-only list with a diagnostic naming the input, as does
+  `run-rust-ci.yml`'s `extra-components`. `run-zig-ci.yml` previously built
+  nothing and reported success; `release-zig-binaries.yml` failed later in its
+  checksum step with `shasum: *: No such file or directory` (#115)
+
+### Fixed
 
 - `lint-text.yml` runs every enabled linter after setup succeeds even when
   an earlier linter fails, reporting all findings in one run. Any linter

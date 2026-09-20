@@ -199,7 +199,9 @@ nor `Darwin` matches. Windows runners are not supported.
 
 ## Migration
 
-See [docs/migrations/v3.md](docs/migrations/v3.md) for the v3 path renames.
+See [docs/migrations/v4.md](docs/migrations/v4.md) for the v4 argument-binding
+changes, and [docs/migrations/v3.md](docs/migrations/v3.md) for the v3 path
+renames.
 
 ## Versioning
 
