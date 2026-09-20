@@ -28,6 +28,11 @@ Default `targets`:
 x86_64-linux-gnu aarch64-linux-gnu x86_64-macos aarch64-macos x86_64-windows-gnu
 ```
 
+`targets` is split on whitespace into separate target triples. Quoting,
+escaping, glob expansion and variable expansion are not supported. A value
+containing a newline fails the job rather than losing every line after the
+first, and an empty value fails rather than building nothing.
+
 ## Usage
 
 ```yaml

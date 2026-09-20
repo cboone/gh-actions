@@ -70,3 +70,10 @@ empty: passed
 $ "${NODE_BIN}" "${ZIG_FORMAT_FIXTURE}" whitespace
 whitespace: passed
 ```
+
+## Multi-line path list
+
+```scrut
+$ "${NODE_BIN}" "${ZIG_FORMAT_FIXTURE}" multiline
+multiline: passed
+```

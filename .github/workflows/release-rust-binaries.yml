@@ -31,7 +31,10 @@ on:
         type: string
         default: rust-toolchain.toml
       build-args:
-        description: Additional arguments passed to cargo build.
+        description: >-
+          Space-separated additional arguments passed to cargo build, on a
+          single line. Quoting, escaping and glob expansion are not
+          supported.
         type: string
         default: ""
       archive-prefix:
@@ -173,9 +176,13 @@ jobs:
           TARGET: ${{ matrix.target }}
           BUILD_ARGS: ${{ inputs.build-args }}
         run: |
+          if [[ "${BUILD_ARGS}" == *$'\n'* ]]; then
+            echo "::error::build-args must be a single line of space-separated arguments" >&2
+            exit 1
+          fi
           args=(cargo build --release --target "${TARGET}")
-          if [ -n "${BUILD_ARGS}" ]; then
-            read -r -a extra <<< "${BUILD_ARGS}"
+          read -r -a extra <<< "${BUILD_ARGS}"
+          if [[ ${#extra[@]} -gt 0 ]]; then
             args+=("${extra[@]}")
           fi
           "${args[@]}"

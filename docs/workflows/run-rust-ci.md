@@ -60,6 +60,12 @@ supported targets are `x86_64-unknown-linux-gnu`,
 | `llvm-cov-checksums`  | string  | the v0.9.1 archives   | `<sha256>  <version>  <target>` lines for cargo-llvm-cov  |
 | `timeout-minutes`     | number  | `15`                  | Job timeout in minutes                                    |
 
+`test-args`, `clippy-args` and `extra-components` are split on whitespace into
+separate arguments. Quoting, escaping, glob expansion and variable expansion
+are not supported, and a value containing a newline fails the job rather than
+losing every line after the first. `cargo-features` and `codecov-files` are
+single values and are not split.
+
 ## Secrets
 
 | Name            | Required | Description          |

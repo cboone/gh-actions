@@ -39,7 +39,9 @@ on:
         default: "0.9.145"
       test-args:
         description: >-
-          Additional arguments passed to cargo test or cargo nextest run.
+          Space-separated additional arguments passed to cargo test or
+          cargo nextest run, on a single line. Quoting, escaping and glob
+          expansion are not supported.
         type: string
         default: ""
       run-lint:
@@ -48,7 +50,9 @@ on:
         default: true
       clippy-args:
         description: >-
-          Arguments passed to cargo clippy after the -- separator.
+          Space-separated arguments passed to cargo clippy after the --
+          separator, on a single line. Quoting, escaping and glob
+          expansion are not supported.
         type: string
         default: "-D warnings"
       run-format-check:
@@ -101,7 +105,8 @@ on:
       extra-components:
         description: >-
           Space-separated list of additional rustup components to install
-          (e.g. "llvm-tools-preview").
+          (e.g. "llvm-tools-preview"), on a single line. Quoting, escaping
+          and glob expansion are not supported.
         type: string
         default: ""
       coverage:
@@ -193,7 +198,15 @@ jobs:
         env:
           COMPONENTS: ${{ inputs.extra-components }}
         run: |
+          if [[ "${COMPONENTS}" == *$'\n'* ]]; then
+            echo "::error::extra-components must be a single line of space-separated component names" >&2
+            exit 1
+          fi
           read -r -a components <<< "${COMPONENTS}"
+          if [[ ${#components[@]} -eq 0 ]]; then
+            echo "::error::extra-components must contain at least one component name" >&2
+            exit 1
+          fi
           rustup component add "${components[@]}"
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -326,6 +339,10 @@ jobs:
           TEST_ARGS: ${{ inputs.test-args }}
           CARGO_FEATURES: ${{ inputs.cargo-features }}
         run: |
+          if [[ "${TEST_ARGS}" == *$'\n'* ]]; then
+            echo "::error::test-args must be a single line of space-separated arguments" >&2
+            exit 1
+          fi
           if [ "${USE_NEXTEST}" = "true" ]; then
             args=(cargo nextest run)
           else
@@ -334,8 +351,8 @@ jobs:
           if [ -n "${CARGO_FEATURES}" ]; then
             args+=(--features "${CARGO_FEATURES}")
           fi
-          if [ -n "${TEST_ARGS}" ]; then
-            read -r -a extra <<< "${TEST_ARGS}"
+          read -r -a extra <<< "${TEST_ARGS}"
+          if [[ ${#extra[@]} -gt 0 ]]; then
             args+=("${extra[@]}")
           fi
           "${args[@]}"
@@ -349,6 +366,10 @@ jobs:
           CODECOV_FILE: ${{ inputs.codecov-files }}
           TEST_ARGS: ${{ inputs.test-args }}
         run: |
+          if [[ "${TEST_ARGS}" == *$'\n'* ]]; then
+            echo "::error::test-args must be a single line of space-separated arguments" >&2
+            exit 1
+          fi
           if [ "${USE_NEXTEST}" = "true" ]; then
             args=(cargo llvm-cov nextest --lcov --output-path "${CODECOV_FILE}")
           else
@@ -357,8 +378,8 @@ jobs:
           if [ -n "${CARGO_FEATURES}" ]; then
             args+=(--features "${CARGO_FEATURES}")
           fi
-          if [ -n "${TEST_ARGS}" ]; then
-            read -r -a extra <<< "${TEST_ARGS}"
+          read -r -a extra <<< "${TEST_ARGS}"
+          if [[ ${#extra[@]} -gt 0 ]]; then
             args+=("${extra[@]}")
           fi
           "${args[@]}"
@@ -369,6 +390,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           CODECOV_CLI_VERSION: ${{ inputs.codecov-cli-version }}
+          CODECOV_FILE: ${{ inputs.codecov-files }}
         run: |
           # Unset empty token so the CLI uses tokenless mode for public repos
           # instead of treating the empty string as an invalid token.
@@ -403,7 +425,7 @@ jobs:
           fi
           chmod +x "${codecov_bin}"
           "${codecov_bin}" upload-process \
-            --file "${{ inputs.codecov-files }}" \
+            --file "${CODECOV_FILE}" \
             --disable-search
 
   lint:
@@ -452,13 +474,17 @@ jobs:
           CLIPPY_ARGS: ${{ inputs.clippy-args }}
           CARGO_FEATURES: ${{ inputs.cargo-features }}
         run: |
+          if [[ "${CLIPPY_ARGS}" == *$'\n'* ]]; then
+            echo "::error::clippy-args must be a single line of space-separated arguments" >&2
+            exit 1
+          fi
           args=(cargo clippy --all-targets)
           if [ -n "${CARGO_FEATURES}" ]; then
             args+=(--features "${CARGO_FEATURES}")
           fi
           args+=(--)
-          if [ -n "${CLIPPY_ARGS}" ]; then
-            read -r -a extra <<< "${CLIPPY_ARGS}"
+          read -r -a extra <<< "${CLIPPY_ARGS}"
+          if [[ ${#extra[@]} -gt 0 ]]; then
             args+=("${extra[@]}")
           fi
           "${args[@]}"
