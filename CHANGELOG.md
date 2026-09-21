@@ -106,7 +106,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `requirements/reuse.in` now asks for `reuse[charset-normalizer]`, since
   reuse 6 requires `python-magic` against the runner's `libmagic`, which
   no manifest can pin, and needs a declared fallback when that import
-  fails (#61)
+  fails. See
+  [the v4 migration guide](docs/migrations/v4.md#reuse-lint-reports-more-than-it-used-to)
+  (#61)
 - `lint-shell.yml` still discovers shell scripts one tracked path at a
   time. shfmt 3.14.1 fixes the `-f=0` defect that motivated the loop, but
   `shfmt-version` is caller-overridable, so an older shfmt can still reach

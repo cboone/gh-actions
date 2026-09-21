@@ -200,7 +200,7 @@ nor `Darwin` matches. Windows runners are not supported.
 ## Migration
 
 See [docs/migrations/v4.md](docs/migrations/v4.md) for the v4 argument-binding
-changes and the Rust tool checksum inputs, and
+changes, the Rust tool checksum inputs and the reuse 6 lint behavior, and
 [docs/migrations/v3.md](docs/migrations/v3.md) for the v3 path renames.
 
 ## Versioning
