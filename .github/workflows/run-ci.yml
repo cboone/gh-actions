@@ -491,6 +491,10 @@ jobs:
       matrix:
         # shfmt-sha256 is the v3.13.1 binary's digest on that runner's
         # platform, for the single-checksum install and the rejection cases.
+        # That 3.13.1 install is load-bearing for a second reason: it is what
+        # drives lint-shell's per-file discovery fallback against a real
+        # pre-3.14.0 binary. Moving it off 3.13.1 silently drops that
+        # coverage, because the fallback would stop being reached.
         include:
           - runner: ubuntu-latest
             shfmt-sha256: fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1
@@ -561,7 +565,13 @@ jobs:
           arch-names: amd64=x86_64 arm64=aarch64
           archive-member: uv-{arch}-{os}/uv
 
-      - name: Check tracked shell discovery and checker execution
+      # Runs here against the shfmt 3.13.1 installed above, which predates
+      # the -f=0 filtering fix and so drives lint-shell's per-file fallback
+      # with a real old binary rather than a wrapper. It runs a second time
+      # after the wrapper installs below, where shfmt is 3.14.1 and the same
+      # cases drive the batched call. Neither run is redundant: each is the
+      # only real-binary exercise of its branch.
+      - name: Check tracked shell discovery against shfmt 3.13.1
         run: uv run tests/check-shell-discovery.py
 
       # Each binary must resolve to the pinned install rather than a copy
@@ -616,6 +626,14 @@ jobs:
 
       - name: Set up shellcheck through the wrapper
         uses: ./actions/set-up-shellcheck
+
+      # The same check again, now that shfmt is the 3.14.1 default. This is
+      # the only place lint-shell's batched discovery meets a real fixed
+      # binary over the adversarial fixture set; the shell and
+      # shellcheck-only jobs run it over this repository but assert nothing
+      # about the manifest, and an empty one passes them green.
+      - name: Check tracked shell discovery against shfmt 3.14.1
+        run: uv run tests/check-shell-discovery.py
 
       - name: Check the wrapper installs
         run: |
