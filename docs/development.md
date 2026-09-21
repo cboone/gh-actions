@@ -489,6 +489,21 @@ that actionlint really does shell out to shellcheck. Its `scrut` job calls
 It passes `tests/fixtures/hello.py` through `HELLO_BIN`: that PEP 723
 executable only runs if uv reached `PATH`.
 
+`tests/check-shell-discovery.py` executes `lint-shell.yml`'s literal discovery
+and checker blocks against temporary Git indexes. Discovery batches its
+`shfmt -f=0` call only when it measures the installed binary filtering a prose
+file out of that mode, so the check drives both answers wherever it runs, with
+`shfmt` wrappers that intercept `-f=0` and delegate everything else: one
+reproduces the pre-3.14.1 echo-back, and one is an independent oracle for the
+fixed mode. Both must agree with each other and with the real binary on the
+manifest, and only the fallback may print its notice. Keep both wrappers.
+Deleting them makes an inverted probe invisible to every other case in the
+file, which is measured rather than assumed. Real-binary coverage of both
+branches comes free: the `install-pinned-tool` matrix runs this check under the
+shfmt 3.13.1 it installs for the installer cases, which is the fallback, while
+the `shell` and `shellcheck-only` jobs call `lint-shell.yml` at the default
+3.14.1 over this repository, which is the batched call.
+
 The `workflow-arg-binding` job covers the argument-binding rules above on
 Linux and macOS, the latter for the bash 3.2 at `/bin/bash` that the fixture
 spawns. `tests/fixtures/check-workflow-arg-binding.mjs` reads the production

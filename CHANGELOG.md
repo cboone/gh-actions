@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `lint-shell.yml` discovers shell scripts in a single `shfmt -f=0` call over
+  the tracked file list, rather than one `shfmt -f` process per tracked file.
+  On a repository with many tracked files that is one process instead of
+  thousands (#124)
+
+  The per-file loop existed because that mode listed explicitly supplied
+  non-shell files until shfmt 3.14.1, which #61 made the pinned default.
+  `shfmt-version` stays caller-overridable, so discovery measures the binary it
+  was given rather than trusting the pin: it asks shfmt to classify a prose
+  file written outside the checkout, and keeps the per-file loop, with a
+  notice, when that file comes back or the flag is refused outright. A probe
+  rather than a parsed `shfmt --version`, which reads `(devel)` for a source
+  build and cannot report a backport.
+
+  Nothing about the input contract changes. A caller pinning an older shfmt
+  discovers exactly the scripts it discovered before, and pays the same process
+  per tracked file to do it. What both paths guarantee is unchanged too:
+  submodule directories and symlinks to untracked files excluded, a file named
+  exactly `-` passed as `./-`, and every original path retained byte for byte
+  in the NUL-separated manifest both checkers read.
+
 ## [4.0.0] - 2026-09-21
 
 ### Added
