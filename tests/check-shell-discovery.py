@@ -57,6 +57,17 @@ if [[ "${1-}" == '-f=0' ]]; then
 fi
 exec "${REAL_SHFMT}" ${@+"$@"}
 """,
+    # A release predating the flag refuses it rather than answering. Selects
+    # the fallback through the probe's non-zero exit rather than its output,
+    # which is the other half of that branch.
+    "refusing": """#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1-}" == '-f=0' ]]; then
+  echo 'flag provided but not defined: -f=0' >&2
+  exit 2
+fi
+exec "${REAL_SHFMT}" ${@+"$@"}
+""",
 }
 
 # The notice the fallback branch prints, and the only way to tell from outside
@@ -191,9 +202,11 @@ def main():
             Path(env["GITHUB_STEP_SUMMARY"]).write_text("")
             shimmed = execute("Find shell scripts", root, probed)
             assert shimmed.returncode == 0, shimmed.stderr
+            # Equality, not containment: it is also what catches a RUNNER_TEMP
+            # probe artifact reaching the manifest, since expected holds only
+            # tracked paths.
             assert manifest(runtime) == expected, (label, shimmed)
-            assert not any("shfmt-find-probe" in path for path in manifest(runtime))
-            assert (SLOW_PATH_NOTICE in shimmed.stdout) == (label == "legacy"), (
+            assert (SLOW_PATH_NOTICE in shimmed.stdout) == (label != "modern"), (
                 label,
                 shimmed.stdout,
             )
