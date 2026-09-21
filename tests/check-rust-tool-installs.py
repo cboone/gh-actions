@@ -10,11 +10,14 @@ version and target triple. Nothing else in CI runs run-rust-ci.yml, so
 this is the only coverage for that lookup and for the verification it
 guards.
 
-Each tool is checked three ways: the committed defaults install and
-report the pinned version; a version with no matching entry is refused
-before anything is downloaded; and a tampered digest is refused after it
-is. The last two are the controls that would catch the lookup silently
-accepting an archive it never verified.
+Each tool is checked four ways: the committed defaults install and
+report the pinned version; a caller-supplied version installs when its
+digests come with it, which is the escape hatch the v4 migration guide
+documents; a version with no matching entry is refused before anything
+is downloaded; and a tampered digest is refused after it is. The last
+two are the controls that would catch the lookup silently accepting an
+archive it never verified, and the second is what would catch it
+accepting nothing but the committed default.
 """
 
 import os
@@ -28,6 +31,12 @@ import textwrap
 
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/run-rust-ci.yml"
 
+# `override` is a real earlier release with its own digests, the case the
+# v4 migration guide tells a caller who pinned one of these versions to
+# write. Keeping it here means the documented escape hatch is exercised
+# rather than asserted: these are the digests this repository shipped
+# before the bump, so a regression in the lookup shows up as this case
+# failing rather than as a consumer's job failing after release.
 TOOLS = {
     "cargo-audit": {
         "step": "Install cargo-audit",
@@ -36,6 +45,17 @@ TOOLS = {
         "binary": "cargo-audit",
         "bin_dir": "cargo-audit-bin",
         "version_args": ["--version"],
+        "override_version": "0.22.1",
+        "override_checksums": (
+            "1890badd5f15831a9af4b074399fcd21e6f7c0fe42c84e9254cdffc9f813765c"
+            "  0.22.1  x86_64-unknown-linux-gnu\n"
+            "4c8df835ee484441bd2c8c6bcac28c4ce4b4058ba9e7477cb9e0012fe7769f66"
+            "  0.22.1  aarch64-unknown-linux-gnu\n"
+            "582d104a2a4bdb127c6bf6d056d89eede40686d11f52e4bc1765132ec99d2fca"
+            "  0.22.1  x86_64-apple-darwin\n"
+            "04e76e1da25f597bea4814c44faf8aac215838b9f3646e3b6a873d87acd31b73"
+            "  0.22.1  aarch64-apple-darwin\n"
+        ),
     },
     "cargo-llvm-cov": {
         "step": "Install cargo-llvm-cov",
@@ -44,6 +64,17 @@ TOOLS = {
         "binary": "cargo-llvm-cov",
         "bin_dir": "cargo-llvm-cov-bin",
         "version_args": ["llvm-cov", "--version"],
+        "override_version": "0.8.5",
+        "override_checksums": (
+            "7e62d664f5133d43d33a3b11138c93feff98bd71e953ddc260ea8ddf360a37c6"
+            "  0.8.5  x86_64-unknown-linux-gnu\n"
+            "8248a6d5dcb47307c2ef6d5815f90bca07d04a6f1acd06b658f689cb2d8247d9"
+            "  0.8.5  aarch64-unknown-linux-gnu\n"
+            "b8598f0ea19900f6dea3b3fd4214f1de96f1bff47eaa32a775643fc402cabad0"
+            "  0.8.5  x86_64-apple-darwin\n"
+            "816b6ff2c23ba569327d153189d7434afd501fc873cc0f5fbb0cfe412b97bc22"
+            "  0.8.5  aarch64-apple-darwin\n"
+        ),
     },
 }
 
@@ -99,18 +130,16 @@ def execute(step_name, runner_temp, version, checksums):
     )
 
 
-def check(tool, spec):
-    version = input_version(spec["version_input"])
-    checksums = input_default(spec["checksums_input"])
+def installs_and_reports(tool, spec, version, checksums, label):
+    """Run the install block and confirm the binary reports that version."""
     failures = []
-
     with tempfile.TemporaryDirectory() as tmp:
         runner_temp = Path(tmp)
         result = execute(spec["step"], runner_temp, version, checksums)
         installed = runner_temp / spec["bin_dir"] / spec["binary"]
         if result.returncode != 0:
             failures.append(
-                f"{tool}: committed defaults failed to install "
+                f"{tool}: {label} failed to install "
                 f"(exit {result.returncode})\n{result.stderr.strip()}"
             )
         elif not installed.is_file():
@@ -136,7 +165,32 @@ def check(tool, spec):
                     f"{tool}: installed binary reports '{combined}', expected {version}"
                 )
             else:
-                print(f"  {tool}: committed defaults install and report {version}")
+                print(f"  {tool}: {label} installs and reports {version}")
+    return failures
+
+
+def check(tool, spec):
+    version = input_version(spec["version_input"])
+    checksums = input_default(spec["checksums_input"])
+    failures = []
+
+    failures.extend(
+        installs_and_reports(tool, spec, version, checksums, "committed defaults")
+    )
+
+    # The whole point of replacing the supported_version guard: a caller may
+    # name another release as long as they bring its digests. Without this
+    # case the suite would pass even if the lookup only ever matched the
+    # committed default, which is the behavior the guard used to enforce.
+    failures.extend(
+        installs_and_reports(
+            tool,
+            spec,
+            spec["override_version"],
+            spec["override_checksums"],
+            "a caller-supplied version and checksums",
+        )
+    )
 
     # A version the table does not cover must be refused, and must be
     # refused before the archive is fetched.
