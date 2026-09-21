@@ -72,6 +72,15 @@ that does not install one passes vacuously (#85). `run-ci.yml`'s
 `Check actionlint runs shellcheck` step guards that integration by linting a
 planted `SC2086`.
 
+`jq` is the other runner-provided exception, used by
+`actions/run-trufflehog/check-allowlist.sh` and by `scan-for-secrets.yml`
+when a TruffleHog allowlist is configured. It answers the fail-open concern
+directly rather than inheriting it: both entry points check for `jq` before
+scanning and fail with a named requirement when it is missing, so an image
+without it stops the job instead of passing every finding. The allowlist
+matching itself is plain JSON comparison, which no `jq` version has reason to
+change, and the path is inert until a caller sets the input.
+
 ### Pinning Policy and Trust Model
 
 A condensed summary lives in [README.md](../README.md#trust-model-and-pinning).
@@ -518,3 +527,33 @@ in the root `cspell.json` `ignorePaths`, or the `text` job and
 `run-ci.yml` runs `actions/set-up-clap-validator` on those same
 three runners, covering the install, the cache-hit path, and the pins
 `check-pins.sh` must reject. There is no unit test framework.
+
+`tests/trufflehog-positive-control.py` extracts the literal `Run trufflehog`
+step from both the action and `scan-for-secrets.yml` and executes it against
+disposable histories built with `git fast-import`. It runs on `ubuntu-latest`
+and `macos-latest`, because the allowlist checker is a shell script reading a
+jq program and macOS runs it under bash 3.2 with a BSD userland. Linux arm64
+is omitted deliberately: for this code it is the same GNU userland as amd64,
+unlike the installer matrices, which cover architecture rather than userland. Beyond the #111 controls, it
+covers the allowlist: that the exact reviewed tuple is accepted, that changing
+any one of commit, path, line or detector fails, that a verified finding is
+refused even when its tuple is listed, that a malformed allowlist is rejected
+rather than applied loosely, and that no report prints a credential or names a
+secret-bearing field. Two properties of the pinned TruffleHog shape those
+fixtures, both re-checked when the pin moves.
+A custom regex detector cannot produce an indeterminate result, and always
+reports `DetectorName: CustomRegex`, so the allowlist cases use the built-in
+`URI` detector instead. A URI pointing at a local address is refused before any
+connection is attempted, which makes it indeterminate without a network. A
+planted defect removing the detector comparison confirms the field matching is
+what makes a changed field fail. The rejected inputs are covered too: with an
+allowlist set, the action refuses `--json-legacy`, `--sarif` and
+`--github-actions`, which would replace the output being matched, while a
+caller's `--json` is dropped like `--fail` and `--no-update`.
+
+The control runs the extracted step directly, so it never reaches the
+workflow's fetch step, which needs real workflow context. `run-ci.yml`'s
+`trufflehog-allowlist` job calls `scan-for-secrets.yml` with
+`tests/fixtures/trufflehog-allowlist.json` to cover that path: the entry
+deliberately matches nothing, so the job proves the checker is fetched, the
+allowlist validates and an unused entry is reported without failing the scan.

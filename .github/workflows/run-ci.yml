@@ -33,16 +33,36 @@ concurrency:
 
 jobs:
   trufflehog-positive-control:
-    name: TruffleHog positive control
-    runs-on: ubuntu-latest
+    name: TruffleHog positive control (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # The allowlist checker is a shell script reading a jq program, and
+        # the action supports macOS, so it runs there under bash 3.2 and a
+        # BSD userland. Linux arm64 is omitted deliberately: it is the same
+        # GNU userland as amd64 for this code, unlike the installers, whose
+        # matrix covers architecture rather than userland.
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install pinned TruffleHog and scan the checkout
         uses: ./actions/run-trufflehog
+
+      # tests/trufflehog-positive-control.py, run further down, sets
+      # ALLOWLIST_CHECKER to the copy in the checkout, so it never reaches the
+      # action's own default, ${{ github.action_path }}/check-allowlist.sh.
+      # This step leaves that default in place and so is the only thing that
+      # exercises it. The fixture entry matches nothing in a clean tree, so
+      # the checker reports it unused and the step passes.
+      - name: Run the action's own allowlist binding
+        uses: ./actions/run-trufflehog
+        with:
+          allowlist: tests/fixtures/trufflehog-allowlist.json
 
       - name: Install uv
         uses: ./actions/install-pinned-tool
@@ -57,6 +77,18 @@ jobs:
 
       - name: Check findings fail both TruffleHog entry points
         run: uv run --script tests/trufflehog-positive-control.py
+
+  # The control above runs the extracted scan step directly, so it never
+  # reaches the fetch step, which needs real workflow context. This call
+  # covers that path: it fetches the checker from job.workflow_repository at
+  # job.workflow_sha, validates the fixture allowlist and reports its
+  # deliberately unmatched entry as unused, without failing the scan.
+  trufflehog-allowlist:
+    name: TruffleHog allowlist
+    uses: ./.github/workflows/scan-for-secrets.yml
+    with:
+      tool: trufflehog
+      trufflehog-allowlist: tests/fixtures/trufflehog-allowlist.json
 
   actionlint:
     uses: ./.github/workflows/lint-github-actions.yml
