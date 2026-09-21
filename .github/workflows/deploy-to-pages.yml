@@ -30,7 +30,7 @@ on:
       node-version:
         description: Node.js version to install.
         type: string
-        default: "24.15.0"
+        default: "24.21.0"
       timeout-minutes:
         description: Job timeout in minutes.
         type: number

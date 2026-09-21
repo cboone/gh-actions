@@ -9,7 +9,7 @@ between `npm ci` and `npm install`.
 
 | Name              | Type   | Default                      | Description                |
 | ----------------- | ------ | ---------------------------- | -------------------------- |
-| `node-version`    | string | `"24.15.0"`                  | Node.js version to install |
+| `node-version`    | string | `"24.21.0"`                  | Node.js version to install |
 | `registry-url`    | string | `https://npm.pkg.github.com` | npm registry URL           |
 | `timeout-minutes` | number | `10`                         | Job timeout in minutes     |
 

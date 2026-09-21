@@ -44,7 +44,7 @@ on:
       uv-version:
         description: uv version to install when setup-uv is true.
         type: string
-        default: "0.11.8"
+        default: "0.12.17"
       runs-on:
         description: Runner label (Windows is not supported).
         type: string

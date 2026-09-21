@@ -32,7 +32,7 @@ the installer validates that exact version before exposing the executable.
 | `go-version-file`       | string  | `go.mod`         | File to read the Go version from                           |
 | `runs-on`               | string  | `ubuntu-latest`  | Runner label (Windows is not supported)                    |
 | `run-lint`              | boolean | `true`           | Run `make lint`                                            |
-| `golangci-lint-version` | string  | `"2.11.4"`       | golangci-lint version to install                           |
+| `golangci-lint-version` | string  | `"2.13.2"`       | golangci-lint version to install                           |
 | `run-scrut`             | boolean | `false`          | Run scrut CLI tests                                        |
 | `scrut-build-cmd`       | string  | `go build ./...` | Command to build the binary for scrut tests                |
 | `scrut-env`             | string  | `""`             | Newline-delimited KEY=VALUE env vars for scrut tests       |
@@ -42,7 +42,7 @@ the installer validates that exact version before exposing the executable.
 | `run-build`             | boolean | `false`          | Run `make build`                                           |
 | `test-flags`            | string  | `"-race"`        | Flags for go test (only used when coverage is enabled)     |
 | `coverage`              | boolean | `false`          | Generate coverage and upload to Codecov                    |
-| `codecov-cli-version`   | string  | `"11.2.8"`       | Codecov CLI version to install                             |
+| `codecov-cli-version`   | string  | `"11.3.1"`       | Codecov CLI version to install                             |
 | `codecov-files`         | string  | `coverage.out`   | Coverage file path for Codecov upload                      |
 | `timeout-minutes`       | number  | `15`             | Job timeout in minutes                                     |
 

@@ -6,7 +6,7 @@ on:
       node-version:
         description: Node.js version to install.
         type: string
-        default: "24.15.0"
+        default: "24.21.0"
       registry-url:
         description: npm registry URL.
         type: string

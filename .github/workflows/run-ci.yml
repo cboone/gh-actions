@@ -17,6 +17,9 @@ name: Run CI
 # `set-up-clap-validator` runs that action on the same three runners,
 # covering the cold-cache build, the cache-hit path and the pins it must
 # reject.
+# `rust-tool-installs` exercises run-rust-ci.yml's cargo-audit and
+# cargo-llvm-cov install blocks, which nothing else here reaches, across
+# every target triple their committed checksum tables carry.
 
 on:
   push:
@@ -45,7 +48,7 @@ jobs:
         uses: ./actions/install-pinned-tool
         with:
           tool: uv
-          version: 0.11.8
+          version: 0.12.17
           url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
           checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
           os-names: linux=unknown-linux-gnu darwin=apple-darwin
@@ -92,7 +95,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "24.15.0"
+          node-version: "24.21.0"
 
       - name: Install hash-pinned fixture dependencies
         run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
@@ -173,7 +176,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "24.15.0"
+          node-version: "24.21.0"
       - name: Install hash-pinned fixture dependencies
         run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
       - name: Generate workflow installer fixture
@@ -210,7 +213,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "24.15.0"
+          node-version: "24.21.0"
 
       - name: Install locked fixture dependencies
         run: npm ci
@@ -232,7 +235,7 @@ jobs:
         uses: ./actions/install-pinned-tool
         with:
           tool: uv
-          version: 0.11.8
+          version: 0.12.17
           url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
           checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
           os-names: linux=unknown-linux-gnu darwin=apple-darwin
@@ -285,7 +288,7 @@ jobs:
         uses: ./actions/install-pinned-tool
         with:
           tool: uv
-          version: 0.11.8
+          version: 0.12.17
           url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
           checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
           os-names: linux=unknown-linux-gnu darwin=apple-darwin
@@ -321,7 +324,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "24.15.0"
+          node-version: "24.21.0"
 
       - name: Install locked test dependencies
         run: npm ci
@@ -366,7 +369,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "24.15.0"
+          node-version: "24.21.0"
 
       - name: Install locked test dependencies
         run: npm ci
@@ -519,7 +522,7 @@ jobs:
         uses: ./actions/install-pinned-tool
         with:
           tool: uv
-          version: 0.11.8
+          version: 0.12.17
           url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
           checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
           os-names: linux=unknown-linux-gnu darwin=apple-darwin
@@ -540,7 +543,7 @@ jobs:
           status=0
           for spec in "shfmt 3.13.1 --version" "shfmt-single 3.13.1 --version" \
             "actionlint 1.7.12 -version" "shellcheck 0.11.0 --version" \
-            "uv 0.11.8 --version"; do
+            "uv 0.12.17 --version"; do
             read -r tool want flag <<< "${spec}"
             resolved="$(command -v "${tool}" || true)"
             if [ "${resolved}" != "${RUNNER_TEMP}/${tool}-bin/${tool}" ]; then
@@ -585,7 +588,7 @@ jobs:
       - name: Check the wrapper installs
         run: |
           status=0
-          for spec in "shfmt 3.13.1 --version" "actionlint 1.7.12 -version" \
+          for spec in "shfmt 3.14.1 --version" "actionlint 1.7.12 -version" \
             "shellcheck 0.11.0 --version"; do
             read -r tool want flag <<< "${spec}"
             resolved="$(command -v "${tool}" || true)"
@@ -697,6 +700,12 @@ jobs:
           check_rejection wrong-checksum 65 "Checksum verification failed for shfmt_v3.13.1_" \
             TOOL=shfmt VERSION=3.13.1 "URL_TEMPLATE=${SHFMT_URL}" \
             CHECKSUM=0000000000000000000000000000000000000000000000000000000000000000
+          # This case supplies its own table, so what it proves is the
+          # relation between VERSION and that table, not between VERSION and
+          # the shipped default: 3.14.1 against a 3.13.1-keyed table is a
+          # version newer than its checksums whatever the default later
+          # becomes. 3.14.1 is a real release, so the rejection is the table's
+          # doing rather than a 404 on an asset that never existed.
           check_rejection version-bumped-without-checksums 65 "No checksum entry for shfmt_v3.14.1_" \
             TOOL=shfmt VERSION=3.14.1 "URL_TEMPLATE=${SHFMT_URL}" \
             "CHECKSUMS=${SHFMT_SHA256}  shfmt_v3.13.1_linux_amd64"
@@ -1046,7 +1055,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "24.15.0"
+          node-version: "24.21.0"
 
       # The fixture lives outside the checkout deliberately. A dictionary
       # installed beside cspell-lib resolves from a config anywhere else in
@@ -1172,3 +1181,34 @@ jobs:
           check_rejection cspell-not-installed 64 "cspell is not installed in" \
             "INSTALL_DIR=${RUNNER_TEMP}" "PACKAGES=${PT_PT_PACKAGE}"
           exit "${status}"
+
+  rust-tool-installs:
+    name: Rust tool installs (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: ./actions/install-pinned-tool
+        with:
+          tool: uv
+          version: 0.12.17
+          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+          os-names: linux=unknown-linux-gnu darwin=apple-darwin
+          arch-names: amd64=x86_64 arm64=aarch64
+          archive-member: uv-{arch}-{os}/uv
+
+      # run-rust-ci.yml is never invoked by this workflow, so its committed
+      # cargo-audit and cargo-llvm-cov digests would otherwise reach a
+      # release unexercised. The matrix covers every target triple the two
+      # checksum tables carry.
+      - name: Check the cargo-audit and cargo-llvm-cov installs
+        run: uv run tests/check-rust-tool-installs.py

@@ -6,7 +6,7 @@ on:
       node-version:
         description: Node.js version to install.
         type: string
-        default: "24.15.0"
+        default: "24.21.0"
       run-markdownlint:
         description: Run markdownlint-cli2.
         type: boolean
@@ -87,7 +87,7 @@ permissions:
   contents: read
 
 env:
-  UV_VERSION: 0.11.8
+  UV_VERSION: 0.12.17
   # markdownlint-cli2, prettier, cspell are pinned in this repo's
   # package-lock.json with per-package sha512 integrity hashes; bump
   # them by editing package.json and running `npm install`.

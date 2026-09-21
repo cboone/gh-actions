@@ -17,7 +17,7 @@ credentials and detections without verification are outside the TruffleHog gate.
 | `tool`               | string | `gitleaks`     | Which tool to run: gitleaks, trufflehog, or both |
 | `scan-scope`         | string | `full-history` | Scan scope: full-history or working-tree         |
 | `gitleaks-version`   | string | `"8.30.1"`     | gitleaks version to install                      |
-| `trufflehog-version` | string | `"3.95.2"`     | trufflehog version to install                    |
+| `trufflehog-version` | string | `"3.97.5"`     | trufflehog version to install                    |
 | `fetch-depth`        | number | `0`            | Git fetch depth (0 for full history)             |
 | `allowlist-config`   | string | `""`           | Path to a gitleaks allowlist config file         |
 | `timeout-minutes`    | number | `15`           | Job timeout in minutes                           |

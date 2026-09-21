@@ -110,26 +110,26 @@ TOOLS: list[Tool] = [
             "check asserts the set-up-actionlint default version; bump it too."
         ),
     ),
-    Tool("golangci-lint", "2.11.4", lambda: github_latest_release("golangci/golangci-lint")),
+    Tool("golangci-lint", "2.13.2", lambda: github_latest_release("golangci/golangci-lint")),
     Tool("gitleaks", "8.30.1", lambda: github_latest_release("gitleaks/gitleaks")),
-    Tool("trufflehog", "3.95.2", lambda: github_latest_release("trufflesecurity/trufflehog")),
-    Tool("goreleaser", "2.15.4", lambda: github_latest_release("goreleaser/goreleaser")),
+    Tool("trufflehog", "3.97.5", lambda: github_latest_release("trufflesecurity/trufflehog")),
+    Tool("goreleaser", "2.18.2", lambda: github_latest_release("goreleaser/goreleaser")),
     Tool("markscribe", "0.8.1", lambda: github_latest_release("charmbracelet/markscribe")),
-    Tool("codecov CLI", "11.2.8", lambda: github_latest_release("codecov/codecov-cli")),
-    Tool("cargo-deny", "0.19.4", lambda: github_latest_release("EmbarkStudios/cargo-deny")),
+    Tool("codecov CLI", "11.3.1", lambda: github_latest_release("codecov/codecov-cli")),
+    Tool("cargo-deny", "0.20.2", lambda: github_latest_release("EmbarkStudios/cargo-deny")),
     Tool(
         "cargo-nextest",
-        "0.9.133",
+        "0.9.145",
         lambda: github_latest_matching("nextest-rs/nextest", r"cargo-nextest-(\d+\.\d+\.\d+)"),
     ),
     Tool(
         "uv",
-        "0.11.8",
+        "0.12.17",
         lambda: github_latest_release("astral-sh/uv"),
         notes=(
             "Bump every pin together: UV_VERSION in lint-text.yml and "
             "check-tool-versions.yml, the uv-version default in run-reuse's "
-            "action.yml and in run-scrut-tests.yml, and both the install and the "
+            "action.yml and in run-scrut-tests.yml, and every install and the "
             "asserted version in run-ci.yml. The documented defaults have to match: "
             "the input tables in actions/run-reuse/README.md and "
             "docs/workflows/run-scrut-tests.md, and the example in "
@@ -160,30 +160,46 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         "shfmt",
-        "3.13.1",
+        "3.14.1",
         lambda: github_latest_release("mvdan/sh"),
         "Committed SHA-256 lines must be regenerated on bump: the `checksums` "
         "default in actions/set-up-shfmt and `shfmt-checksums` in lint-shell.yml. "
-        "run-ci.yml's wrapper check asserts the set-up-shfmt default version; "
-        "bump it too. Its other shfmt 3.13.1 lines are test fixtures and can stay.",
+        "Bump the `version` defaults beside them, the `checksums` description "
+        "prose in set-up-shfmt's action.yml, and run-ci.yml's wrapper check, "
+        "which asserts the set-up-shfmt default. The documented defaults have to "
+        "match: the input tables in actions/set-up-shfmt/README.md and "
+        "docs/workflows/lint-shell.md, and the example and `gh api` recipe in "
+        "actions/install-pinned-tool/README.md. Grep the outgoing version to "
+        "catch any that moved. run-ci.yml's remaining 3.13.1 lines are "
+        "install-pinned-tool test fixtures and can stay.",
     ),
     Tool(
         "cargo-audit",
-        "0.22.1",
+        "0.22.2",
         lambda: github_latest_matching("rustsec/rustsec", r"cargo-audit/v(\d+\.\d+\.\d+)"),
-        "Hardcoded SHA-256 checksums must be regenerated on bump.",
+        "Committed SHA-256 lines must be regenerated on bump: the "
+        "`audit-checksums` default in run-rust-ci.yml, whose entries are keyed "
+        "by version and target triple, so the version in each line moves too. "
+        "Bump the `audit-version` default beside it and the row in "
+        "docs/workflows/run-rust-ci.md. tests/check-rust-tool-installs.py "
+        "covers the result.",
     ),
     Tool(
         "cargo-llvm-cov",
-        "0.8.5",
+        "0.9.1",
         lambda: github_latest_release("taiki-e/cargo-llvm-cov"),
-        "Hardcoded SHA-256 checksums must be regenerated on bump.",
+        "Committed SHA-256 lines must be regenerated on bump: the "
+        "`llvm-cov-checksums` default in run-rust-ci.yml, whose entries are "
+        "keyed by version and target triple because the archive name carries "
+        "no version. Bump the `llvm-cov-version` default beside it and the row "
+        "in docs/workflows/run-rust-ci.md. "
+        "tests/check-rust-tool-installs.py covers the result.",
     ),
     Tool("yamllint", "1.38.0", lambda: pypi_latest("yamllint"),
          "requirements/yamllint.txt must be regenerated with `uv pip compile --generate-hashes`."),
-    Tool("reuse", "5.0.2", lambda: pypi_latest("reuse"),
+    Tool("reuse", "6.2.0", lambda: pypi_latest("reuse"),
          "requirements/reuse.txt must be regenerated with `uv pip compile --generate-hashes`."),
-    Tool("Node.js LTS (24)", "24.15.0", lambda: nodejs_lts_latest(24)),
+    Tool("Node.js LTS (24)", "24.21.0", lambda: nodejs_lts_latest(24)),
 ]
 
 
