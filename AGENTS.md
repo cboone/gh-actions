@@ -59,3 +59,17 @@ make lint-yaml     # yamllint
 `npm run lint:md:fix` fixes Markdown. Run relevant format and lint checks after edits. CI self-tests installers on its supported runner matrix; see [testing](docs/development.md#testing) for controls and fixtures.
 
 Keep this root concise, specialized procedures in the reference, and scoped instructions paired. Verify each global-plus-root-plus-nested instruction chain remains within 32 KiB.
+
+## Code Review Rules
+
+<!-- BEGIN set-up-review-config -->
+
+- Review each changed file against its checklist in `.github/skills/code-review/`; the `SKILL.md` there maps file patterns to checklists.
+- Rules under a checklist's Important heading are P1. All other checklist rules are P2 or lower.
+- Start each finding with the checklist name and the rule name, for example `write-go-code: Checked errors`.
+- Do not report what these CI checks already report: `actionlint`, `shellcheck`, `shfmt`, `markdownlint-cli2`, `prettier`, `cspell`, `yamllint`.
+- Do not review these paths: `package-lock.json`, `actions/set-up-scrut/Cargo.lock`, `docs/plans/done/**`, `tests/fixtures/cspell-extra-dict/**`, `.github/skills/code-review/*.md` except `SKILL.md`.
+- Claude Code Review takes its severities from `REVIEW.md`.
+- Rules outside this block take precedence over it.
+
+<!-- END set-up-review-config -->
