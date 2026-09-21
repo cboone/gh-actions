@@ -16,6 +16,11 @@ not for an approver.
 10-minute timeout, so a `timeout-minutes` below 10 cuts the deployment off
 before the action can report its own clearer error.
 
+`build-command` runs in the checked-out workspace, which the workflow checks out
+with `persist-credentials: false`. It does not inherit a Git credential from
+`.git/config`, so a command that has to authenticate to GitHub needs a token
+of its own, through `gh` and `GH_TOKEN` or an explicit remote.
+
 **Permissions:** `contents: read`, `pages: write`, `id-token: write`
 
 ## Inputs
