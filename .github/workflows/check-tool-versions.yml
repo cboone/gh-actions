@@ -23,30 +23,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      UV_VERSION: 0.12.17
       ISSUE_TITLE: "Outdated pinned tool versions"
       ISSUE_LABEL: "dependencies"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install uv (checksum-verified)
-        run: |
-          archive="uv-x86_64-unknown-linux-gnu.tar.gz"
-          base_url="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}"
-          archive_path="${RUNNER_TEMP}/${archive}"
-          curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
-          curl -sSfL "${base_url}/${archive}.sha256" -o "${archive_path}.sha256"
-          expected="$(awk '{print $1}' "${archive_path}.sha256")"
-          actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
-          if [ "${expected}" != "${actual}" ]; then
-            echo "Checksum verification failed for ${archive}" >&2
-            exit 1
-          fi
-          install_dir="${RUNNER_TEMP}/uv-bin"
-          mkdir -p "${install_dir}"
-          tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
-          install -m 0755 "${RUNNER_TEMP}/uv-x86_64-unknown-linux-gnu/uv" "${install_dir}/uv"
-          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+      # This workflow is not reusable, so a `./` action path resolves against
+      # this repository's own checkout above. It can use the action directly
+      # rather than fetching install-pinned-tool.sh the way the reusable
+      # workflows have to. The pinned version is set-up-uv's default, so this
+      # file no longer carries a uv pin of its own.
+      - name: Install uv
+        uses: ./actions/set-up-uv
 
       - name: Run version check
         id: check
