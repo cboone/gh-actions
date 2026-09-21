@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `set-up-uv` composite action: installs uv pinned to `version` (default
+  0.12.17) and adds it to `PATH`. The release archive is verified against
+  the per-asset `.sha256` uv publishes beside each platform's tarball.
+  Built on `install-pinned-tool`, so it covers Linux and macOS on amd64
+  and arm64 (#102)
+- `run-ci.yml` `reuse` job: runs `actions/run-reuse` against a new
+  `tests/fixtures/reuse` fixture on Linux amd64, Linux arm64 and macOS
+  arm64. `run-reuse` had no self-test, and it carries its own copy of the
+  uv install recipe because a composite action cannot reach a sibling
+  action by a `./` path, so nothing else exercised it. The job passes
+  `--root`, since this repository is not itself REUSE-compliant; the
+  action's default `args: lint` stays uncovered deliberately (#102)
+
+### Changed
+
+- `lint-text.yml`, `check-tool-versions.yml` and `run-reuse` install uv
+  through `install-pinned-tool` instead of their own inline installers.
+  The two workflow installs covered Linux x86_64 only and now cover
+  Linux and macOS on amd64 and arm64; no workflow currently runs them on
+  another platform, so this is latent capability rather than a fix.
+  Versions, defaults and checksum sources are unchanged (#102)
+- `lint-text.yml` fetches `install-pinned-tool`'s script from
+  `job.workflow_repository` at `job.workflow_sha`, the model it already
+  uses for its yamllint manifest and its cspell dictionary installer. It
+  depended on those `job` context properties before this change, so its
+  GitHub Enterprise Server support is unaffected: `run-yamllint: false`
+  remains the documented setting there (#102)
+- `check-tool-versions.yml` reaches `set-up-uv` by `./` path and no
+  longer pins uv itself. It is not a reusable workflow and already checks
+  this repository out, so the restriction that forces the other workflows
+  to fetch the script does not apply to it (#102)
+- `run-ci.yml`'s four consumer uv installs call `set-up-uv` instead of
+  repeating the recipe. The install in the `install-pinned-tool` job is
+  unchanged: it is what proves the generic installer handles uv's target
+  triples, nested archive member and per-asset checksum file, and routing
+  it through the wrapper would remove that coverage. The wrapper re-test
+  now covers `set-up-uv` alongside `set-up-shfmt`, `set-up-actionlint`
+  and `set-up-shellcheck` (#102)
+
 ## [4.0.0] - 2026-09-21
 
 ### Added

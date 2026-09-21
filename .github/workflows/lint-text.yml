@@ -347,27 +347,46 @@ jobs:
           INSTALL_DIR: ${{ env.CSPELL_INSTALL_DIR }}
         run: bash "${RUNNER_TEMP}/install-cspell-dictionaries.sh"
 
-      - name: Install uv
+      # Same fetch model as the dictionary installer above and the yamllint
+      # manifest below: the installer comes from the repository and commit
+      # this workflow file came from, so script and workflow always share a
+      # commit. A `./` action path, which is how this repository's own
+      # workflows reach set-up-uv, would resolve against the caller's
+      # checkout here.
+      - name: Fetch install-pinned-tool
         if: inputs.run-yamllint
+        env:
+          REQ_REPO: ${{ job.workflow_repository }}
+          REQ_SHA: ${{ job.workflow_sha }}
         run: |
-          archive="uv-x86_64-unknown-linux-gnu.tar.gz"
-          base_url="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}"
-          archive_path="${RUNNER_TEMP}/${archive}"
-          curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
-          curl -sSfL "${base_url}/${archive}.sha256" -o "${archive_path}.sha256"
-          expected="$(awk '{print $1}' "${archive_path}.sha256")"
-          actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
-          if [ "${expected}" != "${actual}" ]; then
-            echo "Checksum verification failed for ${archive}" >&2
-            echo "Expected: ${expected}" >&2
-            echo "Actual:   ${actual}" >&2
+          if [ -z "${REQ_REPO}" ] || [ -z "${REQ_SHA}" ]; then
+            msg="job.workflow_repository or job.workflow_sha is unavailable,"
+            msg="${msg} so this workflow cannot fetch its pinned installer."
+            msg="${msg} Neither is populated on GitHub Enterprise Server; set"
+            msg="${msg} run-yamllint: false there."
+            echo "::error::${msg}" >&2
             exit 1
           fi
-          install_dir="${RUNNER_TEMP}/uv-bin"
-          mkdir -p "${install_dir}"
-          tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
-          install -m 0755 "${RUNNER_TEMP}/uv-x86_64-unknown-linux-gnu/uv" "${install_dir}/uv"
-          printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
+          base="https://raw.githubusercontent.com/${REQ_REPO}/${REQ_SHA}"
+          echo "Fetching from ${base}"
+          curl -sSfL --proto '=https' --retry 3 --retry-delay 5 --retry-all-errors \
+            "${base}/actions/install-pinned-tool/install-pinned-tool.sh" \
+            -o "${RUNNER_TEMP}/install-pinned-tool.sh"
+
+      # Unused installer variables are not blanked here, as they are in the
+      # composite actions: a reusable workflow does not inherit the caller's
+      # job-level env, so there is nothing to shadow.
+      - name: Install uv
+        if: inputs.run-yamllint
+        env:
+          TOOL: uv
+          VERSION: ${{ env.UV_VERSION }}
+          URL_TEMPLATE: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+          CHECKSUMS_URL_TEMPLATE: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+          OS_NAMES: linux=unknown-linux-gnu darwin=apple-darwin
+          ARCH_NAMES: amd64=x86_64 arm64=aarch64
+          ARCHIVE_MEMBER: uv-{arch}-{os}/uv
+        run: bash "${RUNNER_TEMP}/install-pinned-tool.sh"
 
       - name: Install yamllint with hash-pinned requirements
         if: inputs.run-yamllint

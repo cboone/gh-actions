@@ -25,57 +25,33 @@ runs:
     - name: Install uv
       shell: bash
       env:
-        UV_VERSION: ${{ inputs.uv-version }}
-      run: |
-        case "$(uname -s)" in
-          Linux)
-            case "$(uname -m)" in
-              x86_64) target="x86_64-unknown-linux-gnu" ;;
-              arm64|aarch64) target="aarch64-unknown-linux-gnu" ;;
-              *)
-                echo "Unsupported Linux architecture: $(uname -m)" >&2
-                exit 1
-                ;;
-            esac
-            ;;
-          Darwin)
-            case "$(uname -m)" in
-              x86_64) target="x86_64-apple-darwin" ;;
-              arm64|aarch64) target="aarch64-apple-darwin" ;;
-              *)
-                echo "Unsupported macOS architecture: $(uname -m)" >&2
-                exit 1
-                ;;
-            esac
-            ;;
-          *)
-            echo "Unsupported operating system: $(uname -s)" >&2
-            exit 1
-            ;;
-        esac
-        archive="uv-${target}.tar.gz"
-        base_url="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}"
-        archive_path="${RUNNER_TEMP}/${archive}"
-        curl -sSfL "${base_url}/${archive}" -o "${archive_path}"
-        curl -sSfL "${base_url}/${archive}.sha256" -o "${archive_path}.sha256"
-        expected="$(awk '{print $1}' "${archive_path}.sha256")"
-        if command -v sha256sum >/dev/null 2>&1; then
-          actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
-        else
-          actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
-        fi
-        if [ "${expected}" != "${actual}" ]; then
-          echo "Checksum verification failed for ${archive}" >&2
-          echo "Expected: ${expected}" >&2
-          echo "Actual:   ${actual}" >&2
-          exit 1
-        fi
-        install_dir="${RUNNER_TEMP}/uv-bin"
-        mkdir -p "${install_dir}"
-        tar -xz -C "${RUNNER_TEMP}" -f "${archive_path}"
-        install -m 0755 "${RUNNER_TEMP}/uv-${target}/uv" "${install_dir}/uv"
-        printf '%s\n' "${install_dir}" >> "${GITHUB_PATH}"
-        "${install_dir}/uv" --version
+        # install-pinned-tool is a sibling of this action inside the
+        # gh-actions checkout the runner makes when loading it, so both come
+        # from the same commit. A `uses: ./` reference would resolve against
+        # the caller's workspace instead, and that applies to the sibling
+        # set-up-uv action too, so this action drives the installer directly.
+        # Unused installer variables are set empty so a caller's job-level
+        # env cannot reach the installer. INSTALLER stays in `env:` because,
+        # for a job that sets `container:`, the runner translates host paths
+        # there but not in expressions in `run:`.
+        INSTALLER: ${{ github.action_path }}/../install-pinned-tool/install-pinned-tool.sh
+        TOOL: uv
+        VERSION: ${{ inputs.uv-version }}
+        URL_TEMPLATE: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+        CHECKSUM: ""
+        CHECKSUMS: ""
+        CHECKSUMS_URL_TEMPLATE: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+        # uv ships each platform's binary inside a directory named for the
+        # target triple, so the member path needs the same renames the URL
+        # does.
+        ARCHIVE_MEMBER: uv-{arch}-{os}/uv
+        OS_NAMES: linux=unknown-linux-gnu darwin=apple-darwin
+        ARCH_NAMES: amd64=x86_64 arm64=aarch64
+      run: bash "${INSTALLER}"
+
+    - name: Report uv version
+      shell: bash
+      run: uv --version
 
     - name: Install reuse with hash-pinned requirements
       shell: bash
