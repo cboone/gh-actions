@@ -33,7 +33,7 @@ action individually.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/create-pull-request@v3.2.0
+- uses: cboone/gh-actions/actions/create-pull-request@v4.0.0
   with:
     branch: chore/update-data
     commit-message: "chore: update generated data"

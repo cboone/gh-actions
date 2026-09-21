@@ -89,7 +89,7 @@ even when there are no shell scripts, because discovery requires shfmt.
 ```yaml
 jobs:
   shell:
-    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v3.2.0
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v4.0.0
 ```
 
 Another version of either tool, with the checksum for the `ubuntu-latest`
@@ -98,7 +98,7 @@ asset:
 ```yaml
 jobs:
   shell:
-    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v3.2.0
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v4.0.0
     with:
       shellcheck-version: 0.10.0
       shellcheck-checksums: |

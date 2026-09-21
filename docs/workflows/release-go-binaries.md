@@ -30,7 +30,7 @@ first.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-go-binaries.yml@v3.2.0
+    uses: cboone/gh-actions/.github/workflows/release-go-binaries.yml@v4.0.0
     with:
       goreleaser-version: "2.18.2"
     secrets:

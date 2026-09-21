@@ -233,7 +233,7 @@ later.
 ```yaml
 jobs:
   text:
-    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.2.0
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v4.0.0
     with:
       run-cspell: true
 ```
@@ -243,7 +243,7 @@ Academic Markdown repo with the `lean-math` preset:
 ```yaml
 jobs:
   text:
-    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.2.0
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v4.0.0
     with:
       run-cspell: true
       run-prettier: false
@@ -256,7 +256,7 @@ Repo that wants CI to use its own pinned tool versions from
 ```yaml
 jobs:
   text:
-    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.2.0
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v4.0.0
     with:
       run-cspell: true
       use-consumer-versions: true
@@ -268,7 +268,7 @@ not bundle, and its own `cspell.json` imports it:
 ```yaml
 jobs:
   text:
-    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.2.0
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v4.0.0
     with:
       run-cspell: true
       extra-cspell-packages: |
@@ -281,7 +281,7 @@ which spell-checks only part of the tree:
 ```yaml
 jobs:
   text:
-    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v3.2.0
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v4.0.0
     with:
       run-cspell: true
       cspell-config: config/cspell.json

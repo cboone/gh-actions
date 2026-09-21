@@ -20,5 +20,5 @@ changelog file in Keep a Changelog format.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/create-gh-release-from-changelog.yml@v3.2.0
+    uses: cboone/gh-actions/.github/workflows/create-gh-release-from-changelog.yml@v4.0.0
 ```

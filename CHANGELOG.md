@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-09-21
+
 ### Added
 
 - `run-trufflehog` gains an `allowlist` input, and `scan-for-secrets.yml` a
@@ -141,6 +143,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   time. shfmt 3.14.1 fixes the `-f=0` defect that motivated the loop, but
   `shfmt-version` is caller-overridable, so an older shfmt can still reach
   that code path (#61)
+- Updated pinned GitHub Actions: `github/codeql-action` v4.38.0 to
+  v4.38.1 and `crate-ci/typos` v1.50.1 to v1.50.2, both patch releases
+  (#131)
+- Updated the pinned npm lint toolchain `lint-text.yml` installs: cspell
+  10.3.0 to 10.3.3 and Prettier 3.9.6 to 3.9.8 (#122, #130)
 
 ### Fixed
 
@@ -792,7 +799,8 @@ install --global "<pkg>@<version>"` (no integrity check) with `npm ci`
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v3.2.0...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v4.0.0...HEAD
+[4.0.0]: https://github.com/cboone/gh-actions/compare/v3.2.0...v4.0.0
 [3.2.0]: https://github.com/cboone/gh-actions/compare/v3.1.1...v3.2.0
 [3.1.1]: https://github.com/cboone/gh-actions/compare/v3.1.0...v3.1.1
 [3.1.0]: https://github.com/cboone/gh-actions/compare/v3.0.0...v3.1.0

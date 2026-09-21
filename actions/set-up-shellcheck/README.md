@@ -23,14 +23,14 @@ if it cannot find one.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-shellcheck@v3.2.0
+- uses: cboone/gh-actions/actions/set-up-shellcheck@v4.0.0
 - run: shellcheck script.sh
 ```
 
 Another version, with the checksum for the one platform this job runs on:
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-shellcheck@v3.2.0
+- uses: cboone/gh-actions/actions/set-up-shellcheck@v4.0.0
   with:
     version: 0.10.0
     checksums: |

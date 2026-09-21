@@ -375,7 +375,7 @@ requirement, GITHUB_TOKEN requirement, changelog-format requirement.>
 Composite action, within a job's `steps:`:
 
 ```yaml
-- uses: cboone/gh-actions/actions/<name>@v3.2.0
+- uses: cboone/gh-actions/actions/<name>@v4.0.0
   with:
     <input>: <value>
 ```
@@ -386,7 +386,7 @@ only when the called workflow declares the named secret; otherwise omit it:
 ```yaml
 jobs:
   component:
-    uses: cboone/gh-actions/.github/workflows/<name>.yml@v3.2.0
+    uses: cboone/gh-actions/.github/workflows/<name>.yml@v4.0.0
     with:
       <input>: <value>
     secrets:
