@@ -4,7 +4,7 @@
 # ///
 """Exercise lint-shell's actual run blocks with temporary tracked fixtures."""
 
-# cspell:ignore cacheinfo
+# cspell:ignore cacheinfo geteuid
 
 import os
 from pathlib import Path
@@ -20,10 +20,9 @@ WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/lint-shell.y
 # binary filtering a prose file out of that mode. Both answers have to be
 # exercised wherever this runs, and the runner's own shfmt can only give one,
 # so each branch is driven by a wrapper that intercepts -f=0 and delegates
-# everything else to the real binary. `${@+"$@"}` guards the empty argument
-# list, which bash 3.2 rejects under `set -u` on macOS.
+# everything else to the real binary.
 SHIMS = {
-    # shfmt before 3.14.1 echoed back every explicitly supplied path in this
+    # shfmt before 3.14.0 echoed back every explicitly supplied path in this
     # mode, non-shell files included. Selects the per-file fallback.
     "legacy": """#!/usr/bin/env bash
 set -euo pipefail
@@ -32,15 +31,20 @@ if [[ "${1-}" == '-f=0' ]]; then
   if [[ "${1-}" == '--' ]]; then
     shift
   fi
-  printf '%s\\0' ${@+"$@"}
+  printf '%s\\0' "$@"
   exit 0
 fi
-exec "${REAL_SHFMT}" ${@+"$@"}
+exec "${REAL_SHFMT}" "$@"
 """,
     # An independent oracle for the fixed mode: classify one path at a time
     # with newline-mode -f, which filtered correctly before the fix, and
     # re-emit NUL-separated so a path holding a newline survives. Selects the
-    # batched call.
+    # batched call. The oracle holds for regular-file arguments only, which is
+    # what the workflow's -f/-L filter guarantees: real shfmt walks a
+    # directory argument and emits what is inside, where this emits the
+    # argument. Assigning before testing keeps shfmt's exit status, which a
+    # command substitution inside `[[ ]]` would discard, so a file shfmt
+    # cannot read fails here exactly as it fails the batched call.
     "modern": """#!/usr/bin/env bash
 set -euo pipefail
 if [[ "${1-}" == '-f=0' ]]; then
@@ -48,30 +52,36 @@ if [[ "${1-}" == '-f=0' ]]; then
   if [[ "${1-}" == '--' ]]; then
     shift
   fi
-  for path in ${@+"$@"}; do
-    if [[ -n "$("${REAL_SHFMT}" -f -- "${path}")" ]]; then
+  for path in "$@"; do
+    found="$("${REAL_SHFMT}" -f -- "${path}")" || exit "$?"
+    if [[ -n "${found}" ]]; then
       printf '%s\\0' "${path}"
     fi
   done
   exit 0
 fi
-exec "${REAL_SHFMT}" ${@+"$@"}
+exec "${REAL_SHFMT}" "$@"
 """,
-    # A release predating the flag refuses it rather than answering. Selects
-    # the fallback through the probe's non-zero exit rather than its output,
-    # which is the other half of that branch.
+    # shfmt added -f=0 in 3.11.0, so anything older refuses it rather than
+    # answering. Selects the fallback through the probe's non-zero exit rather
+    # than its output, which is the other half of that branch.
     "refusing": """#!/usr/bin/env bash
 set -euo pipefail
 if [[ "${1-}" == '-f=0' ]]; then
   echo 'flag provided but not defined: -f=0' >&2
   exit 2
 fi
-exec "${REAL_SHFMT}" ${@+"$@"}
+exec "${REAL_SHFMT}" "$@"
 """,
 }
 
-# The notice the fallback branch prints, and the only way to tell from outside
-# which branch ran.
+# Spliced into each wrapper in place of its `set` line, so every invocation
+# leaves a byte behind and the process count becomes something to assert.
+COUNT_CALL = 'set -euo pipefail\nprintf \'x\' >> "${SHFMT_CALL_LOG}"\n'
+
+# The notice the fallback branch prints. It is the discriminator these cases
+# use because the alternative, the `shell-candidate.txt` only the fallback
+# writes, persists in the shared RUNNER_TEMP across runs.
 SLOW_PATH_NOTICE = "discovery is checking one file at a time"
 
 
@@ -89,6 +99,17 @@ def run_block(name):
 
 
 def execute(name, root, env):
+    # RUNNER_TEMP and the two GitHub files are one location reused by every
+    # call here, where a real job gets them fresh. Clear what the step may
+    # read back or append to, so a case cannot pass on a neighbor's residue:
+    # a stale probe answer would otherwise select the branch, and the step
+    # appends to GITHUB_OUTPUT rather than overwriting it.
+    runtime = Path(env["RUNNER_TEMP"])
+    for stale in ("shfmt-find-probe.out", "shfmt-find-probe.err", "shell-candidate.txt"):
+        (runtime / stale).unlink(missing_ok=True)
+    for key in ("GITHUB_OUTPUT", "GITHUB_STEP_SUMMARY", "SHFMT_CALL_LOG"):
+        if key in env:
+            Path(env[key]).write_text("")
     return subprocess.run(
         ["bash", "-e", "-o", "pipefail", "-c", run_block(name)],
         cwd=root,
@@ -109,12 +130,17 @@ def shimmed_env(base, env, label, real):
     directory = base / f"shim-{label}"
     directory.mkdir(exist_ok=True)
     wrapper = directory / "shfmt"
-    wrapper.write_text(SHIMS[label])
+    # Every wrapper logs a byte per invocation, which is what lets this
+    # check assert the process count the batched call exists to reduce.
+    # Only calls through the wrapper count: the modern oracle reaches the real
+    # binary directly, so its inner per-path calls are deliberately invisible.
+    wrapper.write_text(SHIMS[label].replace("set -euo pipefail\n", COUNT_CALL, 1))
     wrapper.chmod(0o755)
     shimmed = env.copy()
     # Resolved from the unmodified PATH by the caller, so the wrapper cannot
     # find itself.
     shimmed["REAL_SHFMT"] = real
+    shimmed["SHFMT_CALL_LOG"] = str(base / f"calls-{label}")
     shimmed["PATH"] = os.pathsep.join([str(directory), env["PATH"]])
     return shimmed
 
@@ -124,6 +150,16 @@ def manifest(runtime):
     paths = (runtime / "shell-scripts.txt").read_bytes().split(b"\0")
     assert paths[-1] == b"", paths
     return set(os.fsdecode(path) for path in paths[:-1])
+
+
+def filtered_count(runtime):
+    """How many tracked paths survived the step's -f/-L filter."""
+    return (runtime / "discovery-input.txt").read_bytes().count(b"\0")
+
+
+def call_count(env):
+    """How many times the step invoked shfmt through the wrapper."""
+    return len(Path(env["SHFMT_CALL_LOG"]).read_bytes())
 
 
 def main():
@@ -150,7 +186,11 @@ def main():
         assert Path(env["GITHUB_OUTPUT"]).read_text() == "found=false\n"
         assert "checks were skipped" in Path(env["GITHUB_STEP_SUMMARY"]).read_text()
         assert (runtime / "shell-scripts.txt").read_bytes() == b""
-        print("Empty tracked tree: notice and summary confirmed")
+        # An empty tracked tree must not reach the probe at all, so it cannot
+        # claim anything about the pinned shfmt. This is what the -s guard on
+        # discovery-input.txt buys beyond skipping empty work.
+        assert SLOW_PATH_NOTICE not in empty.stdout, empty.stdout
+        print("Empty tracked tree: notice and summary confirmed, probe not reached")
 
         good = "#!/usr/bin/env bash\nprintf '%s\\n' hello\n"
         scripts = {
@@ -202,17 +242,49 @@ def main():
             Path(env["GITHUB_STEP_SUMMARY"]).write_text("")
             shimmed = execute("Find shell scripts", root, probed)
             assert shimmed.returncode == 0, shimmed.stderr
-            # Equality, not containment: it is also what catches a RUNNER_TEMP
-            # probe artifact reaching the manifest, since expected holds only
-            # tracked paths.
+            # Equality, not containment. Containment would still hold if the
+            # probe's output check were dropped and the legacy wrapper's
+            # echo-back put README.txt and .editorconfig in the manifest.
             assert manifest(runtime) == expected, (label, shimmed)
             assert (SLOW_PATH_NOTICE in shimmed.stdout) == (label != "modern"), (
                 label,
                 shimmed.stdout,
             )
+            # The point of the change, asserted rather than assumed: the
+            # batched branch spends one call on the probe and one on the whole
+            # set, while the fallback spends one per surviving tracked path.
+            # Degrading the batched call back to a process per file, with
+            # `xargs -n1` or otherwise, fails here and nowhere else.
+            calls = call_count(probed)
+            if label == "modern":
+                assert calls == 2, (label, calls)
+            else:
+                assert calls == 1 + filtered_count(runtime), (label, calls)
             assert Path(env["GITHUB_OUTPUT"]).read_text() == "found=true\n"
             assert not Path(env["GITHUB_STEP_SUMMARY"]).read_text()
         print("Batched and per-file discovery agree, and only the fallback says so")
+        print("Process count: one batched call versus one per tracked path")
+
+        # A tracked file shfmt cannot read must fail the step, not drop
+        # silently out of the manifest and go unlinted behind a green job.
+        # Both branches abort on it, and the modern oracle only reproduces
+        # that because it keeps shfmt's exit status rather than testing its
+        # output. Extension-less on purpose: shfmt settles a `.sh` name
+        # without opening the file. Root defeats the permission bit, so skip
+        # there rather than assert something untrue.
+        if os.geteuid() != 0:
+            unreadable = root / "cmake/build-helper"
+            unreadable.chmod(0o000)
+            try:
+                denied = execute("Find shell scripts", root, env)
+                assert denied.returncode != 0, denied
+                for label in SHIMS:
+                    probed = shimmed_env(base, env, label, real_shfmt)
+                    denied = execute("Find shell scripts", root, probed)
+                    assert denied.returncode != 0, (label, denied)
+            finally:
+                unreadable.chmod(0o644)
+            print("Unreadable tracked file: every branch fails rather than skipping it")
 
         outside = base / "outside"
         outside.mkdir()
