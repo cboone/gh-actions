@@ -1,0 +1,26 @@
+# Fixture for run-ci.yml's `reuse` job, which lints this directory with
+# `reuse --root tests/fixtures/reuse lint`. It is the only thing that
+# exercises actions/run-reuse, so keep it compliant: an unannotated file here
+# turns the job red, which is the point.
+#
+# `path` is a literal list rather than a glob, so adding a file here means
+# adding it below too. That is deliberate: a glob would absorb a new file
+# silently, and the job's whole value is that it notices. Do not reduce this
+# to REUSE.toml alone either, because `reuse lint` reports 0 / 0 and exits 0
+# on a root with nothing to lint; the job asserts the count for that reason.
+#
+# `precedence = "aggregate"` lets a file's own SPDX header add to what is
+# declared here. "override" would ignore such a header and "closest" would
+# let it replace these values, and neither is what a fixture wants.
+#
+# This is not a statement about the repository's own licensing. The
+# repository root carries LICENSE and is not REUSE-compliant, which is why
+# the job passes --root rather than linting the checkout.
+version = 1
+SPDX-PackageName = "gh-actions run-reuse fixture"
+
+[[annotations]]
+path = ["REUSE.toml", "sample.txt"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Christopher Boone"
+SPDX-License-Identifier = "MIT"

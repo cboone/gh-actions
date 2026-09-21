@@ -1,0 +1,2 @@
+A file whose copyright and licensing REUSE.toml supplies, so `reuse lint`
+has something to find. Its contents carry no meaning.

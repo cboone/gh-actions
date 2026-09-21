@@ -127,14 +127,21 @@ TOOLS: list[Tool] = [
         "0.12.17",
         lambda: github_latest_release("astral-sh/uv"),
         notes=(
-            "Bump every pin together: UV_VERSION in lint-text.yml and "
-            "check-tool-versions.yml, the uv-version default in run-reuse's "
-            "action.yml and in run-scrut-tests.yml, and every install and the "
-            "asserted version in run-ci.yml. The documented defaults have to match: "
-            "the input tables in actions/run-reuse/README.md and "
+            "Bump every pin together: the version default in set-up-uv's "
+            "action.yml, UV_VERSION in lint-text.yml, the uv-version default in "
+            "run-reuse's action.yml and in run-scrut-tests.yml, and in run-ci.yml "
+            "the install-pinned-tool self-test's version and the three asserted "
+            "versions. Two of those assertions are the cross-checks that make a "
+            "partial bump fail: the wrapper check asserts set-up-uv's default, and "
+            "the reuse job asserts run-reuse's. check-tool-versions.yml carries no "
+            "pin of its own: it calls set-up-uv and takes that default. The "
+            "documented defaults have to match: the input tables in "
+            "actions/set-up-uv/README.md, actions/run-reuse/README.md and "
             "docs/workflows/run-scrut-tests.md, and the example in "
             "actions/install-pinned-tool/README.md. Grep the outgoing version to "
-            "catch any that moved; CHANGELOG entries are historical and stay."
+            "catch any that moved. .github/dependabot.yml cites UV_VERSION as an "
+            "example of a string Dependabot does not track; refresh it or leave it, "
+            "but decide. CHANGELOG entries are historical and stay."
         ),
     ),
     Tool(
