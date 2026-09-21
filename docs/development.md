@@ -1,3 +1,5 @@
+<!-- cspell:ignore unrunnable -->
+
 # Development reference
 
 Read this before changing an action, workflow, dependency pin, component reference or release. Code-span paths are relative to the repository root; bare workflow filenames refer to `.github/workflows/`. See [root instructions](../AGENTS.md) for commands and merge policy.
@@ -503,6 +505,41 @@ action, so this job is the only thing that exercises it. The job passes
 `--root` because this repository is not itself REUSE-compliant, which
 leaves the action's default `args: lint` deliberately uncovered. An
 unannotated file added under the fixture fails the job.
+
+`tests/check-shell-discovery.py` executes `lint-shell.yml`'s literal discovery
+and checker blocks against temporary Git indexes. Discovery batches its
+`shfmt -f=0` call only when it measures the installed binary filtering a prose
+file out of that mode, so the check drives every answer wherever it runs, with
+four `shfmt` wrappers that intercept `-f=0` and delegate everything else.
+Keep all four; each is the sole coverage for something, measured by planting
+the defect and confirming the suite goes green without it:
+
+- `legacy` reproduces the pre-3.14.0 echo-back, and `modern` is an independent
+  oracle for the fixed mode. Deleting them makes an inverted probe invisible to
+  every other case in the file. `modern` assigns before testing so it keeps
+  shfmt's exit status; testing inside `[[ ]]` would discard it and a file shfmt
+  cannot read would stop failing the step.
+- `refusing` models a shfmt older than 3.11.0, which has no `-f=0` to refuse
+  correctly. It is the only thing that makes the probe's `if !` guard
+  non-removable.
+- `unrunnable` exits 126, the way a missing or wrong-architecture binary does.
+  It is the only thing holding the step to reporting a machine fault instead
+  of blaming the pin.
+
+All wrappers must agree with each other and with the real binary on the
+manifest; only the fallback may print its notice; and every wrapper logs a byte
+per invocation, so the process count the change exists to reduce is asserted
+rather than assumed. Without that count, degrading the batched call back to one
+process per file passes every other case.
+
+Real-binary coverage of both branches is deliberate rather than incidental. The
+`install-pinned-tool` matrix runs this check twice: once against the shfmt
+3.13.1 it installs for the installer cases, which drives the fallback, and
+again after the wrapper installs at 3.14.1, which drives the batched call. Both
+pins are load-bearing for that and say so at each end. The `shell` and
+`shellcheck-only` jobs also run the batched call over this repository, but they
+assert nothing about the manifest and an empty one passes them green, so they
+are a smoke test rather than coverage.
 
 The `workflow-arg-binding` job covers the argument-binding rules above on
 Linux and macOS, the latter for the bash 3.2 at `/bin/bash` that the fixture

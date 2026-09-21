@@ -48,6 +48,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now covers `set-up-uv` alongside `set-up-shfmt`, `set-up-actionlint`
   and `set-up-shellcheck` (#102)
 
+- `lint-shell.yml` discovers shell scripts with a batched `shfmt -f=0` call
+  over the tracked file list, rather than one `shfmt -f` process per tracked
+  file. The call goes through `xargs`, so a large tree is split across a few
+  processes; either way it is a handful instead of one per tracked file.
+  Measured over 14,001 paths, discovery went from 32.6s to 0.29s (#124)
+
+  The per-file loop existed because that mode listed explicitly supplied
+  non-shell files until shfmt 3.14.0, where the guard in `cmd/shfmt/main.go`
+  became `find.val != "false"`. No release note records the change, so it is
+  cited from the source. `shfmt-version` stays caller-overridable, so discovery
+  measures the binary it was given rather than trusting the pin: it asks shfmt
+  to classify a prose file written outside the checkout, and keeps the per-file
+  loop, with a notice, when that file comes back or the flag is refused
+  outright. shfmt added `-f=0` in 3.11.0, so anything older has no such mode
+  and the notice says so rather than claiming the mode filters wrongly.
+
+  A shfmt that cannot be run at all, which exits 126 or above, now fails the
+  step with an error naming the exit status and quoting shfmt's own stderr.
+  Before, every non-zero exit was read as an old pin, so a missing or
+  wrong-architecture binary was reported as a version problem.
+
+  Nothing about the input contract changes. A caller pinning an older shfmt
+  discovers exactly the scripts it discovered before, and pays the same process
+  per tracked file to do it. What both paths guarantee is unchanged too:
+  submodule directories and symlinks to untracked files excluded, a file named
+  exactly `-` passed as `./-`, and every original path retained byte for byte
+  in the NUL-separated manifest both checkers read.
+
 ## [4.0.0] - 2026-09-21
 
 ### Added
