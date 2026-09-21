@@ -57,15 +57,15 @@ def action_version(path):
     return version[1]
 
 
-def scan_step(path):
+def scan_step(path, step_name="Run trufflehog"):
     """Read the literal Bash block of the named step without YAML dependencies."""
     content = path.read_text()
     step = re.search(
-        r"(?m)^( *)- name: Run trufflehog\n(?P<body>(?:\1  .*\n|\n)+)",
+        rf"(?m)^( *)- name: {re.escape(step_name)}\n(?P<body>(?:\1  .*\n|\n)+)",
         content,
     )
     if step is None:
-        raise AssertionError(f"Missing Run trufflehog step in {path}")
+        raise AssertionError(f"Missing {step_name} step in {path}")
     block = re.search(r"(?m)^ *run: \|\n((?: +.*\n|\n)+)", step["body"])
     if block is None:
         raise AssertionError(f"Expected literal run block in {path}")
@@ -612,6 +612,83 @@ def check_action_output_flags(base, env, action, repo):
     )
 
 
+def check_fetch_step_rejections(base):
+    """The workflow's fetch step refuses what it cannot do, before scanning.
+
+    Only CI reaches this step, because it needs the `job` context, so its
+    guards are otherwise never executed. Running the literal block here covers
+    them without a runner.
+    """
+    fetch = scan_step(
+        ROOT / ".github/workflows/scan-for-secrets.yml", "Fetch allowlist checker"
+    )
+    allowlist = write_allowlist(
+        base / "allow-fetch.json",
+        {
+            "version": 1,
+            "entries": [
+                {
+                    "reason": "Fetch-step fixture",
+                    "detector": "URI",
+                    "commit": "c" * 40,
+                    "path": "sample.txt",
+                    "line": 1,
+                }
+            ],
+        },
+    )
+    runner_temp = base / "fetch-runner-temp"
+    runner_temp.mkdir()
+    ready = {
+        **os.environ,
+        "REQ_REPO": "cboone/gh-actions",
+        "REQ_SHA": "0" * 40,
+        "TRUFFLEHOG_ALLOWLIST": str(allowlist),
+        "RUNNER_TEMP": str(runner_temp),
+    }
+
+    # GitHub Enterprise Server populates neither value, and the step says so
+    # rather than fetching from a URL it cannot build.
+    for missing in ("REQ_REPO", "REQ_SHA"):
+        result = run_scan(
+            fetch,
+            base,
+            {**ready, missing: ""},
+            1,
+            f"fetch step rejects an empty {missing}",
+        )
+        if "Enterprise" not in result.stdout + result.stderr:
+            raise AssertionError(f"{missing}: the GHES cause was not named")
+
+    label = "fetch step rejects a missing allowlist file"
+    result = run_scan(
+        fetch,
+        base,
+        {**ready, "TRUFFLEHOG_ALLOWLIST": "no/such/allowlist.json"},
+        1,
+        label,
+    )
+    if "is not a file" not in result.stdout + result.stderr:
+        raise AssertionError(f"{label}: the cause was not named")
+
+    # jq is runner-provided, so its absence has to fail rather than skip. The
+    # stub directory carries bash alone, since dropping that too would fail
+    # the test for want of an interpreter rather than for want of jq.
+    without_jq = base / "path-without-jq"
+    without_jq.mkdir()
+    (without_jq / "bash").symlink_to(shutil.which("bash"))
+    label = "fetch step rejects a missing jq"
+    result = run_scan(
+        fetch,
+        base,
+        {**ready, "PATH": str(without_jq)},
+        1,
+        label,
+    )
+    if "jq is required" not in result.stdout + result.stderr:
+        raise AssertionError(f"{label}: the cause was not named")
+
+
 def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow):
     """Cover the allowlist end to end, and through both entry points."""
     uri_dir = base / "bin-uri"
@@ -645,6 +722,7 @@ def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow)
     check_expected_findings(base, findings, entry)
     check_malformed_findings(base, findings, entry)
     check_no_command_injection(base, entry)
+    check_fetch_step_rejections(base)
     check_verified_never_allowlisted(base, custom_wrapper_dir, planted)
     check_planted_defect(base, findings, entry)
 

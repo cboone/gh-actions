@@ -9,12 +9,18 @@ to limit noise from invalid credentials, so revoked credentials and detections
 without verification are outside the TruffleHog gate.
 
 Without `trufflehog-allowlist`, any reported finding fails the job with
-TruffleHog's own exit code 183. With it set, the exit code is the checker's
-instead: `0` when every finding is allowed, `1` when any finding is not, and
-`2` for an allowlist or scan output it could not use. Only an indeterminate
-finding whose commit, path, line and detector all match an entry is allowed. A
-verified finding fails even when an entry matches it, as the rules below set
-out.
+TruffleHog's own exit code 183.
+
+With it set, a scan that completes hands its findings to the checker, whose
+exit code the job then takes: `0` when every finding is allowed, `1` when any
+finding is not, and `2` for an allowlist or scan output it could not use. A
+scan that does not complete never reaches the checker, and the job exits with
+TruffleHog's own status instead, so a failed scan is never reported as a clean
+one. Only 183, meaning results were found, continues to matching.
+
+Only an indeterminate finding whose commit, path, line and detector all match
+an entry is allowed. A verified finding fails even when an entry matches it, as
+the rules below set out.
 
 **Permissions:** `contents: read`
 
