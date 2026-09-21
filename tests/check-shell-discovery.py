@@ -179,6 +179,10 @@ def main():
             GITHUB_STEP_SUMMARY=str(base / "summary"),
         )
         subprocess.run(["git", "init", "--quiet"], cwd=root, env=env, check=True)
+        # Resolved before any wrapper directory exists, so a wrapper placed
+        # ahead of it on PATH cannot find itself.
+        real_shfmt = shutil.which("shfmt")
+        assert real_shfmt, "shfmt must be installed to run this check"
 
         empty = execute("Find shell scripts", root, env)
         assert empty.returncode == 0, empty.stderr
@@ -186,11 +190,19 @@ def main():
         assert Path(env["GITHUB_OUTPUT"]).read_text() == "found=false\n"
         assert "checks were skipped" in Path(env["GITHUB_STEP_SUMMARY"]).read_text()
         assert (runtime / "shell-scripts.txt").read_bytes() == b""
-        # An empty tracked tree must not reach the probe at all, so it cannot
-        # claim anything about the pinned shfmt. This is what the -s guard on
-        # discovery-input.txt buys beyond skipping empty work.
+        # An empty tracked tree must not reach shfmt at all, so it cannot
+        # claim anything about the pinned binary. That is what the -s guard on
+        # discovery-input.txt buys beyond skipping empty work, and the call
+        # count is what makes it observable: with the guard gone, a modern
+        # shfmt still says nothing, so only the count or an old pin shows it.
         assert SLOW_PATH_NOTICE not in empty.stdout, empty.stdout
-        print("Empty tracked tree: notice and summary confirmed, probe not reached")
+        for label in SHIMS:
+            probed = shimmed_env(base, env, label, real_shfmt)
+            quiet = execute("Find shell scripts", root, probed)
+            assert quiet.returncode == 0, (label, quiet.stderr)
+            assert call_count(probed) == 0, (label, call_count(probed))
+            assert SLOW_PATH_NOTICE not in quiet.stdout, (label, quiet.stdout)
+        print("Empty tracked tree: notice and summary confirmed, shfmt never invoked")
 
         good = "#!/usr/bin/env bash\nprintf '%s\\n' hello\n"
         scripts = {
@@ -231,11 +243,23 @@ def main():
         assert not Path(env["GITHUB_STEP_SUMMARY"]).read_text()
         print("Tracked discovery: nested shebangs, extensions and unusual paths confirmed")
 
+        # Discovery reads the checkout and must not write to it. The probe in
+        # particular belongs in RUNNER_TEMP: put it in the workspace and it
+        # would survive into every later step of a real job. `git ls-files`
+        # would never list it, so the manifest cannot show this.
+        def workspace():
+            return subprocess.run(
+                ["git", "status", "--porcelain", "--untracked-files=all"],
+                cwd=root, env=env, capture_output=True, text=True, check=True,
+            ).stdout
+
+        before = workspace()
+        execute("Find shell scripts", root, env)
+        assert workspace() == before, "discovery wrote into the checkout"
+        print("Workspace: discovery leaves the checkout byte for byte unchanged")
+
         # Whichever branch the runner's own shfmt selected above, both must
-        # produce that same manifest. Resolve the real binary before any shim
-        # reaches PATH.
-        real_shfmt = shutil.which("shfmt")
-        assert real_shfmt, "shfmt must be installed to run this check"
+        # produce that same manifest.
         for label in SHIMS:
             probed = shimmed_env(base, env, label, real_shfmt)
             Path(env["GITHUB_OUTPUT"]).write_text("")
