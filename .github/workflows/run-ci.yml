@@ -20,6 +20,9 @@ name: Run CI
 # `rust-tool-installs` exercises run-rust-ci.yml's cargo-audit and
 # cargo-llvm-cov install blocks, which nothing else here reaches, across
 # every target triple their committed checksum tables carry.
+# `reuse` runs that action against tests/fixtures/reuse on the same three
+# runners, covering the uv recipe it carries for want of a `./` path to
+# set-up-uv (#102).
 
 on:
   push:
@@ -65,15 +68,7 @@ jobs:
           allowlist: tests/fixtures/trufflehog-allowlist.json
 
       - name: Install uv
-        uses: ./actions/install-pinned-tool
-        with:
-          tool: uv
-          version: 0.12.17
-          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
-          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
-          os-names: linux=unknown-linux-gnu darwin=apple-darwin
-          arch-names: amd64=x86_64 arm64=aarch64
-          archive-member: uv-{arch}-{os}/uv
+        uses: ./actions/set-up-uv
 
       - name: Check findings fail both TruffleHog entry points
         run: uv run --script tests/trufflehog-positive-control.py
@@ -264,15 +259,7 @@ jobs:
         run: scrut test tests/scrut/installation.md
 
       - name: Install uv for release audit controls
-        uses: ./actions/install-pinned-tool
-        with:
-          tool: uv
-          version: 0.12.17
-          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
-          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
-          os-names: linux=unknown-linux-gnu darwin=apple-darwin
-          arch-names: amd64=x86_64 arm64=aarch64
-          archive-member: uv-{arch}-{os}/uv
+        uses: ./actions/set-up-uv
 
       - name: Check release audit defect controls
         env:
@@ -317,15 +304,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: ./actions/install-pinned-tool
-        with:
-          tool: uv
-          version: 0.12.17
-          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
-          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
-          os-names: linux=unknown-linux-gnu darwin=apple-darwin
-          arch-names: amd64=x86_64 arm64=aarch64
-          archive-member: uv-{arch}-{os}/uv
+        uses: ./actions/set-up-uv
 
       - name: Audit native release assets against reviewed hashes
         env:
@@ -603,10 +582,10 @@ jobs:
       # The set-up-* wrappers install into the same directories, so clear
       # them first; otherwise the next check would pass on the binaries the
       # direct installs left behind.
-      - name: Remove the direct shfmt, actionlint and shellcheck installs
+      - name: Remove the direct shfmt, actionlint, shellcheck and uv installs
         run: |
           rm -rf "${RUNNER_TEMP}/shfmt-bin" "${RUNNER_TEMP}/actionlint-bin" \
-            "${RUNNER_TEMP}/shellcheck-bin"
+            "${RUNNER_TEMP}/shellcheck-bin" "${RUNNER_TEMP}/uv-bin"
 
       - name: Set up shfmt through the wrapper
         uses: ./actions/set-up-shfmt
@@ -617,11 +596,14 @@ jobs:
       - name: Set up shellcheck through the wrapper
         uses: ./actions/set-up-shellcheck
 
+      - name: Set up uv through the wrapper
+        uses: ./actions/set-up-uv
+
       - name: Check the wrapper installs
         run: |
           status=0
           for spec in "shfmt 3.14.1 --version" "actionlint 1.7.12 -version" \
-            "shellcheck 0.11.0 --version"; do
+            "shellcheck 0.11.0 --version" "uv 0.12.17 --version"; do
             read -r tool want flag <<< "${spec}"
             resolved="$(command -v "${tool}" || true)"
             if [ "${resolved}" != "${RUNNER_TEMP}/${tool}-bin/${tool}" ]; then
@@ -1228,15 +1210,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        uses: ./actions/install-pinned-tool
-        with:
-          tool: uv
-          version: 0.12.17
-          url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
-          checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
-          os-names: linux=unknown-linux-gnu darwin=apple-darwin
-          arch-names: amd64=x86_64 arm64=aarch64
-          archive-member: uv-{arch}-{os}/uv
+        uses: ./actions/set-up-uv
 
       # run-rust-ci.yml is never invoked by this workflow, so its committed
       # cargo-audit and cargo-llvm-cov digests would otherwise reach a
@@ -1244,3 +1218,38 @@ jobs:
       # checksum tables carry.
       - name: Check the cargo-audit and cargo-llvm-cov installs
         run: uv run tests/check-rust-tool-installs.py
+
+  # run-reuse had no coverage before #102, which mattered once its uv install
+  # moved onto install-pinned-tool: the action carries its own copy of the uv
+  # recipe, because a composite action cannot reach the sibling set-up-uv by a
+  # `./` path, so nothing else exercises it. The matrix is the installer one,
+  # per the coverage rule in .github/workflows/AGENTS.md.
+  #
+  # What this catches, because each makes the job fail: a uv install that does
+  # not reach PATH, a requirements manifest that does not resolve from
+  # github.action_path, a hash mismatch under --require-hashes, and reuse
+  # never actually running.
+  #
+  # --root scopes the lint to the fixture. This repository is not itself
+  # REUSE-compliant, so the action's default `args: lint` would fail here;
+  # that default is left uncovered deliberately rather than by oversight.
+  reuse:
+    name: run-reuse (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Lint the REUSE fixture
+        uses: ./actions/run-reuse
+        with:
+          args: |
+            --root
+            tests/fixtures/reuse
+            lint

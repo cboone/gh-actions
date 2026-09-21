@@ -1,0 +1,16 @@
+# Fixture for run-ci.yml's `reuse` job, which lints this directory with
+# `reuse --root tests/fixtures/reuse lint`. It is the only thing that
+# exercises actions/run-reuse, so keep it compliant: an unannotated file here
+# turns the job red, which is the point.
+#
+# This is not a statement about the repository's own licensing. The
+# repository root carries LICENSE and is not REUSE-compliant, which is why
+# the job passes --root rather than linting the checkout.
+version = 1
+SPDX-PackageName = "gh-actions run-reuse fixture"
+
+[[annotations]]
+path = ["REUSE.toml", "sample.txt"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Christopher Boone"
+SPDX-License-Identifier = "MIT"
