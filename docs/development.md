@@ -10,16 +10,23 @@ Composite actions live in `actions/` and are referenced as
 `cboone/gh-actions/actions/<name>@<ref>`. Reusable workflows live in
 `.github/workflows/` and are called via `workflow_call`. A reusable
 workflow cannot use a composite action from this repo by a `./` path,
-which resolves against the caller's checkout. `lint-github-actions.yml`
-and `lint-shell.yml` therefore fetch
-`actions/install-pinned-tool/install-pinned-tool.sh` from
+which resolves against the caller's checkout. `lint-github-actions.yml`,
+`lint-shell.yml`, `lint-text.yml` and `run-scrut-tests.yml` therefore
+fetch `actions/install-pinned-tool/install-pinned-tool.sh` from
 `job.workflow_repository` at `job.workflow_sha` and run it, the model
-`lint-text.yml` uses for its manifests, which keeps the installer on the
-workflow's own commit. `run-scrut-tests.yml` also fetches that installer
-for its optional uv setup. Other tool installations are inlined or use
+`lint-text.yml` already uses for its manifests, which keeps the installer
+on the workflow's own commit. Other tool installations are inlined or use
 SHA-pinned external setup actions. Composite actions reach sibling files in this repo through
-`github.action_path`: `set-up-actionlint`, `set-up-shellcheck` and
-`set-up-shfmt` run `../install-pinned-tool/install-pinned-tool.sh`.
+`github.action_path`: `set-up-actionlint`, `set-up-shellcheck`,
+`set-up-shfmt`, `set-up-uv` and `run-reuse` run
+`../install-pinned-tool/install-pinned-tool.sh`. The same `./` restriction
+applies between two composite actions, so `run-reuse` drives the installer
+itself rather than delegating to `set-up-uv`.
+
+The workflows in `.github/workflows/` that are not reusable, such as
+`run-ci.yml` and `check-tool-versions.yml`, check this repository out and
+so reach its actions by `./` path directly. `check-tool-versions.yml` uses
+`set-up-uv` that way and carries no uv pin of its own.
 
 ### Naming
 
@@ -488,6 +495,14 @@ that actionlint really does shell out to shellcheck. Its `scrut` job calls
 `run-scrut-tests.yml` with `setup-uv: true` against the specs in `tests/scrut/`.
 It passes `tests/fixtures/hello.py` through `HELLO_BIN`: that PEP 723
 executable only runs if uv reached `PATH`.
+
+Its `reuse` job runs `actions/run-reuse` against `tests/fixtures/reuse` on
+the same three runners. `run-reuse` carries its own copy of the uv install
+recipe, because no `./` path reaches `set-up-uv` from inside a composite
+action, so this job is the only thing that exercises it. The job passes
+`--root` because this repository is not itself REUSE-compliant, which
+leaves the action's default `args: lint` deliberately uncovered. An
+unannotated file added under the fixture fails the job.
 
 The `workflow-arg-binding` job covers the argument-binding rules above on
 Linux and macOS, the latter for the bash 3.2 at `/bin/bash` that the fixture
