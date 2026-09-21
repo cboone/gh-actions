@@ -111,10 +111,10 @@ jobs:
         run: |
           # Reduce the tracked tree to the regular files a checker can read,
           # retaining each original path in a NUL-separated list. This loop
-          # spawns nothing; -f and -L are shell builtins. Its guard is
-          # load-bearing for the batched call below, which walks a directory
-          # argument and would otherwise pull untracked files out of a
-          # submodule.
+          # forks nothing: `[[` is a shell keyword and `printf` a builtin.
+          # Its guard is load-bearing for either discovery path, because
+          # shfmt walks a directory argument and would otherwise pull
+          # untracked files out of a submodule.
           git ls-files -z > "${RUNNER_TEMP}/tracked-files.txt"
           : > "${RUNNER_TEMP}/shell-scripts.txt"
           while IFS= read -r -d '' path; do
@@ -129,33 +129,57 @@ jobs:
             printf '%s\0' "${path}"
           done < "${RUNNER_TEMP}/tracked-files.txt" \
             > "${RUNNER_TEMP}/discovery-input.txt"
+          # This guard is load-bearing beyond skipping empty work: GNU xargs,
+          # which ubuntu-latest has, runs its command once on empty input,
+          # and `shfmt -f=0` with no operands emits a newline that would
+          # become a one-entry manifest holding a bogus path. `-r` below
+          # covers the same case; both stay, because each stands alone.
           if [[ -s "${RUNNER_TEMP}/discovery-input.txt" ]]; then
-            # `shfmt -f=0` classifies the whole set in one call, but it listed
-            # explicitly supplied non-shell files until 3.14.1 and older
-            # releases lack the flag outright, and shfmt-version is
-            # caller-overridable. So ask the installed binary to classify a
-            # prose file rather than parsing `shfmt --version`, which reads
-            # "(devel)" for a source build and cannot report a backport. The
-            # probe lives outside the checkout, so it cannot reach the
-            # manifest. `if !` keeps a shfmt that rejects the flag from
-            # aborting the step; its stderr still explains the fallback.
+            # `shfmt -f=0` classifies the whole set in one call. shfmt added
+            # that flag in 3.11.0 and did not filter explicitly supplied
+            # non-shell files out of it until 3.14.0, where the guard in
+            # cmd/shfmt/main.go became `find.val != "false"`. No release note
+            # records the change, so cite the guard rather than the notes.
+            # shfmt-version is caller-overridable, so ask the installed
+            # binary to classify a prose file instead of parsing
+            # `shfmt --version`, which cannot tell a release that lacks the
+            # flag from one that has it and gets it wrong. The probe lives
+            # outside the checkout, so it cannot reach the manifest.
             probe="${RUNNER_TEMP}/shfmt-find-probe"
             printf '%s\n' 'Prose, so no shell dialect can claim it.' > "${probe}"
+            probe_status=0
+            shfmt -f=0 -- "${probe}" > "${probe}.out" 2> "${probe}.err" \
+              || probe_status=$?
+            # Only a refused flag or an echoed-back probe is evidence about
+            # the version. 126 and up mean shfmt could not be run at all,
+            # which is a machine fault and must not be reported as an old pin.
+            if [[ "${probe_status}" -ge 126 ]]; then
+              msg="shfmt could not be run: exit ${probe_status}."
+              msg="${msg} This is not a version problem, so discovery cannot"
+              msg="${msg} continue. shfmt reported:"
+              msg="${msg} $(tr '\n' ' ' < "${probe}.err")"
+              echo "::error::${msg}" >&2
+              exit 1
+            fi
             batched=true
-            if ! shfmt -f=0 -- "${probe}" > "${probe}.out"; then
-              batched=false
-            elif [[ -s "${probe}.out" ]]; then
+            if [[ "${probe_status}" -ne 0 || -s "${probe}.out" ]]; then
               batched=false
             fi
             if [[ "${batched}" == true ]]; then
-              xargs -0 shfmt -f=0 -- < "${RUNNER_TEMP}/discovery-input.txt" \
+              xargs -0 -r shfmt -f=0 -- < "${RUNNER_TEMP}/discovery-input.txt" \
                 > "${RUNNER_TEMP}/shell-scripts.txt"
             else
-              msg="The pinned shfmt does not filter explicitly supplied"
-              msg="${msg} non-shell files in its NUL-separated find mode, so"
-              msg="${msg} discovery is checking one file at a time. Pin shfmt"
-              msg="${msg} 3.14.1 or later to discover in a single pass."
+              # Both causes, because the probe selects this branch either
+              # way and a caller below 3.11.0 has no such mode to fix.
+              msg="The pinned shfmt either lacks its NUL-separated find mode"
+              msg="${msg} or does not filter explicitly supplied non-shell"
+              msg="${msg} files out of it, so discovery is checking one file"
+              msg="${msg} at a time. Pin shfmt 3.14.0 or later to discover in"
+              msg="${msg} a single pass."
               echo "::notice::${msg}"
+              if [[ -s "${probe}.err" ]]; then
+                echo "shfmt reported: $(tr '\n' ' ' < "${probe}.err")"
+              fi
               while IFS= read -r -d '' path; do
                 shfmt -f -- "${path}" > "${RUNNER_TEMP}/shell-candidate.txt"
                 if [[ -s "${RUNNER_TEMP}/shell-candidate.txt" ]]; then
