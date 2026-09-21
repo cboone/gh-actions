@@ -6,6 +6,11 @@ for SPDX/REUSE compliance. Thin alternative to
 from this repo's hash-pinned `requirements/reuse.txt` (every transitive
 dependency is sha256-pinned via `uv pip compile --generate-hashes`).
 
+uv itself is installed through
+[install-pinned-tool](../install-pinned-tool/README.md) and verified against
+the per-asset `.sha256` upstream publishes, on Linux and macOS, amd64 and
+arm64.
+
 ## Inputs
 
 | Name         | Type   | Default   | Description                                      |
