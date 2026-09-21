@@ -190,8 +190,11 @@ packages.
 ### How the workflow reaches its own manifests
 
 The preset configs, `package.json` + `package-lock.json`,
-`requirements/yamllint.txt`, and the dictionary installer
-`actions/install-cspell-dictionaries/install-cspell-dictionaries.sh` all
+`requirements/yamllint.txt`, the dictionary installer
+`actions/install-cspell-dictionaries/install-cspell-dictionaries.sh`, and
+the generic installer
+`actions/install-pinned-tool/install-pinned-tool.sh`, which puts uv on
+`PATH` for the yamllint install, all
 live in this repo, not the consumer's. The workflow fetches them over
 `raw.githubusercontent.com` from
 `${{ job.workflow_repository }}` at `${{ job.workflow_sha }}`: the

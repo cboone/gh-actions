@@ -69,7 +69,7 @@ OS_NAMES: linux=unknown-linux-gnu darwin=apple-darwin
 ARCH_NAMES: amd64=x86_64 arm64=aarch64
 ```
 
-`README.md` from the [per-component template](../development.md#per-component-doc-template), plus a Quick Reference row in the root `README.md` under Repository chores, both required by `actions/AGENTS.md`.
+`README.md` from the [per-component template](../../development.md#per-component-doc-template), plus a Quick Reference row in the root `README.md` under Repository chores, both required by `actions/AGENTS.md`.
 
 ### 2. `actions/run-reuse/action.yml`
 

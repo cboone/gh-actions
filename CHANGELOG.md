@@ -13,8 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   0.12.17) and adds it to `PATH`. The release archive is verified against
   the per-asset `.sha256` uv publishes beside each platform's tarball.
   Built on `install-pinned-tool`, so it covers Linux and macOS on amd64
-  and arm64 where the installs it replaces covered Linux amd64 alone
-  (#102)
+  and arm64 (#102)
 - `run-ci.yml` `reuse` job: runs `actions/run-reuse` against a new
   `tests/fixtures/reuse` fixture on Linux amd64, Linux arm64 and macOS
   arm64. `run-reuse` had no self-test, and it carries its own copy of the

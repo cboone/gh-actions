@@ -32,7 +32,7 @@ jobs:
       # this repository's own checkout above. It can use the action directly
       # rather than fetching install-pinned-tool.sh the way the reusable
       # workflows have to. The pinned version is set-up-uv's default, so this
-      # file no longer carries a uv pin of its own.
+      # file carries no uv pin of its own.
       - name: Install uv
         uses: ./actions/set-up-uv
 
