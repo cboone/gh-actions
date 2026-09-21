@@ -4,7 +4,7 @@
 # ///
 """Exercise lint-shell's actual run blocks with temporary tracked fixtures."""
 
-# cspell:ignore cacheinfo geteuid
+# cspell:ignore cacheinfo geteuid unrunnable
 
 import os
 from pathlib import Path
