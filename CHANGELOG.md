@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `run-ci.yml` `tool-version-reporting` job: runs
+  `tests/check-tool-version-reporting.py`, which executes
+  `check-tool-versions.yml`'s literal `Run version check` block against
+  stand-in audits with fixed streams and exit statuses. That workflow runs
+  only on a weekly schedule, so nothing else executed the block, and the
+  statuses it mishandled reported green. Each refusal case names the guard
+  it covers; the development reference records why (#140)
+
+### Fixed
+
+- `check-tool-versions.yml` fails the job when
+  `scripts/check-tool-versions.py` does not run to completion. The step
+  routed every non-zero status other than `2` into the `gh issue edit` call
+  that rewrites the tracking issue body. An exception outside the per-tool
+  `try` in `main()`, an unparseable PEP 723 header, and a uv that cannot
+  resolve an interpreter all leave stdout empty, so the step blanked that
+  issue's body and the scheduled run still reported green. A status outside
+  `0`, `1` and `2` is now rejected, a non-zero status paired with an empty
+  report is refused rather than written, and `GITHUB_OUTPUT` is published
+  only once both hold, so an unvalidated status cannot reach the steps that
+  key on it (#140)
+
 ## [4.1.0] - 2026-09-21
 
 ### Added
