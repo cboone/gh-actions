@@ -42,6 +42,8 @@ jobs:
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Fetch the installer from the repository and commit this workflow
       # file came from, the supply-chain model lint-text.yml uses for its

@@ -56,27 +56,24 @@ function* actionFiles(dir, prefix) {
   }
 }
 
-// Every `run:` block in the repository, keyed as `<file>::<job>::<step name>`.
-// The job is part of the key because step names repeat across jobs: keying on
-// the file and name alone would let one allowlist entry cover every same-named
-// step in that file.
-export function* runSteps() {
+// Every step in the repository, keyed as `<file>::<job>::<step name>`. The job
+// is part of the key because step names repeat across jobs: keying on the file
+// and name alone would let one allowlist entry cover every same-named step in
+// that file. An unnamed step falls back to its index, which moves when a step
+// is inserted above it, so a step an exception set names carries a `name:`.
+export function* allSteps() {
   for (const name of readdirSync(workflowDir).filter(isYaml)) {
     const doc = parse(readFileSync(new URL(name, workflowDir), "utf8"));
     for (const [jobId, job] of Object.entries(doc.jobs ?? {})) {
       for (const [index, step] of (job.steps ?? []).entries()) {
-        if (typeof step.run === "string") {
-          yield { key: `${name}::${jobId}::${step.name ?? `(unnamed step ${index})`}`, step };
-        }
+        yield { key: `${name}::${jobId}::${step.name ?? `(unnamed step ${index})`}`, step };
       }
     }
   }
   for (const { path, label } of actionFiles(new URL("actions/", repoRoot), "actions/")) {
     const doc = parse(readFileSync(path, "utf8"));
     for (const [index, step] of (doc.runs?.steps ?? []).entries()) {
-      if (typeof step.run === "string") {
-        yield { key: `${label}::runs::${step.name ?? `(unnamed step ${index})`}`, step };
-      }
+      yield { key: `${label}::runs::${step.name ?? `(unnamed step ${index})`}`, step };
     }
   }
   for (const dir of [new URL(".github/actions/", repoRoot)]) {
@@ -84,11 +81,24 @@ export function* runSteps() {
     for (const { path, label } of actionFiles(dir, ".github/actions/")) {
       const doc = parse(readFileSync(path, "utf8"));
       for (const [index, step] of (doc.runs?.steps ?? []).entries()) {
-        if (typeof step.run === "string") {
-          yield { key: `${label}::runs::${step.name ?? `(unnamed step ${index})`}`, step };
-        }
+        yield { key: `${label}::runs::${step.name ?? `(unnamed step ${index})`}`, step };
       }
     }
+  }
+}
+
+export function* runSteps() {
+  for (const entry of allSteps()) {
+    if (typeof entry.step.run === "string") yield entry;
+  }
+}
+
+// Every `uses:` step, keyed the same way. A composite action may reference
+// `actions/checkout` too, so the checkout policy has to see the same set of
+// files the `run:` walk does rather than the workflows alone.
+export function* usesSteps() {
+  for (const entry of allSteps()) {
+    if (typeof entry.step.uses === "string") yield entry;
   }
 }
 

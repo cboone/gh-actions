@@ -27,6 +27,8 @@ jobs:
       ISSUE_LABEL: "dependencies"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # This workflow is not reusable, so a `./` action path resolves against
       # this repository's own checkout above. It can use the action directly
