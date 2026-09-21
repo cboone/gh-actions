@@ -145,24 +145,36 @@ def main():
     expect_published("outdated", 1, OUTDATED)
     expect_published("lookup errors", 2, LOOKUP_ERRORS)
 
+    # Each refusal names the guard it is coverage for, not just the status. The
+    # two guards overlap on a status outside the contract that also produced no
+    # report, and an assertion on "exited 127" alone passes on either message,
+    # so deleting the status guard left the missing-audit case below green.
+    empty = "with an empty report; refusing to overwrite the tracking issue"
+    unexpected = "expected 0, 1 or 2"
+
     # The bug this file exists for. An unhandled exception, an unparseable PEP
     # 723 header and a uv that cannot resolve an interpreter all leave stdout
     # empty, and the old block handed that emptiness to `gh issue edit
     # --body-file`, erasing the tracking issue while the job reported green.
-    empty_report = "with an empty report"
-    expect_refused("crash on exit 1", empty_report, status=1, output="", error=TRACEBACK)
+    expect_refused("crash on exit 1", empty, status=1, output="", error=TRACEBACK)
     # Status 2 has its own path out of the step, so the emptiness guard must not
     # be keyed to status 1 alone.
-    expect_refused("crash on exit 2", empty_report, status=2, output="", error=TRACEBACK)
+    expect_refused("crash on exit 2", empty, status=2, output="", error=TRACEBACK)
 
     # A status outside the contract, paired with a report that is not empty.
     # Nothing but the status guard can reject this one.
-    expect_refused("unexpected status", "exited 3", status=3, output=OUTDATED)
+    expect_refused(
+        "unexpected status", f"exited 3; {unexpected}", status=3, output=OUTDATED
+    )
 
     # No audit at the path at all, which is the shape of a uv that never ran the
     # script: the redirect still creates an empty report and bash returns 127.
     expect_refused(
-        "missing audit", "exited 127", status=0, output="", install=False
+        "missing audit",
+        f"exited 127; {unexpected}",
+        status=0,
+        output="",
+        install=False,
     )
 
 
