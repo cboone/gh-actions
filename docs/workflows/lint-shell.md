@@ -14,24 +14,31 @@ skips installation and discovery.
 The format check uses `shfmt -d` without style flags so it reads
 `.editorconfig`. Adding a style flag such as `-i 2` disables those settings.
 
-Discovery passes the tracked regular files to `shfmt -f=0` in a single call and
-retains each original path in the NUL-separated manifest both checkers read,
-except that a file named exactly `-` is passed as `./-` so it cannot be
-interpreted as stdin. The tracked tree is filtered first, which is what keeps
-submodule directories and symlinks out: shfmt walks a directory argument, and
-would otherwise reach untracked files inside a submodule.
+Discovery passes the tracked regular files to `shfmt -f=0` and retains each
+original path in the NUL-separated manifest both checkers read, except that a
+file named exactly `-` is passed as `./-` so it cannot be interpreted as stdin.
+The call goes through `xargs`, so a tree large enough to exceed the argument
+limit is split across a few processes rather than one; either way it is a
+handful instead of one per tracked file. The tracked tree is filtered first,
+which is what keeps submodule directories and symlinks out: shfmt walks a
+directory argument, and would otherwise reach untracked files inside a
+submodule.
 
-That mode listed explicitly supplied non-shell files until shfmt 3.14.1, and
-`shfmt-version` is caller-overridable, so the step measures the binary it was
-given rather than trusting the pin. It asks shfmt to classify a prose file
-written outside the checkout, and keeps one `shfmt -f` call per tracked file
-when that file comes back or the flag is refused outright. This is a probe
-rather than a parsed `shfmt --version`, which reads `(devel)` for a source
-build and cannot report a backport.
+shfmt added `-f=0` in 3.11.0 and did not filter explicitly supplied non-shell
+files out of it until 3.14.0, where the guard in `cmd/shfmt/main.go` became
+`find.val != "false"`. No release note records that change, so this is cited
+from the source rather than the notes. `shfmt-version` is caller-overridable,
+so the step measures the binary it was given rather than trusting the pin. It
+asks shfmt to classify a prose file written outside the checkout, and keeps one
+`shfmt -f` call per tracked file when that file comes back or the flag is
+refused outright. A probe rather than a parsed `shfmt --version`, which cannot
+tell a release that lacks the flag from one that has it and gets it wrong.
 
-The fallback is what every version of this workflow did before, so an older pin
-still discovers exactly the same scripts. It pays a process per tracked file to
-do it, and emits a notice saying so.
+An older pin discovers exactly the scripts it discovered before this change,
+pays a process per tracked file to do it, and emits a notice saying so. A shfmt
+that cannot be run at all, which exits 126 or above, is reported as an error
+instead: that is a machine fault, not an old pin, and changing the version
+would not address it.
 
 Both tools are installed from their release assets and verified against the
 committed SHA-256 in `shellcheck-checksums` and `shfmt-checksums`. To use

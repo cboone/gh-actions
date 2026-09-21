@@ -1,4 +1,4 @@
-<!-- cspell:ignore returncode -->
+<!-- cspell:ignore returncode envrc unrunnable -->
 
 # Batch lint-shell script discovery (#124)
 
@@ -10,7 +10,9 @@ many tracked files that is thousands of processes to answer a question one call
 can answer.
 
 The loop exists because shfmt's NUL-separated find mode, `-f=0`, listed
-explicitly supplied non-shell files until 3.14.1. #61 pinned 3.14.1 as the
+explicitly supplied non-shell files until 3.14.0. (This plan said 3.14.1
+throughout, following the issue; review established the real boundary, and the
+Review outcome section below records it.) #61 pinned 3.14.1 as the
 default but left the loop in place, because `shfmt-version` is a caller
 overridable input: a consumer pinning an older shfmt would still reach a batched
 path and would silently get prose, JSON and binaries fed to ShellCheck and the
@@ -233,6 +235,60 @@ Rows nothing covers: the batched call is never exercised against a real shfmt
 3.14.1 from inside this check on a runner that pins 3.13.1 for the installer
 cases. The `shell` and `shellcheck-only` jobs cover that against this
 repository's own tree instead, which is why they are named in the reference.
+(Closed during review; see below.)
+
+## Review outcome
+
+Four review passes ran over the branch after the commits above. They found no
+behavioral defect in the shipped discovery logic, and three classes of problem
+worth recording here, because two of them are corrections to this plan.
+
+**The version boundary was wrong.** The `-f=0` filtering fix landed in shfmt
+3.14.0, not 3.14.1. Verified from upstream source: the guard in
+`cmd/shfmt/main.go` is `find.val == "true"` at v3.13.1 and `find.val != "false"`
+at v3.14.0, and v3.14.0 and v3.14.1 are identical on that line. Neither release
+note mentions it. The error came from the issue text, reached six places
+including the user-facing notice, and told callers to pin further than they
+need. Also established: `-f=0` was added in 3.11.0, so anything older refuses
+the flag rather than mishandling it, and the notice now names both causes.
+
+**The row above marked "nothing covers" is closed.** `run-ci.yml` now runs
+`check-shell-discovery.py` twice in the installer matrix: once at the 3.13.1
+it already installs, driving the fallback, and again after the wrapper
+installs at 3.14.1, driving the batched call. The `shell` and
+`shellcheck-only` jobs were the wrong thing to lean on, because they assert
+nothing about the manifest and an empty one passes them green.
+
+**A second mutation run found five survivors.** Fourteen defects planted, nine
+caught. The survivors and what now catches them:
+
+| Planted defect                                                       | What caught it before | What catches it now                                        |
+| -------------------------------------------------------------------- | --------------------- | ----------------------------------------------------------- |
+| `\|\| true` on the batched call                                       | Nothing               | `Tracked discovery` manifest equality                       |
+| `\|\| true` on the per-file call                                      | Nothing               | `Unreadable tracked file`, a mode-000 extension-less fixture |
+| `xargs -n1`, degrading the batched call to a process per file        | Nothing               | `Process count`, from a per-invocation wrapper log          |
+| Removing the `-s discovery-input.txt` guard                          | Nothing               | `Empty tracked tree`, asserting shfmt is invoked zero times |
+| Writing the probe into the checkout                                  | Nothing               | `Workspace`, asserting the checkout is unchanged            |
+
+Two further rows came out of fixing those. The `modern` oracle tested shfmt's
+output inside `[[ ]]`, which discards the exit status, so it returned 0 where
+the real binary returns 1; it assigns first now. And nothing exercised the
+probe's machine-fault split, so a fourth wrapper exits 126 and asserts
+discovery reports that rather than blaming the pin.
+
+**Three comments were wrong**, two of them written by this plan's own work.
+The bash 3.2 rationale for `${@+"$@"}` does not reproduce: 3.2.57 accepts empty
+`"$@"` under `set -u` and rejects only the braced `"${@}"`, so the idiom and
+the claim are both gone. The equality assertion's stated reason, that it
+catches a `RUNNER_TEMP` probe artifact, is untestable, because the probe is
+untracked and `git ls-files` can never list it; that is the second wrong
+rationale written for the same assertion, after the plant table above already
+recorded the first. And `[[` is a shell keyword, not a builtin.
+
+Deferred as out of scope, filed separately: shfmt never classifies a shell
+script whose basename begins with a dot, so a tracked `.envrc.sh` or
+`.bash_profile` is silently never linted. Both branches agree, so it is not a
+regression, but it is live for every consumer.
 
 ## Commits
 
