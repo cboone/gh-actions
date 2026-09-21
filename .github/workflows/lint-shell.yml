@@ -109,13 +109,12 @@ jobs:
         id: find-scripts
         if: inputs.run-shellcheck || inputs.run-shfmt
         run: |
-          # Discover one tracked path at a time, retaining the original path
-          # in a NUL-separated manifest. Passing every path to `shfmt -f=0`
-          # once, the NUL-separated find mode this manifest wants, would be
-          # cheaper; that mode listed explicitly supplied non-shell files
-          # until 3.14.1, and shfmt-version is caller-overridable, so an
-          # older pin still reaches it. Per-file -f is correct on every
-          # version. Collapsing the loop is tracked in #124.
+          # Reduce the tracked tree to the regular files a checker can read,
+          # retaining each original path in a NUL-separated list. This loop
+          # spawns nothing; -f and -L are shell builtins. Its guard is
+          # load-bearing for the batched call below, which walks a directory
+          # argument and would otherwise pull untracked files out of a
+          # submodule.
           git ls-files -z > "${RUNNER_TEMP}/tracked-files.txt"
           : > "${RUNNER_TEMP}/shell-scripts.txt"
           while IFS= read -r -d '' path; do
@@ -127,11 +126,45 @@ jobs:
             if [[ "${path}" == '-' ]]; then
               path="./-"
             fi
-            shfmt -f -- "${path}" > "${RUNNER_TEMP}/shell-candidate.txt"
-            if [[ -s "${RUNNER_TEMP}/shell-candidate.txt" ]]; then
-              printf '%s\0' "${path}" >> "${RUNNER_TEMP}/shell-scripts.txt"
+            printf '%s\0' "${path}"
+          done < "${RUNNER_TEMP}/tracked-files.txt" \
+            > "${RUNNER_TEMP}/discovery-input.txt"
+          if [[ -s "${RUNNER_TEMP}/discovery-input.txt" ]]; then
+            # `shfmt -f=0` classifies the whole set in one call, but it listed
+            # explicitly supplied non-shell files until 3.14.1 and older
+            # releases lack the flag outright, and shfmt-version is
+            # caller-overridable. So ask the installed binary to classify a
+            # prose file rather than parsing `shfmt --version`, which reads
+            # "(devel)" for a source build and cannot report a backport. The
+            # probe lives outside the checkout, so it cannot reach the
+            # manifest. `if !` keeps a shfmt that rejects the flag from
+            # aborting the step; its stderr still explains the fallback.
+            probe="${RUNNER_TEMP}/shfmt-find-probe"
+            printf '%s\n' 'Prose, so no shell dialect can claim it.' > "${probe}"
+            batched=true
+            if ! shfmt -f=0 -- "${probe}" > "${probe}.out"; then
+              batched=false
+            elif [[ -s "${probe}.out" ]]; then
+              batched=false
             fi
-          done < "${RUNNER_TEMP}/tracked-files.txt"
+            if [[ "${batched}" == true ]]; then
+              xargs -0 shfmt -f=0 -- < "${RUNNER_TEMP}/discovery-input.txt" \
+                > "${RUNNER_TEMP}/shell-scripts.txt"
+            else
+              msg="The pinned shfmt does not filter explicitly supplied"
+              msg="${msg} non-shell files in its NUL-separated find mode, so"
+              msg="${msg} discovery is checking one file at a time. Pin shfmt"
+              msg="${msg} 3.14.1 or later to discover in a single pass."
+              echo "::notice::${msg}"
+              while IFS= read -r -d '' path; do
+                shfmt -f -- "${path}" > "${RUNNER_TEMP}/shell-candidate.txt"
+                if [[ -s "${RUNNER_TEMP}/shell-candidate.txt" ]]; then
+                  printf '%s\0' "${path}"
+                fi
+              done < "${RUNNER_TEMP}/discovery-input.txt" \
+                > "${RUNNER_TEMP}/shell-scripts.txt"
+            fi
+          fi
           if [[ -s "${RUNNER_TEMP}/shell-scripts.txt" ]]; then
             echo "found=true" >> "${GITHUB_OUTPUT}"
           else
