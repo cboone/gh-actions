@@ -75,6 +75,20 @@ exec "${REAL_SHFMT}" "$@"
 """,
 }
 
+# Not in SHIMS, because every case there expects discovery to succeed. A
+# shfmt that cannot be run at all exits 126 or above, the way a missing or
+# wrong-architecture binary does, and that is a machine fault rather than
+# evidence about the pinned version. Discovery must say so and stop, not fall
+# back and blame the pin.
+UNRUNNABLE_SHIM = """#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1-}" == '-f=0' ]]; then
+  echo 'cannot execute binary file' >&2
+  exit 126
+fi
+exec "${REAL_SHFMT}" "$@"
+"""
+
 # Spliced into each wrapper in place of its `set` line, so every invocation
 # leaves a byte behind and the process count becomes something to assert.
 COUNT_CALL = 'set -euo pipefail\nprintf \'x\' >> "${SHFMT_CALL_LOG}"\n'
@@ -125,7 +139,7 @@ def write(root, name, contents):
     path.write_text(contents)
 
 
-def shimmed_env(base, env, label, real):
+def shimmed_env(base, env, label, real, source=None):
     """Put a `shfmt` wrapper ahead of the real binary on PATH."""
     directory = base / f"shim-{label}"
     directory.mkdir(exist_ok=True)
@@ -134,7 +148,8 @@ def shimmed_env(base, env, label, real):
     # check assert the process count the batched call exists to reduce.
     # Only calls through the wrapper count: the modern oracle reaches the real
     # binary directly, so its inner per-path calls are deliberately invisible.
-    wrapper.write_text(SHIMS[label].replace("set -euo pipefail\n", COUNT_CALL, 1))
+    body = SHIMS[label] if source is None else source
+    wrapper.write_text(body.replace("set -euo pipefail\n", COUNT_CALL, 1))
     wrapper.chmod(0o755)
     shimmed = env.copy()
     # Resolved from the unmodified PATH by the caller, so the wrapper cannot
@@ -235,18 +250,13 @@ def main():
         write(root, "vendor/module/untracked.sh", good)
         Path(env["GITHUB_OUTPUT"]).write_text("")
         Path(env["GITHUB_STEP_SUMMARY"]).write_text("")
-        found = execute("Find shell scripts", root, env)
-        assert found.returncode == 0, found.stderr
-        expected = {"./-" if name == "-" else name for name in scripts}
-        assert manifest(runtime) == expected, found
-        assert Path(env["GITHUB_OUTPUT"]).read_text() == "found=true\n"
-        assert not Path(env["GITHUB_STEP_SUMMARY"]).read_text()
-        print("Tracked discovery: nested shebangs, extensions and unusual paths confirmed")
 
         # Discovery reads the checkout and must not write to it. The probe in
         # particular belongs in RUNNER_TEMP: put it in the workspace and it
-        # would survive into every later step of a real job. `git ls-files`
-        # would never list it, so the manifest cannot show this.
+        # survives into every later step of a real job. `git ls-files` can
+        # never list an untracked file, so no manifest assertion can show
+        # this. Snapshot before the first run that reaches the probe at all,
+        # because a later baseline would already contain the stray file.
         def workspace():
             return subprocess.run(
                 ["git", "status", "--porcelain", "--untracked-files=all"],
@@ -254,8 +264,14 @@ def main():
             ).stdout
 
         before = workspace()
-        execute("Find shell scripts", root, env)
+        found = execute("Find shell scripts", root, env)
+        assert found.returncode == 0, found.stderr
+        expected = {"./-" if name == "-" else name for name in scripts}
+        assert manifest(runtime) == expected, found
+        assert Path(env["GITHUB_OUTPUT"]).read_text() == "found=true\n"
+        assert not Path(env["GITHUB_STEP_SUMMARY"]).read_text()
         assert workspace() == before, "discovery wrote into the checkout"
+        print("Tracked discovery: nested shebangs, extensions and unusual paths confirmed")
         print("Workspace: discovery leaves the checkout byte for byte unchanged")
 
         # Whichever branch the runner's own shfmt selected above, both must
@@ -309,6 +325,18 @@ def main():
             finally:
                 unreadable.chmod(0o644)
             print("Unreadable tracked file: every branch fails rather than skipping it")
+
+        # A shfmt that cannot be run is not an old pin. Discovery must fail
+        # with an error naming the exit status, and must not print the
+        # fallback notice, which would send the reader to change a version.
+        broken = shimmed_env(base, env, "unrunnable", real_shfmt, UNRUNNABLE_SHIM)
+        unrunnable = execute("Find shell scripts", root, broken)
+        assert unrunnable.returncode != 0, unrunnable
+        # The error goes to stderr, the way the step's other `::error::` does.
+        assert "::error::shfmt could not be run: exit 126" in unrunnable.stderr, unrunnable
+        assert "cannot execute binary file" in unrunnable.stderr, unrunnable
+        assert SLOW_PATH_NOTICE not in unrunnable.stdout + unrunnable.stderr, unrunnable
+        print("Unrunnable shfmt: reported as a machine fault, not as an old pin")
 
         outside = base / "outside"
         outside.mkdir()
