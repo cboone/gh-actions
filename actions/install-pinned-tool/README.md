@@ -90,7 +90,7 @@ itself rather than reaching for `set-up-uv`.
 A bare binary with committed per-platform checksums:
 
 ```yaml
-- uses: cboone/gh-actions/actions/install-pinned-tool@v4.0.0
+- uses: cboone/gh-actions/actions/install-pinned-tool@v4.1.0
   with:
     tool: shfmt
     version: 3.14.1
@@ -106,7 +106,7 @@ A bare binary with committed per-platform checksums:
 An archive verified against the upstream checksum file:
 
 ```yaml
-- uses: cboone/gh-actions/actions/install-pinned-tool@v4.0.0
+- uses: cboone/gh-actions/actions/install-pinned-tool@v4.1.0
   with:
     tool: actionlint
     version: 1.7.12
@@ -119,7 +119,7 @@ Rust target-triple asset names and a `./`-prefixed member, with one committed
 checksum for a job that only runs on `ubuntu-latest`:
 
 ```yaml
-- uses: cboone/gh-actions/actions/install-pinned-tool@v4.0.0
+- uses: cboone/gh-actions/actions/install-pinned-tool@v4.1.0
   with:
     tool: typos
     version: 1.50.1
@@ -133,7 +133,7 @@ checksum for a job that only runs on `ubuntu-latest`:
 A nested member and a per-asset `.sha256` file:
 
 ```yaml
-- uses: cboone/gh-actions/actions/install-pinned-tool@v4.0.0
+- uses: cboone/gh-actions/actions/install-pinned-tool@v4.1.0
   with:
     tool: uv
     version: 0.12.17

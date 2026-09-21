@@ -21,7 +21,7 @@ second install would re-download the whole tarball for one more member.
 Composite action, within a job's `steps:`:
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-uv@v4.0.0
+- uses: cboone/gh-actions/actions/set-up-uv@v4.1.0
 - run: uv run --script script.py
 ```
 

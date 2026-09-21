@@ -37,7 +37,7 @@ files or auto-generate notes from merged PRs.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/create-gh-release@v4.0.0
+- uses: cboone/gh-actions/actions/create-gh-release@v4.1.0
   with:
     files: |
       dist/*.tar.gz

@@ -18,7 +18,7 @@ templates.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-markscribe@v4.0.0
+- uses: cboone/gh-actions/actions/run-markscribe@v4.1.0
   env:
     GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
   with:

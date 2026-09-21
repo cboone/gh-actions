@@ -36,7 +36,7 @@ before the action can report its own clearer error.
 ```yaml
 jobs:
   pages:
-    uses: cboone/gh-actions/.github/workflows/deploy-to-pages.yml@v4.0.0
+    uses: cboone/gh-actions/.github/workflows/deploy-to-pages.yml@v4.1.0
     with:
       build-command: "npm run build"
       artifact-path: ./dist

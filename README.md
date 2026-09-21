@@ -91,25 +91,25 @@ on:
 
 jobs:
   github-actions:
-    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v4.0.0
+    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v4.1.0
 
   text:
-    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v4.0.0
+    uses: cboone/gh-actions/.github/workflows/lint-text.yml@v4.1.0
     with:
       run-cspell: true
       run-yamllint: true
 
   shell:
-    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v4.0.0
+    uses: cboone/gh-actions/.github/workflows/lint-shell.yml@v4.1.0
 
   go:
-    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@v4.0.0
+    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@v4.1.0
     with:
       run-format-check: true
       run-build: true
 
   secrets:
-    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v4.0.0
+    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v4.1.0
     with:
       tool: both
 ```
@@ -125,7 +125,7 @@ on:
 
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-go-binaries.yml@v4.0.0
+    uses: cboone/gh-actions/.github/workflows/release-go-binaries.yml@v4.1.0
     secrets:
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```
@@ -207,7 +207,7 @@ changes, the Rust tool checksum inputs and the reuse 6 lint behavior, and
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/) with exact version
-tags. Pin to a specific version (e.g., `@v4.0.0`) for production use.
+tags. Pin to a specific version (e.g., `@v4.1.0`) for production use.
 
 ### Version bumps
 
@@ -225,17 +225,17 @@ tags. Pin to a specific version (e.g., `@v4.0.0`) for production use.
 Releases are created with the `/release` skill, which analyzes conventional
 commits, recommends a version bump, updates CHANGELOG.md, creates a release
 commit, and tags it. The recommended outcome for each release is a single
-exact version tag (e.g., `v4.0.0`) pointing to the release commit.
+exact version tag (e.g., `v4.1.0`) pointing to the release commit.
 
 After tagging locally, push:
 
 ```bash
-git push origin main v4.0.0
+git push origin main v4.1.0
 ```
 
 ### Pinning for callers
 
-Always pin to an exact release tag (e.g. `@v4.0.0`). Branch refs like
+Always pin to an exact release tag (e.g. `@v4.1.0`). Branch refs like
 `@main` are not supported: they float, they bypass our SHA-pin and
 checksum contract, and the supply-chain risk is not worth the
 convenience.
