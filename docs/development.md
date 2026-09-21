@@ -43,8 +43,8 @@ and `lint-github-actions.yml`, and `shfmt-checksums` in `lint-shell.yml`.
 `run-rust-ci.yml`'s `audit-checksums` and `llvm-cov-checksums` are input
 defaults too, keyed by version and target triple rather than by asset name,
 because cargo-llvm-cov's archive name carries no version and so cannot tell
-two releases apart on its own. scrut's sit in case statements in the files
-that install them.
+two releases apart on its own. scrut's checksums sit in case statements in
+the files that install them.
 
 Keying by something the caller cannot vary independently of the download is
 what makes these fail closed: overriding a version without its checksums
