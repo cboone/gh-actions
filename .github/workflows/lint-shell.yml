@@ -171,11 +171,11 @@ jobs:
             else
               # Both causes, because the probe selects this branch either
               # way and a caller below 3.11.0 has no such mode to fix.
-              msg="The pinned shfmt either lacks its NUL-separated find mode"
-              msg="${msg} or does not filter explicitly supplied non-shell"
-              msg="${msg} files out of it, so discovery is checking one file"
-              msg="${msg} at a time. Pin shfmt 3.14.0 or later to discover in"
-              msg="${msg} a single pass."
+              msg="The installed shfmt either lacks its NUL-separated find"
+              msg="${msg} mode or does not filter explicitly supplied"
+              msg="${msg} non-shell files out of it, so discovery is checking"
+              msg="${msg} one file at a time. Pin shfmt 3.14.0 or later to"
+              msg="${msg} discover in a single pass."
               echo "::notice::${msg}"
               if [[ -s "${probe}.err" ]]; then
                 echo "shfmt reported: $(tr '\n' ' ' < "${probe}.err")"
