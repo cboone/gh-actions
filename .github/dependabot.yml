@@ -10,12 +10,13 @@
 #
 # Dependabot does NOT track:
 #   - Tool version strings inside workflow `env:` blocks or `inputs.*-version`
-#     defaults (e.g., `UV_VERSION: 0.11.8`,
+#     defaults (e.g., `UV_VERSION: 0.12.17`,
 #     `gitleaks-version: "8.30.1"`). These are bumped manually or via the
 #     `update-everything` skill. A future Renovate config (custom managers
 #     with regex rules) could automate them.
-#   - Hardcoded SHA-256 checksums for shfmt/scrut/cargo-audit. These must
-#     be bumped together with their version string.
+#   - Hardcoded SHA-256 checksums for shellcheck, scrut, shfmt, cargo-audit
+#     and cargo-llvm-cov. These must be bumped together with their version
+#     string.
 #
 # Minor/patch updates are grouped into one PR per ecosystem per week.
 # Major updates open individual PRs so breaking-change risk stays visible.

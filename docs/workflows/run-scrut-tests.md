@@ -25,7 +25,7 @@ Only the pinned version is supported. See the
 | `scrut-env`       | string  | `""`            | Newline-delimited KEY=VALUE env vars for scrut tests                    |
 | `scrut-setup-cmd` | string  | `""`            | Shell command to run before scrut tests; runs after the uv install step |
 | `setup-uv`        | boolean | `false`         | Install uv and add it to `PATH` before `scrut-setup-cmd` runs           |
-| `uv-version`      | string  | `"0.11.8"`      | uv version to install when `setup-uv` is true                           |
+| `uv-version`      | string  | `"0.12.17"`     | uv version to install when `setup-uv` is true                           |
 | `runs-on`         | string  | `ubuntu-latest` | Runner label (Windows is not supported)                                 |
 | `timeout-minutes` | number  | `10`            | Job timeout in minutes                                                  |
 

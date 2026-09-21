@@ -10,7 +10,7 @@ Run GoReleaser to build and publish a Go release.
 | -------------------- | ------ | ----------------- | ------------------------------------ |
 | `go-version-file`    | string | `go.mod`          | File to read the Go version from     |
 | `runs-on`            | string | `ubuntu-latest`   | Runner label (Windows not supported) |
-| `goreleaser-version` | string | `"2.15.4"`        | GoReleaser version to install        |
+| `goreleaser-version` | string | `"2.18.2"`        | GoReleaser version to install        |
 | `goreleaser-args`    | string | `release --clean` | Arguments to pass to goreleaser      |
 | `timeout-minutes`    | number | `30`              | Job timeout in minutes               |
 
@@ -32,7 +32,7 @@ jobs:
   release:
     uses: cboone/gh-actions/.github/workflows/release-go-binaries.yml@v3.2.0
     with:
-      goreleaser-version: "2.15.4"
+      goreleaser-version: "2.18.2"
     secrets:
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 ```

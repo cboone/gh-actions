@@ -44,6 +44,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   newline-delimited files and globs. Both default to today's behavior. The
   extra-dictionary self-tests now use them to assert that a skipped install
   fails the job (#105)
+- `run-rust-ci.yml` takes `audit-checksums` and `llvm-cov-checksums`,
+  `<sha256>  <version>  <target triple>` lines defaulting to the committed
+  digests for the pinned versions. cargo-audit and cargo-llvm-cov publish
+  no checksum file upstream, and until now a `supported_version` guard
+  refused every version but the one whose digests this repo shipped, so
+  `audit-version` and `llvm-cov-version` accepted exactly one value each
+  and every bump of either broke any caller that had pinned them. A
+  caller can now move either version by supplying its digests, and a
+  version with no matching entry is still refused before anything is
+  downloaded. **Anyone who pinned `audit-version` or `llvm-cov-version`
+  explicitly must now pass that version's checksums alongside it, or drop
+  the input to take the default**. See
+  [the v4 migration guide](docs/migrations/v4.md#rust-tool-versions-now-need-their-checksums)
+  (#61)
+- `run-ci.yml` gains a `rust-tool-installs` job covering those two
+  install blocks on all four supported target triples: the committed
+  defaults install and report their version, an unknown version is
+  refused before any download, and a digest that does not match its
+  archive is refused after one. Nothing previously exercised
+  `run-rust-ci.yml`, so its committed digests reached releases unverified
+  (#61)
 
 ### Changed
 
@@ -83,6 +104,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `run-rust-ci.yml`'s `extra-components`. `run-zig-ci.yml` previously built
   nothing and reported success; `release-zig-binaries.yml` failed later in its
   checksum step with `shasum: *: No such file or directory` (#115)
+- Bump pinned tool defaults to current latest stable releases (#61):
+  - golangci-lint 2.11.4 → 2.13.2
+  - trufflehog 3.95.2 → 3.97.5
+  - GoReleaser 2.15.4 → 2.18.2
+  - codecov CLI 11.2.8 → 11.3.1
+  - cargo-deny 0.19.4 → 0.20.2 (0.x bump treated as breaking; the CLI
+    refactor dropped deprecated flags this repo never passes, and the new
+    `bans.std-replacements` lint can report findings against a consumer's
+    `deny.toml`)
+  - cargo-nextest 0.9.133 → 0.9.145
+  - uv 0.11.8 → 0.12.17 (0.x bump; the surface used here is unaffected by
+    0.12.0's changes to `uv init`, legacy source distribution archive
+    formats and pre-release resolution)
+  - shfmt 3.13.1 → 3.14.1 (new hardcoded SHA-256 checksums; upstream
+    still publishes no checksum file)
+  - cargo-audit 0.22.1 → 0.22.2 (new committed SHA-256 checksums)
+  - cargo-llvm-cov 0.8.5 → 0.9.1 (new committed SHA-256 checksums. Its
+    `--show-missing-lines` output change does not reach `run-rust-ci.yml`,
+    which runs `--lcov --output-path`)
+  - Node.js 24 LTS 24.15.0 → 24.21.0
+- Bump reuse 5.0.2 → 6.2.0. Listed separately from the bumps above
+  because it is the one that changes what `run-reuse` reports for every
+  consumer. `reuse lint` now reads entire files rather than the first
+  4 KiB, so REUSE information deeper in a file is found and may need
+  `REUSE-IgnoreStart` and `REUSE-IgnoreEnd` to suppress; a new Invalid
+  SPDX License Expressions criterion can fail a repository that previously
+  passed; and the Bad licenses criterion now examines only `LICENSES/`.
+  `requirements/reuse.in` now asks for `reuse[charset-normalizer]`, since
+  reuse 6 requires `python-magic` against the runner's `libmagic`, which
+  no manifest can pin, and needs a declared fallback when that import
+  fails. See
+  [the v4 migration guide](docs/migrations/v4.md#reuse-lint-reports-more-than-it-used-to)
+  (#61)
+- `lint-shell.yml` still discovers shell scripts one tracked path at a
+  time. shfmt 3.14.1 fixes the `-f=0` defect that motivated the loop, but
+  `shfmt-version` is caller-overridable, so an older shfmt can still reach
+  that code path (#61)
 
 ### Fixed
 
@@ -93,9 +151,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   These fixes landed after v3.2.0 and appear in a release here for the first
   time (#111)
 - TruffleHog scans keep the checksum-verified version they installed.
-  `--no-update` stops the binary from replacing the pinned 3.95.2 mid-scan with
-  whatever upstream had published, which defeated both the pin and its checksum
-  (#111)
+  `--no-update` stops the binary from replacing the pinned version mid-scan
+  with whatever upstream had published, which defeated both the pin and its
+  checksum (#111)
 - `lint-text.yml` runs every enabled linter after setup succeeds even when
   an earlier linter fails, reporting all findings in one run. Any linter
   failure still fails the job; setup failure and cancellation prevent

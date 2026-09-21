@@ -34,7 +34,7 @@ an allowlist there is nothing to match, so those flags are left alone.
 
 | Name        | Type   | Default     | Description                                   |
 | ----------- | ------ | ----------- | --------------------------------------------- |
-| `version`   | string | `3.95.2`    | trufflehog version to install                 |
+| `version`   | string | `3.97.5`    | trufflehog version to install                 |
 | `args`      | string | (see below) | Arguments to pass to trufflehog, one per line |
 | `allowlist` | string | `""`        | Path to a JSON allowlist of reviewed findings |
 

@@ -8,10 +8,10 @@ dependency is sha256-pinned via `uv pip compile --generate-hashes`).
 
 ## Inputs
 
-| Name         | Type   | Default  | Description                                      |
-| ------------ | ------ | -------- | ------------------------------------------------ |
-| `uv-version` | string | `0.11.8` | uv version to install for the reuse install step |
-| `args`       | string | `lint`   | Arguments to pass to `reuse`, one per line       |
+| Name         | Type   | Default   | Description                                      |
+| ------------ | ------ | --------- | ------------------------------------------------ |
+| `uv-version` | string | `0.12.17` | uv version to install for the reuse install step |
+| `args`       | string | `lint`    | Arguments to pass to `reuse`, one per line       |
 
 ## Usage
 

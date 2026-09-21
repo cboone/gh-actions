@@ -16,8 +16,12 @@ The format check uses `shfmt -d` without style flags so it reads
 
 Discovery checks each tracked regular file with `shfmt -f` and retains its
 original path in a NUL-separated manifest for both checkers, except that a file
-named exactly `-` is passed as `./-` so it cannot be interpreted as stdin. This avoids a
-shfmt 3.13.1 bug where `-f=0` lists explicitly supplied non-shell files too.
+named exactly `-` is passed as `./-` so it cannot be interpreted as stdin.
+Passing every path to `shfmt -f=0` once, the NUL-separated find mode the
+manifest wants, would be cheaper; that mode listed explicitly supplied
+non-shell files until 3.14.1, and `shfmt-version` is caller-overridable, so an
+older pin still reaches it. Per-file `-f` is correct on every version.
+Collapsing the loop is tracked in [#124](https://github.com/cboone/gh-actions/issues/124).
 
 Both tools are installed from their release assets and verified against the
 committed SHA-256 in `shellcheck-checksums` and `shfmt-checksums`. To use
@@ -34,8 +38,8 @@ another version of either, pass its checksum with it (see
 | `run-shfmt`            | boolean | `true`               | Run shfmt format check                                       |
 | `shellcheck-version`   | string  | `"0.11.0"`           | shellcheck version to install                                |
 | `shellcheck-checksums` | string  | the v0.11.0 archives | `sha256sum`-format lines for the shellcheck release archives |
-| `shfmt-version`        | string  | `"3.13.1"`           | shfmt version to install                                     |
-| `shfmt-checksums`      | string  | the v3.13.1 binaries | `sha256sum`-format lines for the shfmt release binaries      |
+| `shfmt-version`        | string  | `"3.14.1"`           | shfmt version to install                                     |
+| `shfmt-checksums`      | string  | the v3.14.1 binaries | `sha256sum`-format lines for the shfmt release binaries      |
 | `timeout-minutes`      | number  | `10`                 | Job timeout in minutes                                       |
 
 ### How the workflow installs its tools
@@ -99,7 +103,7 @@ jobs:
       shellcheck-version: 0.10.0
       shellcheck-checksums: |
         6c881ab0698e4e6ea235245f22832860544f17ba386442fe7e9d629f8cbedf87  shellcheck-v0.10.0.linux.x86_64.tar.xz
-      shfmt-version: 3.14.1
+      shfmt-version: 3.13.1
       shfmt-checksums: |
-        76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf  shfmt_v3.14.1_linux_amd64
+        fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1  shfmt_v3.13.1_linux_amd64
 ```

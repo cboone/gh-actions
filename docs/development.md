@@ -39,8 +39,28 @@ files suitable for this repo's pinning model; their checksums are committed
 in this repo. shellcheck's and shfmt's are input defaults keyed by asset
 name: `checksums` in `actions/set-up-shellcheck/action.yml` and
 `actions/set-up-shfmt/action.yml`, `shellcheck-checksums` in `lint-shell.yml`
-and `lint-github-actions.yml`, and `shfmt-checksums` in `lint-shell.yml`. The
-others sit in case statements in the files that install them.
+and `lint-github-actions.yml`, and `shfmt-checksums` in `lint-shell.yml`.
+`run-rust-ci.yml`'s `audit-checksums` and `llvm-cov-checksums` are input
+defaults too, keyed by version and target triple rather than by asset name,
+because cargo-llvm-cov's archive name carries no version and so cannot tell
+two releases apart on its own. scrut's checksums sit in case statements in
+the files that install them.
+
+Keying by something the caller cannot vary independently of the download is
+what makes these fail closed: overriding a version without its checksums
+finds no entry and stops before fetching, instead of verifying the new
+archive against the old digest. A `supported_version` guard that rejects
+every version but the committed one achieves the same safety, but makes each
+bump a breaking change for anyone who pinned the input, so prefer a keyed
+table when adding a tool.
+
+scrut keeps its guard in `actions/set-up-scrut/action.yml` and
+`run-scrut-tests.yml`, as `.github/copilot-instructions.md` records. A
+checksum table alone would not make its version caller-settable: two of the
+four supported platforms build from a pinned source commit with a reviewed
+`Cargo.lock` and Rust compiler, so moving that version means moving those
+too. The guard refuses a version this repo cannot actually build rather than
+failing later with a confusing checksum mismatch.
 
 A tool a workflow depends on is installed here unless its runner-provided
 use is explicitly documented. `actions/create-gh-release`, `create-gh-release-from-changelog.yml`,
@@ -87,6 +107,20 @@ anything that runs in CI.
   commit the workflow file itself came from, so a tampered PyPI
   response cannot pass the per-package hash check. `actions/run-reuse` reads
   its manifest through `github.action_path`, keeping it on the action's commit.
+
+  One dependency falls outside that boundary. reuse 6 requires
+  `python-magic`, a `ctypes` wrapper around the runner image's `libmagic`,
+  which no manifest can hash-pin. reuse falls back to another encoding
+  module when `import magic` fails, as it does on a runner without
+  `libmagic`, so `requirements/reuse.in` asks for
+  `reuse[charset-normalizer]` rather than bare `reuse`: that extra is what
+  guarantees a fallback is installed. Without it, `charset-normalizer`
+  reaches the manifest only as a transitive dependency of `python-debian`,
+  and a later compile that drops that edge would leave reuse with no
+  encoding module. Encoding detection can therefore differ between a runner
+  that supplies `libmagic` and one that does not; `REUSE_ENCODING_MODULE`
+  pins the choice.
+
 - **npm tools running in workflows** (markdownlint-cli2, prettier,
   cspell): installed via `npm ci` against the workflow repository's
   `package-lock.json`, fetched at the same `job.workflow_repository`
@@ -197,7 +231,7 @@ repo ships no value for either. The `VALIDATOR_REV` and `RUST_VERSION` in
 as its shfmt 3.13.1 fixtures.
 
 `node-version` defaults to a specific Node 24 LTS release
-(`"24.15.0"`) in `.github/workflows/lint-text.yml`, `.github/workflows/publish-to-npm.yml`, and
+(`"24.21.0"`) in `.github/workflows/lint-text.yml`, `.github/workflows/publish-to-npm.yml`, and
 `.github/workflows/deploy-to-pages.yml`; callers may override with their own pinned
 version.
 
@@ -505,7 +539,8 @@ covers the allowlist: that the exact reviewed tuple is accepted, that changing
 any one of commit, path, line or detector fails, that a verified finding is
 refused even when its tuple is listed, that a malformed allowlist is rejected
 rather than applied loosely, and that no report prints a credential or names a
-secret-bearing field. Two properties of TruffleHog 3.95.2 shape those fixtures.
+secret-bearing field. Two properties of the pinned TruffleHog shape those
+fixtures, both re-checked when the pin moves.
 A custom regex detector cannot produce an indeterminate result, and always
 reports `DetectorName: CustomRegex`, so the allowlist cases use the built-in
 `URI` detector instead. A URI pointing at a local address is refused before any
