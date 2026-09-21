@@ -72,6 +72,7 @@ usage examples.
 | [create-pull-request](actions/create-pull-request/README.md) | action   | SHA-pinned wrapper for peter-evans/create-pull-request     |
 | [deploy-to-pages](docs/workflows/deploy-to-pages.md)         | workflow | build a static site and deploy to GitHub Pages             |
 | [run-markscribe](actions/run-markscribe/README.md)           | action   | generate a file from a Go template (e.g. README rendering) |
+| [set-up-uv](actions/set-up-uv/README.md)                     | action   | install the uv Python package and project manager          |
 
 ## Quick start
 

@@ -1,0 +1,39 @@
+name: Set up uv
+description: Install the uv binary with a pinned version.
+
+inputs:
+  version:
+    description: uv version to install
+    required: false
+    default: "0.12.17"
+
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      shell: bash
+      env:
+        # install-pinned-tool is a sibling of this action inside the
+        # gh-actions checkout the runner makes when loading it, so both come
+        # from the same commit. Unused installer variables are set empty so
+        # a caller's job-level env cannot reach the installer. INSTALLER stays
+        # in `env:` because, for a job that sets `container:`, the runner
+        # translates host paths there but not in expressions in `run:`.
+        INSTALLER: ${{ github.action_path }}/../install-pinned-tool/install-pinned-tool.sh
+        TOOL: uv
+        VERSION: ${{ inputs.version }}
+        URL_TEMPLATE: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+        CHECKSUM: ""
+        CHECKSUMS: ""
+        CHECKSUMS_URL_TEMPLATE: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+        # uv ships each platform's binary inside a directory named for the
+        # target triple, so the member path needs the same renames the URL
+        # does.
+        ARCHIVE_MEMBER: uv-{arch}-{os}/uv
+        OS_NAMES: linux=unknown-linux-gnu darwin=apple-darwin
+        ARCH_NAMES: amd64=x86_64 arm64=aarch64
+      run: bash "${INSTALLER}"
+
+    - name: Report uv version
+      shell: bash
+      run: uv --version
