@@ -700,6 +700,12 @@ jobs:
           check_rejection wrong-checksum 65 "Checksum verification failed for shfmt_v3.13.1_" \
             TOOL=shfmt VERSION=3.13.1 "URL_TEMPLATE=${SHFMT_URL}" \
             CHECKSUM=0000000000000000000000000000000000000000000000000000000000000000
+          # This case supplies its own table, so what it proves is the
+          # relation between VERSION and that table, not between VERSION and
+          # the shipped default: 3.14.1 against a 3.13.1-keyed table is a
+          # version newer than its checksums whatever the default later
+          # becomes. 3.14.1 is a real release, so the rejection is the table's
+          # doing rather than a 404 on an asset that never existed.
           check_rejection version-bumped-without-checksums 65 "No checksum entry for shfmt_v3.14.1_" \
             TOOL=shfmt VERSION=3.14.1 "URL_TEMPLATE=${SHFMT_URL}" \
             "CHECKSUMS=${SHFMT_SHA256}  shfmt_v3.13.1_linux_amd64"
