@@ -20,9 +20,9 @@ name: Run CI
 # `rust-tool-installs` exercises run-rust-ci.yml's cargo-audit and
 # cargo-llvm-cov install blocks, which nothing else here reaches, across
 # every target triple their committed checksum tables carry.
-# `reuse` runs that action against tests/fixtures/reuse on the same three
-# runners, covering the uv recipe it carries for want of a `./` path to
-# set-up-uv (#102).
+# `reuse` runs `run-reuse` against tests/fixtures/reuse on Linux amd64,
+# Linux arm64 and macOS arm64, covering the uv recipe that action carries
+# for want of a `./` path to set-up-uv (#102).
 
 on:
   push:
@@ -582,10 +582,25 @@ jobs:
       # The set-up-* wrappers install into the same directories, so clear
       # them first; otherwise the next check would pass on the binaries the
       # direct installs left behind.
+      #
+      # The removal is asserted because `rm -rf` on a path that does not
+      # match exits 0, which would arm a false pass rather than fail here.
+      # shfmt is the only tool whose wrapper default (3.14.1) differs from
+      # its direct install (3.13.1), so for the other three this teardown is
+      # the sole thing keeping the check below honest.
       - name: Remove the direct shfmt, actionlint, shellcheck and uv installs
         run: |
-          rm -rf "${RUNNER_TEMP}/shfmt-bin" "${RUNNER_TEMP}/actionlint-bin" \
-            "${RUNNER_TEMP}/shellcheck-bin" "${RUNNER_TEMP}/uv-bin"
+          status=0
+          for tool in shfmt actionlint shellcheck uv; do
+            rm -rf "${RUNNER_TEMP}/${tool}-bin"
+            if [ -e "${RUNNER_TEMP}/${tool}-bin" ]; then
+              msg="${RUNNER_TEMP}/${tool}-bin survived removal, so the"
+              msg="${msg} wrapper check below would pass on the direct install"
+              echo "::error::${msg}" >&2
+              status=1
+            fi
+          done
+          exit "${status}"
 
       - name: Set up shfmt through the wrapper
         uses: ./actions/set-up-shfmt
@@ -1219,11 +1234,10 @@ jobs:
       - name: Check the cargo-audit and cargo-llvm-cov installs
         run: uv run tests/check-rust-tool-installs.py
 
-  # run-reuse had no coverage before #102, which mattered once its uv install
-  # moved onto install-pinned-tool: the action carries its own copy of the uv
-  # recipe, because a composite action cannot reach the sibling set-up-uv by a
-  # `./` path, so nothing else exercises it. The matrix is the installer one,
-  # per the coverage rule in .github/workflows/AGENTS.md.
+  # run-reuse carries its own copy of the uv install recipe, because a
+  # composite action cannot reach the sibling set-up-uv by a `./` path, so
+  # this job is the only thing that exercises it. The matrix is the installer
+  # one, per the coverage rule in .github/workflows/AGENTS.md (#102).
   #
   # What this catches, because each makes the job fail: a uv install that does
   # not reach PATH, a requirements manifest that does not resolve from
@@ -1246,6 +1260,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # The order of these three lines is load-bearing. run-reuse passes
+      # them through as positional arguments in order, and `--root` is a
+      # global option that `reuse` requires before the subcommand, so moving
+      # it after `lint` runs a different command rather than failing.
       - name: Lint the REUSE fixture
         uses: ./actions/run-reuse
         with:
@@ -1253,3 +1271,38 @@ jobs:
             --root
             tests/fixtures/reuse
             lint
+
+      # `reuse lint` exits 0 on a root holding no files to lint, so the step
+      # above going green does not by itself prove the fixture was linted. A
+      # fixture trimmed to REUSE.toml alone would report `0 / 0` and pass,
+      # leaving run-reuse unexercised without anything turning red. Asserting
+      # the count is what makes this job mean what its name says.
+      #
+      # The uv assertion covers the other half. run-reuse's `uv-version`
+      # default is a pin of its own, and nothing else compares it against the
+      # pins in set-up-uv, lint-text.yml and run-scrut-tests.yml; a partial
+      # bump would otherwise leave every job green while consumers of
+      # run-reuse kept getting the old uv. Both binaries are on PATH here
+      # because the action appended them to GITHUB_PATH in an earlier step.
+      - name: Check the fixture was linted and uv is the pinned version
+        run: |
+          status=0
+          report="$(reuse --root tests/fixtures/reuse lint)"
+          case "${report}" in
+            *"copyright information: 1 / 1"*) ;;
+            *)
+              echo "::error::reuse linted no files; tests/fixtures/reuse is degenerate" >&2
+              printf '%s\n' "${report}" >&2
+              status=1
+              ;;
+          esac
+          reported="$(uv --version 2>&1)"
+          echo "uv: ${reported}"
+          case "${reported}" in
+            *"0.12.17"*) ;;
+            *)
+              echo "::error::uv reports '${reported}', expected 0.12.17; run-reuse's uv-version default has drifted" >&2
+              status=1
+              ;;
+          esac
+          exit "${status}"
