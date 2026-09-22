@@ -38,8 +38,13 @@ TRACEBACK = "Traceback (most recent call last):\nRuntimeError: synthetic\n"
 
 def run_block(name):
     """Read a named step's literal run block without a YAML dependency."""
-    step = WORKFLOW.read_text().split(f"      - name: {name}\n", 1)[1]
-    step = step.split("      - name:", 1)[0]
+    content = WORKFLOW.read_text()
+    marker = f"      - name: {name}\n"
+    if marker not in content:
+        raise AssertionError(f"Missing {name} step in {WORKFLOW}")
+    step = content.split(marker, 1)[1].split("      - name:", 1)[0]
+    if "        run: |\n" not in step:
+        raise AssertionError(f"Expected a literal run block in {name}")
     lines = step.split("        run: |\n", 1)[1].splitlines()
     body = []
     for line in lines:
@@ -62,8 +67,12 @@ def install_audit(root, status, output, error):
     path.chmod(0o755)
 
 
-def execute(status, output, error="", install=True):
-    """Run the production block against one stand-in and collect everything it wrote."""
+def execute(status=0, output="", error="", install=True):
+    """Run the production block against one stand-in and collect everything it wrote.
+
+    The defaults describe no stand-in at all, and apply only under
+    install=False, where the block runs a path that does not exist.
+    """
     with tempfile.TemporaryDirectory() as tmp:
         base = Path(tmp)
         root = base / "workspace"
@@ -169,13 +178,7 @@ def main():
 
     # No audit at the path at all, which is the shape of a uv that never ran the
     # script: the redirect still creates an empty report and bash returns 127.
-    expect_refused(
-        "missing audit",
-        f"exited 127; {unexpected}",
-        status=0,
-        output="",
-        install=False,
-    )
+    expect_refused("missing audit", f"exited 127; {unexpected}", install=False)
 
 
 if __name__ == "__main__":
