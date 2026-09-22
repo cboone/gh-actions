@@ -246,8 +246,10 @@ Copilot caught a defect in the checker that this review did not, and one inaccur
   stale exemption in place with nothing failing. The loop skips a non-checkout, so no other
   assertion would have seen it either. Asserting over `checkouts` closes it, and the planted
   defect confirms it now goes red.
-- The comment on the non-boolean branch claimed a quoted `"false"` would persist the credential.
-  It would not: `actions/checkout` computes `(input || 'false').toUpperCase() === 'TRUE'`, so
+- The comment on the non-boolean branch claimed a quoted `"false"` would persist the credential,
+  and the "Deviations" section above repeats that claim approvingly. Unlike the rest of this
+  document, that one was not accurate when written; it was simply wrong, in the review as well as
+  in the code. It would not persist: `actions/checkout` computes `(input || 'false').toUpperCase() === 'TRUE'`, so
   every value but `true` means false. The real hazard is the reverse, `yes` or `on` reading as
   enabling while meaning false, and a quoted `"true"` enabling while looking like a string. The
   strict boolean check stands; its rationale was corrected.
