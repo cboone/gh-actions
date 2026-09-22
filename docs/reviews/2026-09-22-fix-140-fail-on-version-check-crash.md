@@ -1,10 +1,14 @@
 # Branch Review: fix/140-fail-on-version-check-crash
 
 Base: `main` (merge base: `bbe1518`)
-Commits: 4
-Files changed: 8 (2 added, 6 modified, 0 deleted, 0 renamed)
-Lines: +509 / -7
 Reviewed through: `80bf1ab`
+Commits reviewed: 4
+Files changed at that commit: 8 (2 added, 6 modified, 0 deleted, 0 renamed)
+Lines at that commit: +509 / -7
+
+The counts above describe the range this review examined. The Resolution section
+at the end covers the commits made after it, and lists the two further files they
+touched.
 
 ## Summary
 
@@ -58,6 +62,8 @@ carries a filled-in plant table and moves to `docs/plans/done/`.
 
 ## File Inventory
 
+As of `80bf1ab`, the commit this review examined.
+
 New files (2):
 
 - `tests/check-tool-version-reporting.py`
@@ -73,6 +79,12 @@ Modified files (6):
 - `docs/development.md`
 
 Deleted files: none. Renamed files: none.
+
+The resolution commits took the branch to 10 files, 3 added and 7 modified. The
+two beyond the eight above are this record itself,
+`docs/reviews/2026-09-22-fix-140-fail-on-version-check-crash.md`, and
+`tests/check-shell-discovery.py`, which item 3 changed so the two copies of
+`run_block` stay identical.
 
 ## Notable Changes
 
