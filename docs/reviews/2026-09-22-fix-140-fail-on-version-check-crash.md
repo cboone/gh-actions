@@ -254,3 +254,38 @@ partial refactors. New behavior has tests, the reference and README are updated
 in the same change, and the CHANGELOG entry is under `[Unreleased]` with the
 issue reference. The plan moved to `docs/plans/done/` with its verification
 section reflecting what was run.
+
+## Resolution
+
+Addressed on 2026-09-22. Seven of the eight items were fixed; the eighth has no
+fix that this repository's conventions permit.
+
+| #   | Summary                                      | Status                | Commit    |
+| --- | -------------------------------------------- | --------------------- | --------- |
+| 1   | "only runs on a schedule" is false           | Resolved              | `c5b305a` |
+| 2   | "the report below" points the wrong way      | Resolved              | `8b5edea` |
+| 3   | `run_block` raises a bare `IndexError`       | Resolved, both copies | `11ebe55` |
+| 4   | Inert `status=0` in the missing-audit case   | Resolved              | `11ebe55` |
+| 5   | `[ -s ]` accepts a whitespace-only report    | Accepted, documented  | `8b5edea` |
+| 6   | Status `0` with an empty report is unguarded | Accepted, documented  | `8b5edea` |
+| 7   | Inline message vs. `msg` within one block    | Resolved              | `8b5edea` |
+| 8   | Commits 1–2 fail `make spell` in isolation   | Skipped               | —         |
+
+Items 5 and 6 were accepted rather than closed. Both are unreachable from the
+current audit script, and the workflow comment now says why: every failure the
+guard exists for leaves stdout completely empty, so a whitespace-aware test
+would reject nothing `[ -s ]` does not, and `main()` returns `0` only after the
+tool loop completes, a path that always prints the current-versions line.
+
+Item 3 was fixed in `tests/check-shell-discovery.py` as well as the new
+checker, so the two verbatim copies of `run_block` stay identical. Both now
+raise an `AssertionError` naming the missing step and its workflow.
+
+Item 8 is skipped. `unparseable` and `unvalidated` first appear in commits
+`f41ea20` and `deb202b` and enter `cspell.json` in `80bf1ab`, so neither of
+those two commits passes `make spell` alone. Moving the word list earlier means
+amending or rebasing, which this repository does not do, and CI gates the pull
+request head rather than individual commits, so nothing is actually broken.
+
+The plant table was re-run after these changes: all four plants are still
+caught, and both status-guard cases still fire when that guard is removed.
