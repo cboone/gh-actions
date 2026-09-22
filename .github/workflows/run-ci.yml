@@ -396,6 +396,43 @@ jobs:
           export NODE_BIN
           scrut test tests/scrut/workflow-arg-binding.md
 
+  # Neither publish workflow can be self-hosted here, because calling either end
+  # to end would publish something, so this job runs their steps directly: the
+  # registry and version gates, the lockfile probe, and the install step all
+  # three npm workflows share. It also asserts the permission split that keeps
+  # `id-token: write` off token-path callers, which nothing else can reach.
+  # macOS covers the /bin/bash 3.2 the fixture spawns.
+  npm-publish:
+    name: npm publish behavior (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.21.0"
+
+      - name: Install locked test dependencies
+        run: npm ci
+
+      - uses: ./actions/set-up-scrut
+
+      - name: Check npm publish behavior
+        shell: bash
+        env:
+          NPM_PUBLISH_FIXTURE: ${{ github.workspace }}/tests/fixtures/check-npm-publish.mjs
+        run: |
+          NODE_BIN="$(command -v node)"
+          export NODE_BIN
+          scrut test tests/scrut/npm-publish.md
+
   # The action job below proves that an installed dictionary resolves; the two
   # jobs here prove the workflow wiring, which is the half that job cannot
   # reach: lint-text.yml fetches the installer at job.workflow_sha, and only a
