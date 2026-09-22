@@ -4,16 +4,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assertExactlyOne, loadWorkflow, runSteps, runStepScript, stepOf } from "./workflow-steps.mjs";
 
-// The only expressions any `run:` block may interpolate, listed per step. The
-// first six are the documented shell-command inputs, which accept a whole
-// command by design. The last two are ternaries whose branches are the string
-// constants `npm ci` and `npm install`; no caller value reaches the shell.
+// The only expressions any `run:` block may interpolate, listed per step. All
+// six are the documented shell-command inputs, which accept a whole command by
+// design. The npm install ternaries that used to sit here are gone: both
+// workflows now decide between `npm ci` and `npm install` inside the step,
+// reading the lockfile path and the caller's opt-in through `env:` (#137).
 //
 // Each step's expressions are named individually rather than the step being
 // allowlisted wholesale, so adding an ordinary data input beside a sanctioned
 // command input is still reported. Allowlisting the step alone would let one
 // exemption cover every later expression added to it.
-const NPM_TERNARY = "steps.npm-cache.outputs.cache-dependency-path != '' && 'npm ci' || 'npm install'";
 const INTERPOLATION_ALLOWLIST = new Map([
   ["deploy-to-pages.yml::build::Build site", ["inputs.build-command"]],
   ["run-go-ci.yml::scrut::Scrut test setup", ["inputs.scrut-setup-cmd"]],
@@ -21,8 +21,6 @@ const INTERPOLATION_ALLOWLIST = new Map([
   ["run-scrut-tests.yml::scrut::Scrut test setup", ["inputs.scrut-setup-cmd"]],
   ["run-zig-ci.yml::scrut::Scrut test setup", ["inputs.scrut-setup-cmd"]],
   ["run-zig-ci.yml::scrut::Build binary for scrut tests", ["inputs.scrut-build-cmd"]],
-  ["deploy-to-pages.yml::build::Install npm dependencies", [NPM_TERNARY]],
-  ["publish-to-npm.yml::publish::Install dependencies", [NPM_TERNARY]],
 ]);
 
 // Whitespace inside an expression is insignificant, and the npm ternaries span

@@ -16,20 +16,30 @@ not for an approver.
 10-minute timeout, so a `timeout-minutes` below 10 cuts the deployment off
 before the action can report its own clearer error.
 
+With `setup-node: true`, dependencies install with
+`npm ci --include=dev --no-audit --no-fund --ignore-scripts` when
+`package-lock.json` or `npm-shrinkwrap.json` is present. Without a lockfile the
+build fails rather than resolving versions at build time; set
+`allow-npm-install: true` to opt into `npm install`. Lifecycle scripts stay off
+unless `run-install-scripts: true`, which a build needing a `postinstall` step
+has to set.
+
 **Permissions:** `contents: read`, `pages: write`, `id-token: write`
 
 ## Inputs
 
-| Name              | Type    | Default         | Description                          |
-| ----------------- | ------- | --------------- | ------------------------------------ |
-| `build-command`   | string  |                 | Command to build the site (required) |
-| `artifact-path`   | string  | `./_site`       | Path to the built site directory     |
-| `runs-on`         | string  | `ubuntu-latest` | Runner label                         |
-| `setup-go`        | boolean | `false`         | Set up Go before building            |
-| `go-version-file` | string  | `go.mod`        | File to read the Go version from     |
-| `setup-node`      | boolean | `false`         | Set up Node.js before building       |
-| `node-version`    | string  | `"24.21.0"`     | Node.js version to install           |
-| `timeout-minutes` | number  | `15`            | Job timeout in minutes               |
+| Name                  | Type    | Default         | Description                                              |
+| --------------------- | ------- | --------------- | -------------------------------------------------------- |
+| `build-command`       | string  |                 | Command to build the site (required)                     |
+| `artifact-path`       | string  | `./_site`       | Path to the built site directory                         |
+| `runs-on`             | string  | `ubuntu-latest` | Runner label                                             |
+| `setup-go`            | boolean | `false`         | Set up Go before building                                |
+| `go-version-file`     | string  | `go.mod`        | File to read the Go version from                         |
+| `setup-node`          | boolean | `false`         | Set up Node.js before building                           |
+| `node-version`        | string  | `"24.21.0"`     | Node.js version to install                               |
+| `allow-npm-install`   | boolean | `false`         | Permit `npm install` when the repository has no lockfile |
+| `run-install-scripts` | boolean | `false`         | Run dependency lifecycle scripts while installing        |
+| `timeout-minutes`     | number  | `15`            | Job timeout in minutes                                   |
 
 ## Usage
 

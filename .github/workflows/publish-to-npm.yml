@@ -1,5 +1,10 @@
 name: Publish to npm
 
+# Publishes with a long-lived token the caller supplies. For npmjs.com, prefer
+# publish-to-npm-with-oidc.yml, which stores no credential at all and gets
+# provenance with it. This workflow remains the path for GitHub Packages and
+# every other registry without OIDC support.
+
 on:
   workflow_call:
     inputs:
@@ -11,6 +16,14 @@ on:
         description: npm registry URL.
         type: string
         default: https://npm.pkg.github.com
+      allow-npm-install:
+        description: Permit npm install when the repository has no lockfile.
+        type: boolean
+        default: false
+      run-install-scripts:
+        description: Run dependency lifecycle scripts while installing.
+        type: boolean
+        default: false
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -31,36 +44,50 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Detect npm cache lockfile
-        id: npm-cache
+      - name: Detect lockfile
+        id: lockfile
         shell: bash
         run: |
           if [ -f package-lock.json ]; then
-            echo "cache=npm" >> "${GITHUB_OUTPUT}"
-            echo "cache-dependency-path=package-lock.json" >> "${GITHUB_OUTPUT}"
+            echo "path=package-lock.json" >> "${GITHUB_OUTPUT}"
           elif [ -f npm-shrinkwrap.json ]; then
-            echo "cache=npm" >> "${GITHUB_OUTPUT}"
-            echo "cache-dependency-path=npm-shrinkwrap.json" >> "${GITHUB_OUTPUT}"
+            echo "path=npm-shrinkwrap.json" >> "${GITHUB_OUTPUT}"
           else
-            echo "cache=" >> "${GITHUB_OUTPUT}"
-            echo "cache-dependency-path=" >> "${GITHUB_OUTPUT}"
+            echo "path=" >> "${GITHUB_OUTPUT}"
           fi
 
+      # No dependency cache during a publish: a cache entry poisoned by an
+      # earlier job would otherwise reach the published artifact. Clearing
+      # `cache:` alone does not do it, because setup-node enables npm caching on
+      # its own whenever package.json names npm in packageManager or
+      # devEngines.packageManager.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ inputs.node-version }}
           registry-url: ${{ inputs.registry-url }}
-          cache: ${{ steps.npm-cache.outputs.cache }}
-          cache-dependency-path: >-
-            ${{ steps.npm-cache.outputs.cache-dependency-path }}
+          package-manager-cache: false
 
+      # Byte-identical to the install steps in publish-to-npm-with-oidc.yml and
+      # deploy-to-pages.yml; the `parity` scenario in
+      # tests/fixtures/check-npm-publish.mjs fails if one copy drifts.
       - name: Install dependencies
-        run: >-
-          ${{
-            steps.npm-cache.outputs.cache-dependency-path != ''
-            && 'npm ci'
-            || 'npm install'
-          }}
+        shell: bash
+        env:
+          LOCKFILE: ${{ steps.lockfile.outputs.path }}
+          ALLOW_NPM_INSTALL: ${{ inputs.allow-npm-install }}
+          RUN_INSTALL_SCRIPTS: ${{ inputs.run-install-scripts }}
+        run: |
+          args=(--include=dev --no-audit --no-fund)
+          [[ "${RUN_INSTALL_SCRIPTS}" == "true" ]] || args+=(--ignore-scripts)
+          if [[ -n "${LOCKFILE}" ]]; then
+            npm ci "${args[@]}"
+          elif [[ "${ALLOW_NPM_INSTALL}" == "true" ]]; then
+            echo "::warning::No lockfile found; npm install resolves versions at run time."
+            npm install "${args[@]}"
+          else
+            echo "::error::No lockfile found. Commit package-lock.json, or set allow-npm-install: true."
+            exit 1
+          fi
 
       - name: Publish
         env:
