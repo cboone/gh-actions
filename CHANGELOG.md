@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `publish-to-npm-with-oidc.yml` reusable workflow: publishes to npmjs.com
+  through npm's trusted publishing. The job presents a GitHub OIDC token, npm
+  validates it against a publisher configured on the package, and no credential
+  is stored anywhere. Public packages also get provenance attestations, so the
+  tarball carries a verifiable link back to the run and commit that produced
+  it. Declares `contents: read` and `id-token: write`, and no secrets at all
+  (#137)
+
+  It is a separate file rather than an auth-mode input on `publish-to-npm.yml`
+  because a caller must grant every permission the workflow it calls declares,
+  and a nested job's permissions are validated before its `if:` condition is
+  evaluated. One workflow covering both modes would have forced
+  `id-token: write` on every token-path caller, including ones that will never
+  mint an OIDC token.
+
+  The publisher registered on npmjs.com names the caller's own repository and
+  the caller's own workflow filename: npm validates the calling workflow, not
+  the one containing `npm publish`, which is what makes trusted publishing
+  through a reusable workflow work. The workflow refuses a `registry-url` other
+  than `https://registry.npmjs.org`, and checks that npm is at least 11.5.1 and
+  Node at least 22.14.0, because below those npm reports only that
+  authentication failed. The npm check is the one that bites: no Node 22 or 23
+  release bundles an npm that new, so it names 24.5.0, the first that does,
+  rather than repeating npm's own Node floor
+
+- `allow-npm-install` and `run-install-scripts` inputs on `publish-to-npm.yml`
+  and `deploy-to-pages.yml`, each defaulting to false, covering the callers the
+  hardened install defaults below would otherwise strand (#137)
+
+- `run-ci.yml` `npm-publish` job, on Linux and macOS: runs the registry gate,
+  the version gate, the lockfile probe and the shared install step from
+  `tests/fixtures/check-npm-publish.mjs` against stubs, and asserts the
+  permission split between the two publish workflows. Neither publish workflow
+  can be self-hosted, since calling either end to end would publish something
+  (#137)
+
+### Changed
+
+- **Breaking:** `publish-to-npm.yml` and `deploy-to-pages.yml` refuse to
+  install when the repository has no `package-lock.json` or
+  `npm-shrinkwrap.json`, instead of silently falling back to `npm install`. The
+  fallback resolved versions at publish or deploy time, leaving the registry as
+  the only integrity boundary. Set `allow-npm-install: true` to keep it, which
+  now also logs a warning saying so (#137)
+- **Breaking:** both workflows install with `--ignore-scripts`, so a
+  dependency's `preinstall`, `install` and `postinstall` scripts no longer run
+  in a job that publishes or deploys. Set `run-install-scripts: true` for a
+  build that needs them. The package's own `prepublishOnly`, `prepack` and
+  `prepare` scripts still run under `npm publish` (#137)
+- `publish-to-npm.yml` sets `package-manager-cache: false` on `setup-node`, so
+  a publish no longer restores a dependency cache that an earlier job could
+  have poisoned. Clearing the `cache` input alone would not have done it:
+  `setup-node` enables npm caching on its own whenever `package.json` names npm
+  in `packageManager` or `devEngines.packageManager`. `deploy-to-pages.yml`
+  builds rather than publishes and keeps its cache (#137)
+- The install step in all three npm workflows now decides between `npm ci` and
+  `npm install` inside the step, reading the lockfile path and the caller's
+  opt-in through `env:`. The two `run:` ternaries that chose between those
+  literals are gone, and the interpolation allowlist in
+  `tests/fixtures/check-workflow-arg-binding.mjs` drops from eight entries to
+  six (#137)
+
 ## [4.1.0] - 2026-09-21
 
 ### Added
