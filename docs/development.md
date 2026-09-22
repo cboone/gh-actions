@@ -559,8 +559,9 @@ checksum the Codecov CLI.
 `tests/check-tool-version-reporting.py` executes `check-tool-versions.yml`'s
 literal `Run version check` block against stand-in audits with fixed streams
 and exit statuses, driven by the `tool-version-reporting` job. That workflow
-runs only on a weekly schedule, so nothing else executes the block, and the
-statuses it mishandled reported green: the step routed every non-zero status
+runs only on a weekly schedule or a manual dispatch, so no push-triggered job
+executes the block, and the statuses it mishandled reported green: the step
+routed every non-zero status
 other than `2` into `gh issue edit --body-file`, so a run that crashed before
 writing anything blanked the tracking issue while the job passed. The block
 runs under `bash -e -c`, not the `bash -e -o pipefail -c`

@@ -24,9 +24,10 @@ name: Run CI
 # Linux arm64 and macOS arm64, covering the uv recipe that action carries
 # for want of a `./` path to set-up-uv (#102).
 # `tool-version-reporting` executes check-tool-versions.yml's own reporting
-# block against stub audits. That workflow only runs on a schedule, and the
-# statuses it used to mishandle failed green, so nothing else would notice
-# the guards going away (#140).
+# block against stub audits. That workflow runs only on a schedule or a
+# manual dispatch, so no push-triggered job executes the block, and the
+# statuses it used to mishandle failed green: nothing else would notice the
+# guards going away (#140).
 
 on:
   push:

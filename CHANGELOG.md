@@ -13,8 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/check-tool-version-reporting.py`, which executes
   `check-tool-versions.yml`'s literal `Run version check` block against
   stand-in audits with fixed streams and exit statuses. That workflow runs
-  only on a weekly schedule, so nothing else executed the block, and the
-  statuses it mishandled reported green. Each refusal case names the guard
+  only on a weekly schedule or a manual dispatch, so no push-triggered job
+  executed the block, and the statuses it mishandled reported green. Each
+  refusal case names the guard
   it covers; the development reference records why (#140)
 
 ### Fixed
