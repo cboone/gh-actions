@@ -243,9 +243,12 @@ Two things that look like they need the credential do not:
 
 `tests/check-checkout-credentials.mjs` enforces this over every workflow and
 composite action, and `run-ci.yml`'s `checkout-credentials` job runs it. Adding
-a checkout that persists its credential means adding it to the checker's
-`PERSISTS_CREDENTIALS` map, naming the step that consumes the credential, and
-saying why here. Prefer passing a token to the single step that needs it.
+a checkout that persists its credential means giving the step a `name:`, adding
+it to the checker's `PERSISTS_CREDENTIALS` map with the reason, and saying why
+here. The map's reason is printed on every passing run and quoted back when a
+listed checkout contradicts it, so a rationale that has gone stale is visible in
+the CI log rather than buried in the file. Prefer passing a token to the single
+step that needs it.
 
 ### Version Pinning
 

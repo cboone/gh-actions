@@ -35,13 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `checkout-credentials` job in `run-ci.yml`, running
   `tests/check-checkout-credentials.mjs` over every workflow and
-  composite action. A checkout added without `persist-credentials`, one
-  that sets `true` without being listed in the checker, and a listed
-  entry that no longer names a real step each fail the job, so the
-  default cannot come back unnoticed. `tests/fixtures/workflow-steps.mjs`
-  gains a `usesSteps()` walk beside `runSteps()` for it. zizmor's
-  `artipacked` audit (#134) will cover the same ground from outside
-  (#133)
+  composite action, so the default cannot come back unnoticed. Five
+  things fail it, each with its own diagnostic: a listed exemption that
+  no longer names exactly one step, a checkout added without
+  `persist-credentials`, a checkout that keeps its credential without
+  being listed, a value that is not a YAML boolean (a quoted `"false"`
+  is truthy to the action), and a listed checkout that stopped keeping
+  its credential. A passing run prints each exemption and its reason.
+  `tests/fixtures/workflow-steps.mjs` gains a `usesSteps()` walk beside
+  `runSteps()` for it. zizmor's `artipacked` audit (#134) will cover the
+  same ground from outside (#133)
 
 ## [4.1.0] - 2026-09-21
 

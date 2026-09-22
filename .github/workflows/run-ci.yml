@@ -418,9 +418,12 @@ jobs:
   # nothing platform-dependent, so a second runner would repeat an identical
   # result. It needs npm only for the pinned `yaml` parser.
   #
-  # What it catches, because each makes the job fail: a checkout added without
-  # `persist-credentials`, a checkout that sets it to `true` without being
-  # listed in the checker, and a listed entry that no longer names a real step.
+  # What it catches, because each makes the job fail: a listed exemption that
+  # no longer names exactly one step, a checkout added without
+  # `persist-credentials`, a checkout that keeps its credential without being
+  # listed in the checker, a value that is not a YAML boolean, and a listed
+  # checkout that stopped keeping its credential. Each reports separately, so
+  # a renamed exempted step does not read as an unlisted checkout.
   checkout-credentials:
     name: Checkout credentials
     runs-on: ubuntu-latest

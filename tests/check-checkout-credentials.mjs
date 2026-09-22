@@ -9,44 +9,63 @@
 // a new checkout reintroduces the exposure by saying nothing at all; this
 // check is what turns that silence red (#133).
 //
-// What it catches, because each makes the run fail: a checkout added without
-// `persist-credentials`, a checkout that sets it to `true` without being
-// listed below, and an entry below that no longer names a real step.
+// What it catches, because each makes the run fail: an entry below that no
+// longer names exactly one step, a checkout added without
+// `persist-credentials`, a checkout that keeps its credential without being
+// listed below, a value that is not a boolean, and a listed checkout that
+// stopped keeping its credential. Each reports separately, so the diagnostic
+// names the actual problem rather than the one it resembles.
 import assert from "node:assert/strict";
 import { assertExactlyOne, usesSteps } from "./fixtures/workflow-steps.mjs";
 
-// The complete set of checkouts allowed to keep their credential, each with
-// the step that consumes it. Entries are named individually rather than whole
-// files being exempted, so a second checkout added to one of these jobs is
-// still reported.
+// The complete set of checkouts allowed to keep their credential, mapped to
+// the reason. Entries are named individually rather than whole files being
+// exempted, so a second checkout added to one of these jobs is still reported.
+// The reason is not a comment: it is printed on every passing run and quoted
+// back when a listed checkout contradicts it, so a stale rationale is visible
+// rather than buried.
 const PERSISTS_CREDENTIALS = new Map([["release-rust-binaries.yml::homebrew::Check out the Homebrew tap", "the Commit and push formula step pushes to the tap with it"]]);
 
 const CHECKOUT = /^actions\/checkout@/;
 
 const keys = [];
+const checkouts = [];
 const missing = [];
-const unexpected = [];
+const unlisted = [];
+const notBoolean = [];
+const contradictory = [];
 
 for (const { key, step } of usesSteps()) {
   keys.push(key);
   if (!CHECKOUT.test(step.uses)) continue;
+  checkouts.push(key);
 
   const value = step.with?.["persist-credentials"];
+  const listed = PERSISTS_CREDENTIALS.has(key);
   if (value === undefined) {
     missing.push(key);
-  } else if (value === true && !PERSISTS_CREDENTIALS.has(key)) {
-    unexpected.push(key);
   } else if (value !== true && value !== false) {
     // A quoted "false" is truthy to the action, so it would persist the
     // credential while reading as if it did not.
-    unexpected.push(`${key} (persist-credentials: ${JSON.stringify(value)} is not a boolean)`);
-  } else if (value === false && PERSISTS_CREDENTIALS.has(key)) {
-    unexpected.push(`${key} (listed as persisting its credential, but sets false)`);
+    notBoolean.push(`${key} (persist-credentials: ${JSON.stringify(value)})`);
+  } else if (value === true && !listed) {
+    unlisted.push(key);
+  } else if (value === false && listed) {
+    contradictory.push(`${key} (listed because ${PERSISTS_CREDENTIALS.get(key)})`);
   }
 }
 
-assert.deepEqual(missing, [], `actions/checkout steps that do not set persist-credentials:\n  ${missing.join("\n  ")}`);
-assert.deepEqual(unexpected, [], `actions/checkout steps whose persist-credentials value is not allowed:\n  ${unexpected.join("\n  ")}`);
+// First, because a renamed or deleted exempted step also shows up as an
+// unlisted checkout, and "the exemption names nothing" is the cause while
+// "this checkout is not listed" is only the symptom.
 assertExactlyOne([...PERSISTS_CREDENTIALS.keys()], keys, "credential-persisting checkouts");
 
-console.log(`checkout-credentials: passed (${keys.length} steps scanned, ${PERSISTS_CREDENTIALS.size} persisting)`);
+assert.deepEqual(missing, [], `actions/checkout steps that do not set persist-credentials:\n  ${missing.join("\n  ")}`);
+assert.deepEqual(unlisted, [], `actions/checkout steps that keep their credential without being listed in PERSISTS_CREDENTIALS:\n  ${unlisted.join("\n  ")}`);
+assert.deepEqual(notBoolean, [], `actions/checkout steps whose persist-credentials is not a YAML boolean:\n  ${notBoolean.join("\n  ")}`);
+assert.deepEqual(contradictory, [], `actions/checkout steps listed in PERSISTS_CREDENTIALS that set false, so the entry is stale:\n  ${contradictory.join("\n  ")}`);
+
+console.log(`checkout-credentials: passed (${checkouts.length} checkouts, ${PERSISTS_CREDENTIALS.size} keeping their credential)`);
+for (const [key, reason] of PERSISTS_CREDENTIALS) {
+  console.log(`  ${key}: ${reason}`);
+}
