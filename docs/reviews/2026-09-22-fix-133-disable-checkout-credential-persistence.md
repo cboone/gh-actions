@@ -208,3 +208,46 @@ No TODO, FIXME, HACK or XXX comments, no stubs, no commented-out code, no placeh
 new test file is complete and exercised. Documentation was updated alongside the behavior change
 rather than deferred. The zizmor ignore comment the exception will need is correctly left to
 issue #134, and the plan records that hand-off explicitly rather than leaving it implied.
+
+## Review Resolution
+
+Total items: 9. Resolved: 5. Skipped: 4, all by the user's decision rather than oversight.
+
+Everything above this heading is the review as written, before any of it was acted on. The
+findings it records were accurate then and several are not now, so read them as a record of what
+review found rather than as a description of the branch. This section is the current state.
+
+- **Issue 1** (`PERSISTS_CREDENTIALS` values never read): resolved in `5dec922`. The map's reason
+  is printed on every passing run and quoted back in the contradiction diagnostic, so it is live
+  data rather than a comment in an awkward place.
+- **Issue 2** (success line counted `uses:` steps): resolved in `5dec922`. It reports
+  `checkouts.length`, so the number cross-checks against `grep`.
+- **Issue 3** (three failures under one heading): resolved in `5dec922`. Five failure classes now
+  report under their own headings, and `assertExactlyOne` runs first so a renamed exempted step
+  names its cause rather than its symptom.
+- **Issue 4** (`actions/AGENTS.md` silent on the rule): resolved in `96aca05`.
+- **Issue 6** (plan still in `docs/plans/todo/`): resolved. The move to `docs/plans/done/` landed
+  in `5dec922` rather than its own commit, because `git mv` had already staged the rename when
+  that commit was made.
+- **Issues 5 and 7** (tracking the README example's checkout SHA; a `make` target for the
+  checker): skipped by decision. The SHA matches existing precedent for `setup-node` in two other
+  action READMEs and belongs in a change covering all three; issue #138 already owns Makefile test
+  targets.
+- **Issues 8 and 9** (CI, and recording the inspection reasoning): resolved after the review.
+  The branch was pushed as PR #150 and CI ran; the reasoning for the tag- and deploy-triggered
+  workflows that CI cannot reach is recorded in that PR's description.
+
+### Found after this review, by Copilot on PR #150
+
+Copilot caught a defect in the checker that this review did not, and one inaccurate comment:
+
+- `assertExactlyOne` was passed every `uses:` step rather than the filtered checkouts, so
+  retargeting the exempted step to a different action while keeping its name would have left the
+  stale exemption in place with nothing failing. The loop skips a non-checkout, so no other
+  assertion would have seen it either. Asserting over `checkouts` closes it, and the planted
+  defect confirms it now goes red.
+- The comment on the non-boolean branch claimed a quoted `"false"` would persist the credential.
+  It would not: `actions/checkout` computes `(input || 'false').toUpperCase() === 'TRUE'`, so
+  every value but `true` means false. The real hazard is the reverse, `yes` or `on` reading as
+  enabling while meaning false, and a quoted `"true"` enabling while looking like a string. The
+  strict boolean check stands; its rationale was corrected.

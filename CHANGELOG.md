@@ -37,7 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/check-checkout-credentials.mjs` over every workflow and
   composite action, so the default cannot come back unnoticed. Five
   things fail it, each with its own diagnostic: a listed exemption that
-  no longer names exactly one step, a checkout added without
+  no longer names exactly one checkout, whether it was renamed, deleted
+  or pointed at a different action; a checkout added without
   `persist-credentials`, a checkout that keeps its credential without
   being listed, a value that is not a YAML boolean (a quoted `"false"`
   is truthy to the action), and a listed checkout that stopped keeping

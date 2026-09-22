@@ -10,11 +10,12 @@
 // check is what turns that silence red (#133).
 //
 // What it catches, because each makes the run fail: an entry below that no
-// longer names exactly one step, a checkout added without
-// `persist-credentials`, a checkout that keeps its credential without being
-// listed below, a value that is not a boolean, and a listed checkout that
-// stopped keeping its credential. Each reports separately, so the diagnostic
-// names the actual problem rather than the one it resembles.
+// longer names exactly one checkout, whether it was renamed, deleted or
+// pointed at a different action; a checkout added without
+// `persist-credentials`; a checkout that keeps its credential without being
+// listed below; a value that is not a YAML boolean; and a listed checkout
+// that stopped keeping its credential. Each reports separately, so the
+// diagnostic names the actual problem rather than the one it resembles.
 import assert from "node:assert/strict";
 import { assertExactlyOne, usesSteps } from "./fixtures/workflow-steps.mjs";
 
@@ -28,7 +29,6 @@ const PERSISTS_CREDENTIALS = new Map([["release-rust-binaries.yml::homebrew::Che
 
 const CHECKOUT = /^actions\/checkout@/;
 
-const keys = [];
 const checkouts = [];
 const missing = [];
 const unlisted = [];
@@ -36,7 +36,6 @@ const notBoolean = [];
 const contradictory = [];
 
 for (const { key, step } of usesSteps()) {
-  keys.push(key);
   if (!CHECKOUT.test(step.uses)) continue;
   checkouts.push(key);
 
@@ -45,8 +44,11 @@ for (const { key, step } of usesSteps()) {
   if (value === undefined) {
     missing.push(key);
   } else if (value !== true && value !== false) {
-    // A quoted "false" is truthy to the action, so it would persist the
-    // credential while reading as if it did not.
+    // The action decides with `(input || 'false').toUpperCase() === 'TRUE'`,
+    // so every value but `true` means false, `yes` and `on` included. Those
+    // read as enabling and are not, and a quoted `"true"` enables while
+    // looking like a string. Requiring a real YAML boolean keeps the file
+    // saying what the action will do.
     notBoolean.push(`${key} (persist-credentials: ${JSON.stringify(value)})`);
   } else if (value === true && !listed) {
     unlisted.push(key);
@@ -55,10 +57,16 @@ for (const { key, step } of usesSteps()) {
   }
 }
 
-// First, because a renamed or deleted exempted step also shows up as an
-// unlisted checkout, and "the exemption names nothing" is the cause while
-// "this checkout is not listed" is only the symptom.
-assertExactlyOne([...PERSISTS_CREDENTIALS.keys()], keys, "credential-persisting checkouts");
+// Against the checkouts rather than every `uses:` step, so an exemption has
+// to keep naming an `actions/checkout`. Matching any step would let the tap
+// step be swapped for another action under the same name: the loop would skip
+// it as a non-checkout and the stale exemption would survive unreported.
+//
+// First, because an exempted step that was renamed, deleted or pointed at
+// another action also shows up as an unlisted checkout, and "the exemption
+// names nothing" is the cause while "this checkout is not listed" is only the
+// symptom.
+assertExactlyOne([...PERSISTS_CREDENTIALS.keys()], checkouts, "credential-persisting checkouts");
 
 assert.deepEqual(missing, [], `actions/checkout steps that do not set persist-credentials:\n  ${missing.join("\n  ")}`);
 assert.deepEqual(unlisted, [], `actions/checkout steps that keep their credential without being listed in PERSISTS_CREDENTIALS:\n  ${unlisted.join("\n  ")}`);
