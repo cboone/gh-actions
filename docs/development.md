@@ -344,6 +344,19 @@ The consumer's `lint` target runs only `golangci-lint run ./...`.
   is correct if a step or fixture ever runs under `set -u`, where expanding an
   empty array aborts on bash 3.2. Sites where the list is required test
   `-eq 0` instead and fail with a diagnostic, which is not redundant.
+
+  The divergence from the composite form is deliberate and settled (#96).
+  Converging the workflows on one argument per line would turn a caller's
+  `test-args: --all-features --no-fail-fast` into a single malformed argument,
+  a second breaking migration one major after v4 bound these inputs through
+  `env:` and told callers to fold multi-line values onto one line. What the
+  line form buys is an argument containing a space, which no current consumer
+  passes, and the case that would otherwise lose data is rejected with a
+  diagnostic rather than truncated. Composite actions carry no equivalent
+  installed base, so they keep the more capable form. Revisit only for a
+  caller that needs it, and alongside other breaking changes in the same
+  major.
+
 - Ordinary data and argument inputs must be passed to shell steps via `env:` mappings,
   using quoted variables and explicit argument arrays, not inline expressions.
   Explicit command inputs intentionally execute through `run:`:
