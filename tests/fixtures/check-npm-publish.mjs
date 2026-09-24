@@ -246,8 +246,16 @@ const scenarios = {
       assert.equal(step.with.cache, undefined, `${label} sets a cache during a publish`);
     }
 
-    // The Pages build is not a publish, and keeps its cache.
-    assert.equal(setupNodeStep(pages, "build").with.cache, "${{ steps.npm-cache.outputs.cache }}");
+    // The Pages build is not a publish, and keeps its cache. It still turns
+    // setup-node's automatic branch off: `cache` and `package-manager-cache`
+    // are an if/else in the action, so the explicit cache above survives, while
+    // a caller whose package.json names npm in packageManager no longer gets
+    // automatic caching when the probe found no lockfile. That combination
+    // failed in setup-node with `Dependencies lock file is not found`, before
+    // the install step could name the input to set.
+    const pagesSetupNode = setupNodeStep(pages, "build");
+    assert.equal(pagesSetupNode.with.cache, "${{ steps.npm-cache.outputs.cache }}");
+    assert.equal(pagesSetupNode.with["package-manager-cache"], false);
   },
 };
 

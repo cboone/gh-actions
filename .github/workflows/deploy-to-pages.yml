@@ -81,6 +81,13 @@ jobs:
           go-version-file: ${{ inputs.go-version-file }}
           cache: true
 
+      # `cache` and `package-manager-cache` are an if/else inside the action, so
+      # turning the automatic branch off leaves the explicit one above it
+      # untouched: a build with a lockfile still caches. Without that, a caller
+      # whose package.json names npm in packageManager gets automatic caching
+      # even when the probe above found no lockfile, and the action fails with
+      # `Dependencies lock file is not found` before the install step can report
+      # which input to set.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         if: inputs.setup-node
         with:
@@ -88,6 +95,7 @@ jobs:
           cache: ${{ steps.npm-cache.outputs.cache }}
           cache-dependency-path: >-
             ${{ steps.npm-cache.outputs.cache-dependency-path }}
+          package-manager-cache: false
 
       # Byte-identical to the install steps in publish-to-npm.yml and
       # publish-to-npm-with-oidc.yml; the `parity` scenario in

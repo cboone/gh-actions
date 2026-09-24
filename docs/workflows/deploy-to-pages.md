@@ -24,6 +24,12 @@ build fails rather than resolving versions at build time; set
 unless `run-install-scripts: true`, which a build needing a `postinstall` step
 has to set.
 
+The npm cache follows the lockfile: with one present the build caches on it,
+and with none `setup-node` is told not to cache at all. Otherwise a repository
+whose `package.json` names npm in `packageManager` gets `setup-node`'s automatic
+caching, which fails on the missing lockfile before the install step can say
+which input to set.
+
 `build-command` runs in the checked-out workspace, which the workflow checks out
 with `persist-credentials: false`. It does not inherit a Git credential from
 `.git/config`, so a command that has to authenticate to GitHub needs a token

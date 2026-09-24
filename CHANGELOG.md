@@ -90,6 +90,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in a job that publishes or deploys. Set `run-install-scripts: true` for a
   build that needs them. The package's own `prepublishOnly`, `prepack` and
   `prepare` scripts still run under `npm publish` (#137)
+- `deploy-to-pages.yml` sets `package-manager-cache: false` too, which turns off
+  `setup-node`'s automatic caching while leaving the explicit lockfile-keyed
+  cache above it untouched; the two inputs are an if/else inside the action. A
+  caller whose `package.json` names npm in `packageManager`, and that ships no
+  lockfile, otherwise got automatic caching and a `Dependencies lock file is not
+found` failure from `setup-node`, before the install step could name the input
+  to set (#137)
 - `publish-to-npm.yml` sets `package-manager-cache: false` on `setup-node`, so
   a publish no longer restores a dependency cache that an earlier job could
   have poisoned. Clearing the `cache` input alone would not have done it:
