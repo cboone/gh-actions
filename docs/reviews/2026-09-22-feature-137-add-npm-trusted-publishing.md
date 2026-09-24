@@ -1,9 +1,17 @@
+<!-- cspell:ignore baacdfa -->
+
 # Branch Review: feature/137-add-npm-trusted-publishing
 
 Base: main (merge base: bbe1518)
 Commits: 4
 Files changed: 19 (6 added, 13 modified, 0 deleted, 0 renamed)
 Reviewed through: f556b9f
+
+**This records the branch at `f556b9f`, not its current state.** Every count, file list and
+finding below describes that commit. The branch has moved since, to resolve these findings, to
+merge `main`, and to answer two rounds of Copilot review. `## Review Resolution` at the end is
+the current state. Read a number here as evidence of what this review examined, never as a
+cross-check against the tree.
 
 ## Summary
 
@@ -271,3 +279,35 @@ Two claims the branch rests on were checked rather than trusted:
   both publish workflows, turning the `shape` assertions into a real end-to-end
   test and covering the gap in the second issue above. The plan already lists
   this as a follow-up.
+
+## Review Resolution
+
+Total items: 6. Resolved: 4. Filed as issues: 2. Outstanding: 1, which only a real publish can
+close.
+
+Everything above this heading is the review as written, before any of it was acted on. Its
+central finding, that the Environment row was wrong, is fixed; read the findings as a record of
+what review found rather than as a description of the branch. This section is the current state.
+
+- **Issue 1** (the Environment row is wrong): resolved in `0e6cba5`. A throwaway run settled both
+  open questions: an empty `environment` name runs the job with the claim absent, and a name
+  passed through the input reaches the claim. The workflow gained an `environment` input, the row
+  now tells a maintainer to pass the same name through it, and `docs/development.md` records the
+  measurement.
+- **Issue 2** (the issue's done-when is unexercised): **still outstanding**. Publishing a test
+  package on npmjs.com and confirming provenance needs a real package and a merged tag, so it
+  cannot be done from the branch. It is the first item in the PR's test plan.
+- **Issue 3** (`run-ci.yml`'s inconsistent `npm ci` calls): filed as
+  [#151](https://github.com/cboone/gh-actions/issues/151), as the review recommended, rather than
+  widening this branch.
+- **Issue 4** (a prerelease npm satisfied the minimum): resolved in `0e6cba5`. The gate orders a
+  prerelease below the release it precedes, so `11.5.1-rc.0` no longer clears a minimum of
+  11.5.1, while a prerelease of a higher version still does.
+- **Issue 5** (the plan is still in `docs/plans/todo/`): skipped by the user's decision, not
+  oversight. It stays in `todo/` until the PR merges.
+- **Issue 6** (a `dry-run` input for self-hosting): filed as
+  [#152](https://github.com/cboone/gh-actions/issues/152).
+
+Two findings arrived later, from Copilot, and are recorded in the PR's summary comments rather
+than here: the Pages cache reaching `setup-node`'s automatic branch without a lockfile, fixed in
+`baacdfa`, and the install steps' `env:` bindings never being asserted, fixed in `bb55aec`.
