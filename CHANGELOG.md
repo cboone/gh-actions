@@ -38,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `deploy-to-pages.yml`, each defaulting to false, covering the callers the
   hardened install defaults below would otherwise strand (#137)
 
+- `environment` input on `publish-to-npm-with-oidc.yml`, empty by default. The
+  OIDC token's `environment` claim comes from the publish job in this
+  repository, and a job calling a reusable workflow may not declare an
+  environment of its own, so this input is the only way to satisfy a trusted
+  publisher scoped to one. Setting it also puts that environment's protection
+  rules, such as required reviewers, in front of the publish (#137)
+
 - `run-ci.yml` `npm-publish` job, on Linux and macOS: runs the registry gate,
   the version gate, the lockfile probe and the shared install step from
   `tests/fixtures/check-npm-publish.mjs` against stubs, and asserts the
@@ -64,6 +71,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `setup-node` enables npm caching on its own whenever `package.json` names npm
   in `packageManager` or `devEngines.packageManager`. `deploy-to-pages.yml`
   builds rather than publishes and keeps its cache (#137)
+- `publish-to-npm-with-oidc.yml`'s version gate orders a prerelease below the
+  release it precedes, so an npm `11.5.1-rc.0` no longer satisfies a minimum of
+  11.5.1. A prerelease of a higher version still does (#137)
 - The install step in all three npm workflows now decides between `npm ci` and
   `npm install` inside the step, reading the lockfile path and the caller's
   opt-in through `env:`. The two `run:` ternaries that chose between those

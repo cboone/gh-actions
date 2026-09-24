@@ -30,6 +30,10 @@ on:
         description: Publish provenance attestations. Turn off for packages published with restricted access.
         type: boolean
         default: true
+      environment:
+        description: Environment for the publish job. Set it when the trusted publisher names one.
+        type: string
+        default: ""
       allow-npm-install:
         description: Permit npm install when the repository has no lockfile.
         type: boolean
@@ -51,6 +55,13 @@ jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
+    # The OIDC token's `environment` claim comes from this job, and a caller
+    # cannot supply one: `environment` is not among the keywords a job calling a
+    # reusable workflow may use. So a publisher configured with an environment
+    # is reachable only through this input. Measured on 2026-09-24: an empty
+    # name runs the job with the claim absent, and a name passed through the
+    # input reaches the claim.
+    environment: ${{ inputs.environment }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       # First, and before the checkout: the likeliest mistake is carrying
@@ -107,10 +118,15 @@ jobs:
           # Node 22.14.0 floor is necessary without being sufficient here.
           NODE_FOR_NPM: 24.5.0
         run: |
-          # Compares dot-separated numeric fields, ignoring a prerelease tail,
-          # rather than `sort -V`, which macOS spells differently.
+          # Compares dot-separated numeric fields, rather than `sort -V`, which
+          # macOS spells differently. A prerelease sorts below the release it
+          # precedes, so 11.5.1-rc.0 does not satisfy a minimum of 11.5.1, while
+          # a prerelease of a higher version still does.
           at_least() {
-            local minimum="$1" actual="${2#v}" want have
+            local minimum="$1" actual="${2#v}" want have prerelease=""
+            case "${actual}" in
+              *-*) prerelease="yes" ;;
+            esac
             actual="${actual%%-*}"
             while [[ -n "${minimum}" || -n "${actual}" ]]; do
               want="${minimum%%.*}"
@@ -134,7 +150,8 @@ jobs:
                 actual=""
               fi
             done
-            return 0
+            # Every field matched, so only the prerelease tail can separate them.
+            [[ -z "${prerelease}" ]]
           }
 
           node_version="$(node --version)"

@@ -121,9 +121,12 @@ const scenarios = {
     expectAccepted(versions(), "the exact minimums");
     expectAccepted(versions({ node: "v24.21.0", npm: "11.6.2" }), "versions above the minimums");
     expectAccepted(versions({ node: "v23" }), "a version with fewer fields");
-    // Documented leniency: the tail is ignored rather than ordered before the
-    // release, so a prerelease of a high enough version passes.
-    expectAccepted(versions({ npm: "12.0.0-rc.1" }), "a prerelease npm");
+    // A prerelease of a higher version clears the minimum; a prerelease of the
+    // minimum itself does not, since it precedes the release that carries the
+    // support the gate is checking for.
+    expectAccepted(versions({ npm: "12.0.0-rc.1" }), "a prerelease above the minimum");
+    expectRejected(versions({ npm: `${minimumNpm}-rc.1` }), `below ${minimumNpm}`, "a prerelease of the minimum npm");
+    expectRejected(versions({ node: `v${minimumNode}-nightly` }), `below ${minimumNode}`, "a prerelease of the minimum Node");
     expectRejected(versions({ node: "v22.13.9" }), `below ${minimumNode}`, "an old Node");
     expectRejected(versions({ node: "v20.19.5" }), "node-version", "a Node major behind");
     expectRejected(versions({ npm: "11.5.0" }), `below ${minimumNpm}`, "an old npm");
@@ -222,6 +225,14 @@ const scenarios = {
     const provenance = stepOf(oidcPublish, "publish", "Disable provenance");
     assert.equal(provenance.if, "${{ !inputs.provenance }}");
     assert.ok(provenance.run.includes("NPM_CONFIG_PROVENANCE=false"));
+
+    // A caller cannot pass an environment to a reusable workflow, and the OIDC
+    // `environment` claim comes from the job that mints the token, which is
+    // this one. Without the input, a publisher scoped to an environment is
+    // unreachable; with it, the default of "" leaves the claim absent.
+    assert.equal(oidcPublish.jobs.publish.environment, "${{ inputs.environment }}");
+    assert.equal(oidcPublish.on.workflow_call.inputs.environment.default, "");
+    assert.equal(tokenPublish.jobs.publish.environment, undefined, "the token workflow declares an environment");
 
     // A publish must not restore a cache an earlier job wrote. Clearing
     // `cache:` is not enough, because setup-node caches on its own whenever

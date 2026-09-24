@@ -44,6 +44,17 @@ publishing with a token and publishing with OIDC are two files,
 `publish-to-npm.yml` and `publish-to-npm-with-oidc.yml`, rather than one
 workflow with an auth-mode input (#137).
 
+The OIDC token a nested job mints reports the caller in `workflow_ref`
+and this repository's workflow in `job_workflow_ref`, and takes its
+`environment` claim from the nested job itself. Measured on 2026-09-24
+by decoding the claims in a throwaway run. Two consequences for
+`publish-to-npm-with-oidc.yml`: an npm trusted publisher names the
+caller's own repository and workflow filename, so this repository never
+appears in a publisher configuration, and an environment-scoped
+publisher is reachable only through that workflow's `environment` input,
+since a job calling a reusable workflow may not declare an environment
+of its own. An empty name is accepted and leaves the claim absent.
+
 ### Naming
 
 - Use imperative path names for local composite actions and reusable workflows.

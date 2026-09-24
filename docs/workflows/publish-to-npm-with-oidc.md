@@ -34,12 +34,12 @@ both, or the run fails at startup before any job begins.
 This happens once per package, on npmjs.com, outside any workflow. On the
 package's Settings page, add a trusted publisher for GitHub Actions and fill in:
 
-| Field                | Value                                                    |
-| -------------------- | -------------------------------------------------------- |
-| Organization or user | The owner of **your** repository                         |
-| Repository           | **Your** repository, the one holding the package source  |
-| Workflow filename    | The file in **your** repository that calls this workflow |
-| Environment          | Optional; set it only if your calling job names one      |
+| Field                | Value                                                               |
+| -------------------- | ------------------------------------------------------------------- |
+| Organization or user | The owner of **your** repository                                    |
+| Repository           | **Your** repository, the one holding the package source             |
+| Workflow filename    | The file in **your** repository that calls this workflow            |
+| Environment          | Optional; if you set one, pass the same name as `environment` below |
 
 The workflow filename is your own release workflow, not
 `publish-to-npm-with-oidc.yml`. npm validates the calling workflow rather than
@@ -53,6 +53,7 @@ publishing through a reusable workflow work at all.
 | `node-version`        | string  | `"24.21.0"`                  | Node.js version to install                               |
 | `registry-url`        | string  | `https://registry.npmjs.org` | npm registry URL; only npmjs.com supports OIDC           |
 | `provenance`          | boolean | `true`                       | Publish provenance attestations                          |
+| `environment`         | string  | `""`                         | Environment for the publish job; empty for none          |
 | `allow-npm-install`   | boolean | `false`                      | Permit `npm install` when the repository has no lockfile |
 | `run-install-scripts` | boolean | `false`                      | Run dependency lifecycle scripts while installing        |
 | `timeout-minutes`     | number  | `10`                         | Job timeout in minutes                                   |
@@ -68,6 +69,15 @@ point of it.
 skips them for packages published with restricted access. Set
 `provenance: false` for a restricted package only if npm reports the skip as an
 error; the input writes `NPM_CONFIG_PROVENANCE=false` and nothing else.
+
+**Environments.** A publisher may name a deployment environment, and the OIDC
+claim it is matched against comes from this workflow's publish job, not from
+yours: `environment` is not one of the keywords a job calling a reusable
+workflow may use. Pass the name through the `environment` input instead, and it
+must match what the publisher names. The default, empty, runs the job with no
+environment and leaves the claim absent, which is what a publisher configured
+without one expects. Setting it also puts the environment's protection rules,
+such as required reviewers, in front of the publish.
 
 **No dependency cache.** `setup-node` runs with `package-manager-cache: false`,
 so a publish never restores a cache an earlier job wrote. Clearing the `cache`
@@ -101,4 +111,18 @@ jobs:
 ```
 
 The publisher registered on npmjs.com for this example names the repository
-holding it and `release.yml`, the file above.
+holding it and `release.yml`, the file above, and leaves Environment empty.
+
+For a publisher scoped to an environment, and for the protection rules that
+come with one:
+
+```yaml
+jobs:
+  publish:
+    permissions:
+      contents: read
+      id-token: write
+    uses: cboone/gh-actions/.github/workflows/publish-to-npm-with-oidc.yml@v4.1.0
+    with:
+      environment: release
+```
