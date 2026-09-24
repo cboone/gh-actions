@@ -5,6 +5,12 @@ Commits: 2
 Files changed: 35 (2 added, 33 modified, 0 deleted, 0 renamed)
 Reviewed through: 4cea761
 
+**This records the branch at `4cea761`, not its current state.** Every count, line number and
+finding below describes that commit. The branch has moved since, both to resolve these findings
+and to merge `main` twice; `## Review Resolution` at the end is the current state, and
+`tests/check-checkout-credentials.mjs` is the authority on the counts. Read a number here as
+evidence of what review examined, never as a cross-check against the tree.
+
 ## Summary
 
 Every `actions/checkout` in the repository now sets `persist-credentials: false`, so the job's
@@ -236,6 +242,15 @@ review found rather than as a description of the branch. This section is the cur
 - **Issues 8 and 9** (CI, and recording the inspection reasoning): resolved after the review.
   The branch was pushed as PR #150 and CI ran; the reasoning for the tag- and deploy-triggered
   workflows that CI cannot reach is recorded in that PR's description.
+
+### Counts, as of the second merge from main
+
+The inventory above counts the branch at `4cea761`: 44 checkouts setting `false` and the tap
+setting `true`, across 18 workflow files. Two merges from `main` have landed since. The second
+brought #149, whose new `tool-version-reporting` job in `run-ci.yml` carried a checkout with no
+`persist-credentials` at all, which is exactly the regression this branch exists to prevent and
+the first one the checker caught that was not planted. It is now covered like the rest, so the
+tree holds 46 checkouts: 45 setting `false` and the tap setting `true`.
 
 ### Found after this review, by Copilot on PR #150
 
