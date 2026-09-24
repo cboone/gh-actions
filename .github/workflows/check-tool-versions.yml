@@ -43,17 +43,54 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
+          report="${RUNNER_TEMP}/report.md"
           set +e
-          ./scripts/check-tool-versions.py > "${RUNNER_TEMP}/report.md"
+          ./scripts/check-tool-versions.py > "${report}"
           status=$?
           set -e
+
+          # Print whatever the run produced before deciding its fate, so a
+          # status this step is about to reject still leaves its partial
+          # output in the log.
+          echo "::group::Report"
+          cat "${report}"
+          echo "::endgroup::"
+
+          # 0, 1 and 2 are the script's entire contract. Anything else means
+          # it did not run to completion: an exception outside the per-tool
+          # try in main(), an unparseable PEP 723 header, or uv failing to
+          # resolve an interpreter. All of those write to stderr and leave
+          # stdout empty, so the report printed above is not an issue body.
+          case "${status}" in
+            0 | 1 | 2) ;;
+            *)
+              msg="check-tool-versions.py exited ${status}"
+              echo "::error::${msg}; expected 0, 1 or 2." >&2
+              exit 1
+              ;;
+          esac
+
+          # A non-zero status is supposed to imply a non-empty report, but
+          # nothing in the script enforces that. Refuse rather than hand an
+          # empty body to `gh issue edit`, which would erase the very issue
+          # that reports the problem. Any byte counts as a report: every
+          # failure above leaves stdout completely empty, so a whitespace-aware
+          # test would reject nothing this one does not. Status 0 is exempt
+          # because main() returns it only after the tool loop completes, and
+          # that path always prints the current-versions line.
+          if [ "${status}" != "0" ] && [ ! -s "${report}" ]; then
+            msg="check-tool-versions.py exited ${status} with an empty report"
+            echo "::error::${msg}; refusing to overwrite the tracking issue." >&2
+            exit 1
+          fi
+
+          # Published last: the steps below key on `status`, and an
+          # unvalidated value must never reach them, including through an
+          # `if:` condition that runs on failure.
           {
             echo "status=${status}"
-            echo "report-path=${RUNNER_TEMP}/report.md"
+            echo "report-path=${report}"
           } >> "${GITHUB_OUTPUT}"
-          echo "::group::Report"
-          cat "${RUNNER_TEMP}/report.md"
-          echo "::endgroup::"
 
       - name: Open or update tracking issue
         if: steps.check.outputs.status != '0'

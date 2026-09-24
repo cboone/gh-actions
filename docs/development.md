@@ -614,6 +614,45 @@ literally and leave no file behind. The two Codecov steps are asserted
 statically rather than executed, because their `run:` blocks download and
 checksum the Codecov CLI.
 
+`tests/check-tool-version-reporting.py` executes `check-tool-versions.yml`'s
+literal `Run version check` block against stand-in audits with fixed streams
+and exit statuses, driven by the `tool-version-reporting` job. That workflow
+runs only on a weekly schedule or a manual dispatch, so no push-triggered job
+executes the block, and the statuses it mishandled reported green: the step
+routed every non-zero status
+other than `2` into `gh issue edit --body-file`, so a run that crashed before
+writing anything blanked the tracking issue while the job passed. The block
+runs under `bash -e -c`, not the `bash -e -o pipefail -c`
+`check-shell-discovery.py` uses, because the runner's default `run:` shell is
+`bash -e {0}` and this workflow sets neither `shell: bash` nor
+`defaults.run.shell`. `ubuntu-latest` alone, unlike the installer matrices:
+this is a shell block, and the workflow is scheduled on `ubuntu-latest` and
+runs nowhere else, so a second userland would assert nothing a consumer gets.
+
+Each of its four refusal cases names the guard it covers, because the two
+guards overlap and planting proved the overlap hid one of them:
+
+- `unexpected status` uses a status outside the contract with a report that is
+  deliberately not empty, so only the status guard can reject it. Deleting that
+  guard publishes `status=3` and the case fails on the exit status.
+- `missing audit` removes the stand-in entirely, the shape of a uv that never
+  ran the script: the redirect still creates an empty report and bash returns
+  `127`. With the status guard deleted, the empty-report guard catches `127`
+  instead, and its message reads `exited 127 with an empty report`, so an
+  assertion naming the status alone passed on either refusal. Both status cases
+  now assert `expected 0, 1 or 2`; keep that wording in the assertion and the
+  annotation together, or this case stops covering the guard it names.
+- `crash on exit 1` and `crash on exit 2` pair a documented status with empty
+  stdout. The status guard cannot see either, so they are the only coverage of
+  the empty-report guard, and status `2` is carried separately because that
+  guard must not be keyed to status `1` alone.
+
+Every refusal also asserts that `GITHUB_OUTPUT` stayed empty and that the
+report group had already been printed. Those two are each the sole coverage of
+an ordering the block depends on: publishing outputs before the guards, or
+printing the report after them, leaves every exit status and annotation
+unchanged, and nothing else turns red.
+
 `actions/install-cspell-dictionaries` is tested on the same three
 runners the same way, through `run-cspell` against a fixture kept
 outside the checkout: a dictionary installed beside `cspell-lib`

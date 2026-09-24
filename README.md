@@ -195,7 +195,9 @@ formula with it. See
 runs weekly to surface upstream releases of tools that Dependabot does not
 track (workflow `env:` versions, hardcoded checksums, the yamllint hash
 manifest), opening or updating a single tracking issue when something is
-outdated.
+outdated. The audit's documented exit statuses are its whole contract: a run
+that does not complete fails the job rather than overwriting that issue with
+an empty body.
 
 For the long-form version of this policy, see
 [the development reference](docs/development.md#pinning-policy-and-trust-model).

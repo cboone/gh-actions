@@ -7,32 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- Every `actions/checkout` step sets `persist-credentials: false`. The
-  action's default writes the token it authenticated with into the
-  checkout's `.git/config` and leaves it there for the rest of the job,
-  where every later step can read it, including third-party tooling these
-  workflows invoke but do not control, and anything that archives or
-  uploads the workspace; zizmor calls that class of exposure
-  `artipacked`. All 44 checkouts took that default, including the ones
-  that hand the workspace to GoReleaser, a cargo toolchain, `npm ci`
-  beside a publish token, and a caller-supplied `build-command` (#133)
-- The Homebrew tap checkout in `release-rust-binaries.yml` is the single
-  exception and now says so: it sets `persist-credentials: true`
-  explicitly and is named `Check out the Homebrew tap`, because the
-  `Commit and push formula` step pushes with that credential. The token
-  is the caller's tap-scoped `HOMEBREW_TAP_TOKEN` in
-  `homebrew-tap/.git/config`, not the job's `GITHUB_TOKEN` (#133)
-- A `build-command`, `scrut-setup-cmd` or `scrut-build-cmd` no longer
-  inherits a Git credential from the workflow's checkout. This is not a
-  breaking change: every value in use across the consuming repositories
-  is a tool install or a compile, and none runs an authenticated Git
-  operation. A command that needs one must be given a token of its own
-  (#133)
-
 ### Added
 
+- `run-ci.yml` `tool-version-reporting` job: runs
+  `tests/check-tool-version-reporting.py`, which executes
+  `check-tool-versions.yml`'s literal `Run version check` block against
+  stand-in audits with fixed streams and exit statuses. That workflow runs
+  only on a weekly schedule or a manual dispatch, so no push-triggered job
+  executed the block, and the statuses it mishandled reported green. Each
+  refusal case names the guard
+  it covers; the development reference records why (#140)
 - `checkout-credentials` job in `run-ci.yml`, running
   `tests/check-checkout-credentials.mjs` over every workflow and
   composite action, so the default cannot come back unnoticed. Five
@@ -49,6 +33,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/fixtures/workflow-steps.mjs` gains a `usesSteps()` walk beside
   `runSteps()` for it. zizmor's `artipacked` audit (#134) will cover the
   same ground from outside (#133)
+
+### Changed
+
+- Every `actions/checkout` step sets `persist-credentials: false`. The
+  action's default writes the token it authenticated with into the
+  checkout's `.git/config` and leaves it there for the rest of the job,
+  where every later step can read it, including third-party tooling these
+  workflows invoke but do not control, and anything that archives or
+  uploads the workspace; zizmor calls that class of exposure
+  `artipacked`. Every checkout in the repository took that default,
+  including the ones that hand the workspace to GoReleaser, a cargo
+  toolchain, `npm ci` beside a publish token, and a caller-supplied
+  `build-command`. The `tool-version-reporting` job that #140 added while
+  this was open took it too, and the new check caught it on the merge
+  (#133)
+- The Homebrew tap checkout in `release-rust-binaries.yml` is the single
+  exception and now says so: it sets `persist-credentials: true`
+  explicitly and is named `Check out the Homebrew tap`, because the
+  `Commit and push formula` step pushes with that credential. The token
+  is the caller's tap-scoped `HOMEBREW_TAP_TOKEN` in
+  `homebrew-tap/.git/config`, not the job's `GITHUB_TOKEN` (#133)
+- A `build-command`, `scrut-setup-cmd` or `scrut-build-cmd` no longer
+  inherits a Git credential from the workflow's checkout. This is not a
+  breaking change: every value in use across the consuming repositories
+  is a tool install or a compile, and none runs an authenticated Git
+  operation. A command that needs one must be given a token of its own
+  (#133)
+
+### Fixed
+
+- `check-tool-versions.yml` fails the job when
+  `scripts/check-tool-versions.py` does not run to completion. The step
+  routed every non-zero status other than `2` into the `gh issue edit` call
+  that rewrites the tracking issue body. An exception outside the per-tool
+  `try` in `main()`, an unparseable PEP 723 header, and a uv that cannot
+  resolve an interpreter all leave stdout empty, so the step blanked that
+  issue's body and the scheduled run still reported green. A status outside
+  `0`, `1` and `2` is now rejected, a non-zero status paired with an empty
+  report is refused rather than written, and `GITHUB_OUTPUT` is published
+  only once both hold, so an unvalidated status cannot reach the steps that
+  key on it (#140)
 
 ## [4.1.0] - 2026-09-21
 
