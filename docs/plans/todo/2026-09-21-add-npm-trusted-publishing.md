@@ -108,10 +108,17 @@ false`.
   the publishing, failing with a message naming `node-version` when `node` is
   below 22.14.0 or `npm` below 11.5.1. Comparison is a small bash function
   splitting on `.`, not `sort -V`, so the fixture can run the same step on
-  macOS. Installing a newer npm is deliberately not offered: an unpinned
+  macOS. A prerelease sorts below the release it precedes, so an npm
+  `11.5.1-rc.0` does not clear a minimum of 11.5.1. Installing a newer npm is deliberately not offered: an unpinned
   `npm install -g npm@latest` would make the registry the sole integrity
   boundary, which the trust model forbids.
 - Detect the lockfile, then the shared install step.
+- An `environment` input, empty by default, applied to the job. Added after the
+  branch review: the OIDC token's `environment` claim comes from this job, and a
+  job calling a reusable workflow may not declare an environment of its own, so
+  without the input a trusted publisher scoped to an environment is unreachable.
+  Measured on 2026-09-24, along with `workflow_ref` naming the caller and
+  `job_workflow_ref` naming this repository.
 - **Disable provenance**, guarded by `if: ${{ !inputs.provenance }}`, writing
   `NPM_CONFIG_PROVENANCE=false` to `GITHUB_ENV`. Deliberately a conditional step
   rather than `NPM_CONFIG_PROVENANCE: ${{ inputs.provenance }}` on the publish
@@ -247,6 +254,12 @@ npmjs.com rather than GitHub Packages:
 
 - A `dry-run` input, with a `working-directory` or fixture package, would let
   `run-ci.yml` self-host both publish workflows the way it self-hosts the
-  others, and would turn the `shape` assertions into an end-to-end test.
+  others, and would turn the `shape` assertions into an end-to-end test. Filed
+  as [#152](https://github.com/cboone/gh-actions/issues/152).
+- `run-ci.yml`'s own six `npm ci` invocations use two different flag sets, which
+  this change leaves alone rather than widening its own diff. Filed as
+  [#151](https://github.com/cboone/gh-actions/issues/151).
 - `cboone/cboone-alpine-plugins` needs either a committed lockfile or
   `allow-npm-install: true` before it moves to v5.
+- The manual verification above is the issue's own done-when and is still
+  outstanding: it needs a package on npmjs.com and a merged tag.
