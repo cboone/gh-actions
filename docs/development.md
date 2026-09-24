@@ -209,6 +209,47 @@ crates.io) be the sole integrity boundary for anything that runs in
 CI.** Registry trust is fine for local developer convenience; it is
 not fine for the supply chain feeding 26+ downstream repos.
 
+### Checkout Credentials
+
+Every `actions/checkout` step sets `persist-credentials: false`. By default the
+action writes the token it authenticated with into the checkout's
+`.git/config` and leaves it there for the rest of the job, where every later
+step can read it, including third-party tooling this repository invokes but
+does not control, and anything that archives or uploads the workspace. zizmor
+calls that class of exposure
+[`artipacked`](https://docs.zizmor.sh/audits/#artipacked).
+
+One checkout keeps its credential: the Homebrew tap checkout in
+`release-rust-binaries.yml`, because the "Commit and push formula" step pushes
+to the tap with it. It sets `persist-credentials: true` explicitly rather than
+relying on the default, so the intent is visible at the call site, and it
+carries a `name:` so the exemption can be keyed on something a reordering
+cannot move. The credential there is the caller's tap-scoped
+`HOMEBREW_TAP_TOKEN`, in the tap's own checkout under `homebrew-tap/`, not the
+job's `GITHUB_TOKEN` in the workspace root. The alternative, pushing to a URL
+with the token in it, was rejected: that puts a secret on a command line, where
+`ps` and Git's own error output can surface it.
+
+Two things that look like they need the credential do not:
+
+- **`gh`** authenticates through `GH_TOKEN` in the environment, not through
+  `.git/config`. `create-gh-release`, `check-tool-versions.yml`'s issue filing
+  and `release-rust-binaries.yml`'s `gh release download` are all unaffected.
+- **`actions/create-pull-request`** authenticates from its own `token` input.
+  Upstream `peter-evans/create-pull-request` saves and unsets any persisted
+  `extraheader`, configures its own, pushes, then restores it, and hides
+  `actions/checkout` v6 credential files to avoid a duplicate auth header.
+  Callers should pair it with `persist-credentials: false`.
+
+`tests/check-checkout-credentials.mjs` enforces this over every workflow and
+composite action, and `run-ci.yml`'s `checkout-credentials` job runs it. Adding
+a checkout that persists its credential means giving the step a `name:`, adding
+it to the checker's `PERSISTS_CREDENTIALS` map with the reason, and saying why
+here. The map's reason is printed on every passing run and quoted back when a
+listed checkout contradicts it, so a rationale that has gone stale is visible in
+the CI log rather than buried in the file. Prefer passing a token to the single
+step that needs it.
+
 ### Version Pinning
 
 Repository-controlled tool version defaults use exact patch releases.
@@ -451,6 +492,10 @@ jobs:
 
 1. Create `.github/workflows/<name>.yml` with an `on: workflow_call` trigger.
 1. Define inputs with types and defaults; keep permissions minimal.
+1. Set `persist-credentials: false` on every `actions/checkout` step, per
+   "Checkout Credentials" above. A checkout that needs the credential has to
+   name the step that consumes it and be listed in
+   `tests/check-checkout-credentials.mjs`.
 1. For a release binary, fetch `install-pinned-tool.sh` from
    `job.workflow_repository` at `job.workflow_sha` and run it, as
    `lint-shell.yml` does; a `./` composite action reference would resolve

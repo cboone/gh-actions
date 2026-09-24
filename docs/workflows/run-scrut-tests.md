@@ -15,6 +15,11 @@ Only the pinned version is supported. See the
 
 **Permissions:** `contents: read`
 
+`scrut-setup-cmd` runs in the checked-out workspace, which the workflow checks out
+with `persist-credentials: false`. It does not inherit a Git credential from
+`.git/config`, so a command that has to authenticate to GitHub needs a token
+of its own, through `gh` and `GH_TOKEN` or an explicit remote.
+
 ## Inputs
 
 | Name              | Type    | Default         | Description                                                             |

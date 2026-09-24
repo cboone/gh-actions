@@ -17,6 +17,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   executed the block, and the statuses it mishandled reported green. Each
   refusal case names the guard
   it covers; the development reference records why (#140)
+- `checkout-credentials` job in `run-ci.yml`, running
+  `tests/check-checkout-credentials.mjs` over every workflow and
+  composite action, so the default cannot come back unnoticed. Five
+  things fail it, each with its own diagnostic: a listed exemption that
+  no longer names exactly one checkout, whether it was renamed, deleted
+  or pointed at a different action; a checkout added without
+  `persist-credentials`, a checkout that keeps its credential without
+  being listed, a value that is not a YAML boolean, and a listed
+  checkout that stopped keeping its credential. The boolean rule matters
+  because the action enables persistence only when the normalized input
+  equals `TRUE`: `yes` and `on` read as enabling and are not, while a
+  quoted `"true"` enables while looking like a string. A passing run
+  prints each exemption and its reason.
+  `tests/fixtures/workflow-steps.mjs` gains a `usesSteps()` walk beside
+  `runSteps()` for it. zizmor's `artipacked` audit (#134) will cover the
+  same ground from outside (#133)
+
+### Changed
+
+- Every `actions/checkout` step sets `persist-credentials: false`. The
+  action's default writes the token it authenticated with into the
+  checkout's `.git/config` and leaves it there for the rest of the job,
+  where every later step can read it, including third-party tooling these
+  workflows invoke but do not control, and anything that archives or
+  uploads the workspace; zizmor calls that class of exposure
+  `artipacked`. Every checkout in the repository took that default,
+  including the ones that hand the workspace to GoReleaser, a cargo
+  toolchain, `npm ci` beside a publish token, and a caller-supplied
+  `build-command`. The `tool-version-reporting` job that #140 added while
+  this was open took it too, and the new check caught it on the merge
+  (#133)
+- The Homebrew tap checkout in `release-rust-binaries.yml` is the single
+  exception and now says so: it sets `persist-credentials: true`
+  explicitly and is named `Check out the Homebrew tap`, because the
+  `Commit and push formula` step pushes with that credential. The token
+  is the caller's tap-scoped `HOMEBREW_TAP_TOKEN` in
+  `homebrew-tap/.git/config`, not the job's `GITHUB_TOKEN` (#133)
+- A `build-command`, `scrut-setup-cmd` or `scrut-build-cmd` no longer
+  inherits a Git credential from the workflow's checkout. This is not a
+  breaking change: every value in use across the consuming repositories
+  is a tool install or a compile, and none runs an authenticated Git
+  operation. A command that needs one must be given a token of its own
+  (#133)
 
 ### Fixed
 

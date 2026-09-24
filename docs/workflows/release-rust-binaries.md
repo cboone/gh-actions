@@ -10,6 +10,12 @@ workflow reads the channel from `rust-toolchain-file` (default
 file at the repo root. At least one of these must resolve to a value or the
 workflow fails fast.
 
+Every checkout drops its Git credential, apart from the Homebrew tap checkout,
+which keeps `HOMEBREW_TAP_TOKEN` in `homebrew-tap/.git/config` because the
+formula commit is pushed with it. The source checkout the build and release
+jobs use does not carry a credential into the cargo toolchain or the uploaded
+artifacts.
+
 **Permissions:** `contents: write`
 
 ## Inputs

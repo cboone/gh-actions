@@ -114,6 +114,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Resolve Rust toolchain
         id: rust-toolchain
@@ -324,11 +325,21 @@ jobs:
             fi
           fi
 
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The one checkout in this repository that keeps its credential.
+      # "Commit and push formula" below pushes to the tap, and the credential
+      # it pushes with is the one this step leaves in
+      # homebrew-tap/.git/config. That credential is the caller's
+      # HOMEBREW_TAP_TOKEN, scoped to the tap, not the job's GITHUB_TOKEN, and
+      # it lives in the tap's own checkout rather than the workspace root. The
+      # step is named so tests/check-checkout-credentials.mjs can key its
+      # exemption on something a reordering cannot move.
+      - name: Check out the Homebrew tap
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ inputs.homebrew-tap }}
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           path: homebrew-tap
+          persist-credentials: true
 
       - name: Detect binary name
         id: meta

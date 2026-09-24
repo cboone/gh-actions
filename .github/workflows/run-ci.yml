@@ -23,6 +23,10 @@ name: Run CI
 # `reuse` runs `run-reuse` against tests/fixtures/reuse on Linux amd64,
 # Linux arm64 and macOS arm64, covering the uv recipe that action carries
 # for want of a `./` path to set-up-uv (#102).
+# `checkout-credentials` holds every `actions/checkout` in the repository to
+# `persist-credentials: false`, apart from the one tap checkout that pushes,
+# so a new checkout cannot reintroduce the default that leaves the job's
+# token in `.git/config` for every later step to read (#133).
 # `tool-version-reporting` executes check-tool-versions.yml's own reporting
 # block against stub audits. That workflow runs only on a schedule or a
 # manual dispatch, so no push-triggered job executes the block, and the
@@ -57,6 +61,8 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install pinned TruffleHog and scan the checkout
         uses: ./actions/run-trufflehog
@@ -124,6 +130,8 @@ jobs:
           - yamllint-only
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -206,6 +214,8 @@ jobs:
         language: [go, zig]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24.21.0"
@@ -242,6 +252,8 @@ jobs:
         runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -307,6 +319,8 @@ jobs:
         runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install uv
         uses: ./actions/set-up-uv
@@ -337,6 +351,8 @@ jobs:
         runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -382,6 +398,8 @@ jobs:
         runner: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -401,6 +419,36 @@ jobs:
           export NODE_BIN
           scrut test tests/scrut/workflow-arg-binding.md
 
+  # One runner, not the installer matrix: the checker reads YAML and executes
+  # nothing platform-dependent, so a second runner would repeat an identical
+  # result. It needs npm only for the pinned `yaml` parser.
+  #
+  # What it catches, because each makes the job fail: a listed exemption that
+  # no longer names exactly one step, a checkout added without
+  # `persist-credentials`, a checkout that keeps its credential without being
+  # listed in the checker, a value that is not a YAML boolean, and a listed
+  # checkout that stopped keeping its credential. Each reports separately, so
+  # a renamed exempted step does not read as an unlisted checkout.
+  checkout-credentials:
+    name: Checkout credentials
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.21.0"
+
+      - name: Install locked test dependencies
+        run: npm ci
+
+      - name: Check the checkout credential policy
+        run: node tests/check-checkout-credentials.mjs
   # check-tool-versions.yml runs weekly on a schedule, so nothing here would
   # otherwise execute its reporting logic until it next fired, and the failure
   # mode it guards against is one that reports green. This job runs that
@@ -417,6 +465,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install uv
         uses: ./actions/set-up-uv
@@ -514,6 +564,8 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install shfmt (bare binary, committed checksums)
         uses: ./actions/install-pinned-tool
@@ -818,6 +870,8 @@ jobs:
       RUST_VERSION: "1.97.1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Caches saved on main are readable from a pull request against it, so
       # this call builds only when the pins change or the entry has aged
@@ -1130,6 +1184,8 @@ jobs:
         sha512-cPNjlavSiMfH/bB/Zl5GEF+94s6C77mdvghvVsclco1Ly0VWN3EpH5L9EE3bDGLDpE7m9EnYfRs8TOfZugGrUg==
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -1272,6 +1328,8 @@ jobs:
         runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install uv
         uses: ./actions/set-up-uv
@@ -1308,6 +1366,8 @@ jobs:
         runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # The order of these three lines is load-bearing. run-reuse passes
       # them through as positional arguments in order, and `--root` is a
