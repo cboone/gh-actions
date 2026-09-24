@@ -23,6 +23,11 @@ name: Run CI
 # `reuse` runs `run-reuse` against tests/fixtures/reuse on Linux amd64,
 # Linux arm64 and macOS arm64, covering the uv recipe that action carries
 # for want of a `./` path to set-up-uv (#102).
+# `tool-version-reporting` executes check-tool-versions.yml's own reporting
+# block against stub audits. That workflow runs only on a schedule or a
+# manual dispatch, so no push-triggered job executes the block, and the
+# statuses it used to mishandle failed green: nothing else would notice the
+# guards going away (#140).
 
 on:
   push:
@@ -395,6 +400,29 @@ jobs:
           NODE_BIN="$(command -v node)"
           export NODE_BIN
           scrut test tests/scrut/workflow-arg-binding.md
+
+  # check-tool-versions.yml runs weekly on a schedule, so nothing here would
+  # otherwise execute its reporting logic until it next fired, and the failure
+  # mode it guards against is one that reports green. This job runs that
+  # workflow's literal `Run version check` block against stub audits.
+  #
+  # ubuntu-latest alone, unlike the installer matrices: this covers a shell
+  # block, and check-tool-versions.yml is scheduled on ubuntu-latest and runs
+  # nowhere else, so a second userland would assert nothing a consumer gets.
+  tool-version-reporting:
+    name: Tool version reporting
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: ./actions/set-up-uv
+
+      - name: Check the version check refuses incomplete runs
+        run: uv run --script tests/check-tool-version-reporting.py
 
   # The action job below proves that an installed dictionary resolves; the two
   # jobs here prove the workflow wiring, which is the half that job cannot
