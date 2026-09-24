@@ -282,8 +282,9 @@ Two claims the branch rests on were checked rather than trusted:
 
 ## Review Resolution
 
-Total items: 6. Resolved: 4. Filed as issues: 2. Outstanding: 1, which only a real publish can
-close.
+Total items: 6. Resolved in this branch: 2. Filed as issues: 2. Skipped by the user's decision:
+
+1. Outstanding: 1, which only a real publish can close.
 
 Everything above this heading is the review as written, before any of it was acted on. Its
 central finding, that the Environment row was wrong, is fixed; read the findings as a record of
