@@ -197,6 +197,24 @@ const scenarios = {
       assert.equal(step.run, first[1].run, `the install step in ${label} has drifted from ${first[0]}`);
     }
     assert.equal(detectSteps[1][1].run, detectSteps[0][1].run, "the lockfile probes in the two publish workflows have drifted");
+
+    // The shared block reads three variables, and each file binds LOCKFILE to
+    // its own probe. Identical `run:` text says nothing about that, so a
+    // binding dropped or pointed at the wrong step would leave the copies
+    // matching while the step misbehaved: an empty ALLOW_NPM_INSTALL refuses a
+    // fallback the caller opted into, and an empty LOCKFILE refuses an install
+    // the repository has a lockfile for.
+    const lockfileBinding = {
+      "publish-to-npm.yml": "${{ steps.lockfile.outputs.path }}",
+      "publish-to-npm-with-oidc.yml": "${{ steps.lockfile.outputs.path }}",
+      "deploy-to-pages.yml": "${{ steps.npm-cache.outputs.cache-dependency-path }}",
+    };
+    for (const [label, step] of installSteps) {
+      assert.equal(step.shell, "bash", `${label}: the install step must name its shell`);
+      assert.equal(step.env?.LOCKFILE, lockfileBinding[label], `${label}: LOCKFILE`);
+      assert.equal(step.env?.ALLOW_NPM_INSTALL, "${{ inputs.allow-npm-install }}", `${label}: ALLOW_NPM_INSTALL`);
+      assert.equal(step.env?.RUN_INSTALL_SCRIPTS, "${{ inputs.run-install-scripts }}", `${label}: RUN_INSTALL_SCRIPTS`);
+    }
   },
 
   // What separates the two publish workflows: each declares only the permission
