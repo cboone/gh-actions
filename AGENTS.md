@@ -18,6 +18,8 @@ Reusable composite actions and workflows for downstream CI/CD. Tool downloads us
 
 Use the strongest supported pin: full SHA plus a version comment for Actions; SHA-256 for binary downloads; reviewed hash manifests for Python; lockfile integrity for npm tools. Never make an upstream registry the sole integrity boundary for CI. Exact devDependency versions and dependent-scoped npm overrides preserve reviewed dependency boundaries.
 
+Every `actions/checkout` sets `persist-credentials: false`, so the job's token does not stay in `.git/config` for later steps to read. The only exception is the Homebrew tap checkout in `release-rust-binaries.yml`, which pushes; `tests/check-checkout-credentials.mjs` enforces the rule.
+
 The full policy, checksum exceptions, consumer-controlled Rust pins, source-pinned clap-validator installation, dictionary integrity rules and automated update coverage live in [the development reference](docs/development.md#pinning-policy-and-trust-model). Read it before changing any dependency or install path. Preserve `dtolnay/rust-toolchain`'s dated default-branch comment because upstream supplies no semver tags.
 
 ## Navigation and scoped instructions

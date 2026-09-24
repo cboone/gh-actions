@@ -184,11 +184,21 @@ integrity check available for its ecosystem.
 > Never let an upstream registry (npm, PyPI, crates.io) be the sole
 > integrity boundary for anything that runs in CI.
 
+Pinning is not the whole of it. Every `actions/checkout` also sets
+`persist-credentials: false`, so the job's token does not sit in
+`.git/config` for every later step, and every workspace upload, to
+collect. The one checkout that keeps its credential is the Homebrew tap
+checkout in `release-rust-binaries.yml`, which pushes the updated
+formula with it. See
+[checkout credentials](docs/development.md#checkout-credentials).
+
 [`.github/workflows/check-tool-versions.yml`](.github/workflows/check-tool-versions.yml)
 runs weekly to surface upstream releases of tools that Dependabot does not
 track (workflow `env:` versions, hardcoded checksums, the yamllint hash
 manifest), opening or updating a single tracking issue when something is
-outdated.
+outdated. The audit's documented exit statuses are its whole contract: a run
+that does not complete fails the job rather than overwriting that issue with
+an empty body.
 
 For the long-form version of this policy, see
 [the development reference](docs/development.md#pinning-policy-and-trust-model).

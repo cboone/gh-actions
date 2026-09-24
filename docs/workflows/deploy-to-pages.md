@@ -24,6 +24,11 @@ build fails rather than resolving versions at build time; set
 unless `run-install-scripts: true`, which a build needing a `postinstall` step
 has to set.
 
+`build-command` runs in the checked-out workspace, which the workflow checks out
+with `persist-credentials: false`. It does not inherit a Git credential from
+`.git/config`, so a command that has to authenticate to GitHub needs a token
+of its own, through `gh` and `GH_TOKEN` or an explicit remote.
+
 **Permissions:** `contents: read`, `pages: write`, `id-token: write`
 
 ## Inputs

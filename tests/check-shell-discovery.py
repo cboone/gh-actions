@@ -101,8 +101,13 @@ SLOW_PATH_NOTICE = "discovery is checking one file at a time"
 
 def run_block(name):
     """Read a named step's literal run block without a YAML dependency."""
-    step = WORKFLOW.read_text().split(f"      - name: {name}\n", 1)[1]
-    step = step.split("      - name:", 1)[0]
+    content = WORKFLOW.read_text()
+    marker = f"      - name: {name}\n"
+    if marker not in content:
+        raise AssertionError(f"Missing {name} step in {WORKFLOW}")
+    step = content.split(marker, 1)[1].split("      - name:", 1)[0]
+    if "        run: |\n" not in step:
+        raise AssertionError(f"Expected a literal run block in {name}")
     lines = step.split("        run: |\n", 1)[1].splitlines()
     body = []
     for line in lines:

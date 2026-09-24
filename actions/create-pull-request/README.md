@@ -32,7 +32,17 @@ action individually.
 
 ## Usage
 
+Check out with `persist-credentials: false`. The action pushes with the `token`
+input, not with a credential left behind in `.git/config`: upstream saves and
+unsets any persisted `extraheader`, configures its own, pushes, then restores
+it. Leaving the default in place only leaves the job's token readable by every
+later step.
+
 ```yaml
+- uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+  with:
+    persist-credentials: false
+
 - uses: cboone/gh-actions/actions/create-pull-request@v4.1.0
   with:
     branch: chore/update-data

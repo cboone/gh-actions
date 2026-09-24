@@ -36,6 +36,12 @@ overrides. Network proxy and certificate settings remain available.
 The replacement build script reports `scrut 0.4.3` from package metadata;
 the installer validates that exact version before exposing the executable.
 
+`scrut-setup-cmd` and `scrut-build-cmd` run in the checked-out workspace, which
+the workflow checks out with `persist-credentials: false`. Neither inherits a
+Git credential from `.git/config`, so a command that has to authenticate to
+GitHub needs a token of its own, through `gh` and `GH_TOKEN` or an explicit
+remote.
+
 ## Inputs
 
 | Name                | Type    | Default                       | Description                                          |

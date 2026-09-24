@@ -234,6 +234,47 @@ crates.io) be the sole integrity boundary for anything that runs in
 CI.** Registry trust is fine for local developer convenience; it is
 not fine for the supply chain feeding 26+ downstream repos.
 
+### Checkout Credentials
+
+Every `actions/checkout` step sets `persist-credentials: false`. By default the
+action writes the token it authenticated with into the checkout's
+`.git/config` and leaves it there for the rest of the job, where every later
+step can read it, including third-party tooling this repository invokes but
+does not control, and anything that archives or uploads the workspace. zizmor
+calls that class of exposure
+[`artipacked`](https://docs.zizmor.sh/audits/#artipacked).
+
+One checkout keeps its credential: the Homebrew tap checkout in
+`release-rust-binaries.yml`, because the "Commit and push formula" step pushes
+to the tap with it. It sets `persist-credentials: true` explicitly rather than
+relying on the default, so the intent is visible at the call site, and it
+carries a `name:` so the exemption can be keyed on something a reordering
+cannot move. The credential there is the caller's tap-scoped
+`HOMEBREW_TAP_TOKEN`, in the tap's own checkout under `homebrew-tap/`, not the
+job's `GITHUB_TOKEN` in the workspace root. The alternative, pushing to a URL
+with the token in it, was rejected: that puts a secret on a command line, where
+`ps` and Git's own error output can surface it.
+
+Two things that look like they need the credential do not:
+
+- **`gh`** authenticates through `GH_TOKEN` in the environment, not through
+  `.git/config`. `create-gh-release`, `check-tool-versions.yml`'s issue filing
+  and `release-rust-binaries.yml`'s `gh release download` are all unaffected.
+- **`actions/create-pull-request`** authenticates from its own `token` input.
+  Upstream `peter-evans/create-pull-request` saves and unsets any persisted
+  `extraheader`, configures its own, pushes, then restores it, and hides
+  `actions/checkout` v6 credential files to avoid a duplicate auth header.
+  Callers should pair it with `persist-credentials: false`.
+
+`tests/check-checkout-credentials.mjs` enforces this over every workflow and
+composite action, and `run-ci.yml`'s `checkout-credentials` job runs it. Adding
+a checkout that persists its credential means giving the step a `name:`, adding
+it to the checker's `PERSISTS_CREDENTIALS` map with the reason, and saying why
+here. The map's reason is printed on every passing run and quoted back when a
+listed checkout contradicts it, so a rationale that has gone stale is visible in
+the CI log rather than buried in the file. Prefer passing a token to the single
+step that needs it.
+
 ### Version Pinning
 
 Repository-controlled tool version defaults use exact patch releases.
@@ -339,6 +380,19 @@ The consumer's `lint` target runs only `golangci-lint run ./...`.
   is correct if a step or fixture ever runs under `set -u`, where expanding an
   empty array aborts on bash 3.2. Sites where the list is required test
   `-eq 0` instead and fail with a diagnostic, which is not redundant.
+
+  The divergence from the composite form is deliberate and settled (#96).
+  Converging the workflows on one argument per line would turn a caller's
+  `test-args: --all-features --no-fail-fast` into a single malformed argument,
+  a second breaking migration one major after v4 bound these inputs through
+  `env:` and told callers to fold multi-line values onto one line. What the
+  line form buys is an argument containing a space, which no current consumer
+  passes, and the case that would otherwise lose data is rejected with a
+  diagnostic rather than truncated. Composite actions carry no equivalent
+  installed base, so they keep the more capable form. Revisit only for a
+  caller that needs it, and alongside other breaking changes in the same
+  major.
+
 - Ordinary data and argument inputs must be passed to shell steps via `env:` mappings,
   using quoted variables and explicit argument arrays, not inline expressions.
   Explicit command inputs intentionally execute through `run:`:
@@ -478,6 +532,10 @@ jobs:
    Every caller must grant everything the workflow declares, including
    for a job an `if:` will skip, so a mode needing a privileged scope
    belongs in its own workflow rather than behind an input.
+1. Set `persist-credentials: false` on every `actions/checkout` step, per
+   "Checkout Credentials" above. A checkout that needs the credential has to
+   name the step that consumes it and be listed in
+   `tests/check-checkout-credentials.mjs`.
 1. For a release binary, fetch `install-pinned-tool.sh` from
    `job.workflow_repository` at `job.workflow_sha` and run it, as
    `lint-shell.yml` does; a `./` composite action reference would resolve
@@ -612,6 +670,45 @@ workflow lets `setup-node` cache. The `parity` scenario holds the three
 copies of the install step, and the two copies of the lockfile probe,
 byte-identical, since a reusable workflow cannot reach a repository-owned
 composite action by a `./` path and the logic has to be duplicated.
+
+`tests/check-tool-version-reporting.py` executes `check-tool-versions.yml`'s
+literal `Run version check` block against stand-in audits with fixed streams
+and exit statuses, driven by the `tool-version-reporting` job. That workflow
+runs only on a weekly schedule or a manual dispatch, so no push-triggered job
+executes the block, and the statuses it mishandled reported green: the step
+routed every non-zero status
+other than `2` into `gh issue edit --body-file`, so a run that crashed before
+writing anything blanked the tracking issue while the job passed. The block
+runs under `bash -e -c`, not the `bash -e -o pipefail -c`
+`check-shell-discovery.py` uses, because the runner's default `run:` shell is
+`bash -e {0}` and this workflow sets neither `shell: bash` nor
+`defaults.run.shell`. `ubuntu-latest` alone, unlike the installer matrices:
+this is a shell block, and the workflow is scheduled on `ubuntu-latest` and
+runs nowhere else, so a second userland would assert nothing a consumer gets.
+
+Each of its four refusal cases names the guard it covers, because the two
+guards overlap and planting proved the overlap hid one of them:
+
+- `unexpected status` uses a status outside the contract with a report that is
+  deliberately not empty, so only the status guard can reject it. Deleting that
+  guard publishes `status=3` and the case fails on the exit status.
+- `missing audit` removes the stand-in entirely, the shape of a uv that never
+  ran the script: the redirect still creates an empty report and bash returns
+  `127`. With the status guard deleted, the empty-report guard catches `127`
+  instead, and its message reads `exited 127 with an empty report`, so an
+  assertion naming the status alone passed on either refusal. Both status cases
+  now assert `expected 0, 1 or 2`; keep that wording in the assertion and the
+  annotation together, or this case stops covering the guard it names.
+- `crash on exit 1` and `crash on exit 2` pair a documented status with empty
+  stdout. The status guard cannot see either, so they are the only coverage of
+  the empty-report guard, and status `2` is carried separately because that
+  guard must not be keyed to status `1` alone.
+
+Every refusal also asserts that `GITHUB_OUTPUT` stayed empty and that the
+report group had already been printed. Those two are each the sole coverage of
+an ordering the block depends on: publishing outputs before the guards, or
+printing the report after them, leaves every exit status and annotation
+unchanged, and nothing else turns red.
 
 `actions/install-cspell-dictionaries` is tested on the same three
 runners the same way, through `run-cspell` against a fixture kept
