@@ -52,7 +52,8 @@ usage examples.
 | [release-go-binaries](docs/workflows/release-go-binaries.md)                           | workflow | GoReleaser build and publish                           |
 | [release-rust-binaries](docs/workflows/release-rust-binaries.md)                       | workflow | Rust matrix build, optional Homebrew formula update    |
 | [release-zig-binaries](docs/workflows/release-zig-binaries.md)                         | workflow | Zig cross-compile from a single runner, GitHub Release |
-| [publish-to-npm](docs/workflows/publish-to-npm.md)                                     | workflow | publish an npm package to a registry                   |
+| [publish-to-npm](docs/workflows/publish-to-npm.md)                                     | workflow | publish an npm package with a registry token           |
+| [publish-to-npm-with-oidc](docs/workflows/publish-to-npm-with-oidc.md)                 | workflow | publish to npmjs.com with OIDC, no token, provenance   |
 | [set-up-goreleaser](actions/set-up-goreleaser/README.md)                               | action   | install GoReleaser                                     |
 
 ### Security and supply chain
@@ -210,7 +211,9 @@ nor `Darwin` matches. Windows runners are not supported.
 
 ## Migration
 
-See [docs/migrations/v4.md](docs/migrations/v4.md) for the v4 argument-binding
+See [docs/migrations/v5.md](docs/migrations/v5.md) for the v5 npm install
+hardening and trusted publishing,
+[docs/migrations/v4.md](docs/migrations/v4.md) for the v4 argument-binding
 changes, the Rust tool checksum inputs and the reuse 6 lint behavior, and
 [docs/migrations/v3.md](docs/migrations/v3.md) for the v3 path renames.
 

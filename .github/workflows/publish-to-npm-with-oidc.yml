@@ -1,0 +1,205 @@
+name: Publish to npm with OIDC
+
+# Publishes to npmjs.com through npm's trusted publishing: the job presents a
+# GitHub OIDC token, npm validates it against a publisher configured on the
+# package, and no credential is stored anywhere. Public packages also get
+# provenance attestations without asking.
+#
+# The publisher on npmjs.com names the *caller's* repository and the *caller's*
+# workflow filename, not this file: npm validates the calling workflow, which is
+# what makes trusted publishing through a reusable workflow work at all.
+#
+# Separate from publish-to-npm.yml because a caller must grant every permission
+# the workflow it calls declares, and a nested job's permissions are checked
+# before its `if:` is evaluated. One workflow covering both auth modes would
+# force `id-token: write` on callers that publish with a token and will never
+# mint an OIDC token.
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node.js version to install.
+        type: string
+        default: "24.21.0"
+      registry-url:
+        description: npm registry URL. Only npmjs.com supports trusted publishing.
+        type: string
+        default: https://registry.npmjs.org
+      provenance:
+        description: Publish provenance attestations. Turn off for packages published with restricted access.
+        type: boolean
+        default: true
+      environment:
+        description: Environment for the publish job. Set it when the trusted publisher names one.
+        type: string
+        default: ""
+      allow-npm-install:
+        description: Permit npm install when the repository has no lockfile.
+        type: boolean
+        default: false
+      run-install-scripts:
+        description: Run dependency lifecycle scripts while installing.
+        type: boolean
+        default: false
+      timeout-minutes:
+        description: Job timeout in minutes.
+        type: number
+        default: 10
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    # The OIDC token's `environment` claim comes from this job, and a caller
+    # cannot supply one: `environment` is not among the keywords a job calling a
+    # reusable workflow may use. So a publisher configured with an environment
+    # is reachable only through this input. Measured on 2026-09-24: an empty
+    # name runs the job with the claim absent, and a name passed through the
+    # input reaches the claim.
+    environment: ${{ inputs.environment }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      # First, and before the checkout: the likeliest mistake is carrying
+      # publish-to-npm.yml's GitHub Packages default across, and the publish
+      # step would report it as an authentication failure.
+      - name: Check the registry
+        shell: bash
+        env:
+          REGISTRY_URL: ${{ inputs.registry-url }}
+        run: |
+          if [[ "${REGISTRY_URL%/}" != "https://registry.npmjs.org" ]]; then
+            echo "::error::registry-url must be https://registry.npmjs.org, not ${REGISTRY_URL}"
+            echo "::error::Use publish-to-npm.yml to publish to any other registry."
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Detect lockfile
+        id: lockfile
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "path=package-lock.json" >> "${GITHUB_OUTPUT}"
+          elif [ -f npm-shrinkwrap.json ]; then
+            echo "path=npm-shrinkwrap.json" >> "${GITHUB_OUTPUT}"
+          else
+            echo "path=" >> "${GITHUB_OUTPUT}"
+          fi
+
+      # No dependency cache during a publish: a cache entry poisoned by an
+      # earlier job would otherwise reach the published artifact. Clearing
+      # `cache:` alone does not do it, because setup-node enables npm caching on
+      # its own whenever package.json names npm in packageManager or
+      # devEngines.packageManager.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.registry-url }}
+          package-manager-cache: false
+
+      # After setup-node, so it reads the Node that will do the publishing.
+      # Below these versions npm has no OIDC support and reports only that
+      # authentication failed. Installing a newer npm here is deliberately not
+      # offered: an unpinned `npm install -g npm@latest` would make the registry
+      # the sole integrity boundary for the tool doing the publishing.
+      - name: Check npm and Node versions
+        shell: bash
+        env:
+          MINIMUM_NODE: 22.14.0
+          MINIMUM_NPM: 11.5.1
+          # The first Node release whose bundled npm is new enough. No Node 22
+          # or 23 release ships one: 22.x tops out at npm 10.9.x, so npm's own
+          # Node 22.14.0 floor is necessary without being sufficient here.
+          NODE_FOR_NPM: 24.5.0
+        run: |
+          # Compares dot-separated numeric fields, rather than `sort -V`, which
+          # macOS spells differently. A prerelease sorts below the release it
+          # precedes, so 11.5.1-rc.0 does not satisfy a minimum of 11.5.1, while
+          # a prerelease of a higher version still does.
+          at_least() {
+            local minimum="$1" actual="${2#v}" want have prerelease=""
+            case "${actual}" in
+              *-*) prerelease="yes" ;;
+            esac
+            actual="${actual%%-*}"
+            while [[ -n "${minimum}" || -n "${actual}" ]]; do
+              want="${minimum%%.*}"
+              have="${actual%%.*}"
+              want="${want//[!0-9]/}"
+              have="${have//[!0-9]/}"
+              if (( 10#0${have} > 10#0${want} )); then
+                return 0
+              fi
+              if (( 10#0${have} < 10#0${want} )); then
+                return 1
+              fi
+              if [[ "${minimum}" == *.* ]]; then
+                minimum="${minimum#*.}"
+              else
+                minimum=""
+              fi
+              if [[ "${actual}" == *.* ]]; then
+                actual="${actual#*.}"
+              else
+                actual=""
+              fi
+            done
+            # Every field matched, so only the prerelease tail can separate them.
+            [[ -z "${prerelease}" ]]
+          }
+
+          node_version="$(node --version)"
+          npm_version="$(npm --version)"
+          status=0
+          if ! at_least "${MINIMUM_NODE}" "${node_version}"; then
+            echo "::error::Node ${node_version} is below ${MINIMUM_NODE}. Raise node-version."
+            status=1
+          fi
+          if ! at_least "${MINIMUM_NPM}" "${npm_version}"; then
+            echo "::error::npm ${npm_version} is below ${MINIMUM_NPM}. Use node-version ${NODE_FOR_NPM} or later."
+            status=1
+          fi
+          exit "${status}"
+
+      # Byte-identical to the install steps in publish-to-npm.yml and
+      # deploy-to-pages.yml; the `parity` scenario in
+      # tests/fixtures/check-npm-publish.mjs fails if one copy drifts.
+      - name: Install dependencies
+        shell: bash
+        env:
+          LOCKFILE: ${{ steps.lockfile.outputs.path }}
+          ALLOW_NPM_INSTALL: ${{ inputs.allow-npm-install }}
+          RUN_INSTALL_SCRIPTS: ${{ inputs.run-install-scripts }}
+        run: |
+          args=(--include=dev --no-audit --no-fund)
+          [[ "${RUN_INSTALL_SCRIPTS}" == "true" ]] || args+=(--ignore-scripts)
+          if [[ -n "${LOCKFILE}" ]]; then
+            npm ci "${args[@]}"
+          elif [[ "${ALLOW_NPM_INSTALL}" == "true" ]]; then
+            echo "::warning::No lockfile found; npm install resolves versions at run time."
+            npm install "${args[@]}"
+          else
+            echo "::error::No lockfile found. Commit package-lock.json, or set allow-npm-install: true."
+            exit 1
+          fi
+
+      # Only ever set to false. npm reads an env config set to the empty string
+      # as true, and an explicit true would turn npm's automatic skip for a
+      # restricted package into a hard error.
+      - name: Disable provenance
+        if: ${{ !inputs.provenance }}
+        shell: bash
+        run: echo "NPM_CONFIG_PROVENANCE=false" >> "${GITHUB_ENV}"
+
+      # No NODE_AUTH_TOKEN, here or anywhere in this file: npm exchanges the
+      # OIDC token for a short-lived one of its own.
+      - name: Publish
+        run: npm publish

@@ -31,6 +31,14 @@ on:
         description: Node.js version to install.
         type: string
         default: "24.21.0"
+      allow-npm-install:
+        description: Permit npm install when the repository has no lockfile.
+        type: boolean
+        default: false
+      run-install-scripts:
+        description: Run dependency lifecycle scripts while installing.
+        type: boolean
+        default: false
       timeout-minutes:
         description: Job timeout in minutes.
         type: number
@@ -73,6 +81,13 @@ jobs:
           go-version-file: ${{ inputs.go-version-file }}
           cache: true
 
+      # `cache` and `package-manager-cache` are an if/else inside the action, so
+      # turning the automatic branch off leaves the explicit one above it
+      # untouched: a build with a lockfile still caches. Without that, a caller
+      # whose package.json names npm in packageManager gets automatic caching
+      # even when the probe above found no lockfile, and the action fails with
+      # `Dependencies lock file is not found` before the install step can report
+      # which input to set.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         if: inputs.setup-node
         with:
@@ -80,15 +95,30 @@ jobs:
           cache: ${{ steps.npm-cache.outputs.cache }}
           cache-dependency-path: >-
             ${{ steps.npm-cache.outputs.cache-dependency-path }}
+          package-manager-cache: false
 
-      - name: Install npm dependencies
+      # Byte-identical to the install steps in publish-to-npm.yml and
+      # publish-to-npm-with-oidc.yml; the `parity` scenario in
+      # tests/fixtures/check-npm-publish.mjs fails if one copy drifts.
+      - name: Install dependencies
         if: inputs.setup-node
-        run: >-
-          ${{
-            steps.npm-cache.outputs.cache-dependency-path != ''
-            && 'npm ci'
-            || 'npm install'
-          }}
+        shell: bash
+        env:
+          LOCKFILE: ${{ steps.npm-cache.outputs.cache-dependency-path }}
+          ALLOW_NPM_INSTALL: ${{ inputs.allow-npm-install }}
+          RUN_INSTALL_SCRIPTS: ${{ inputs.run-install-scripts }}
+        run: |
+          args=(--include=dev --no-audit --no-fund)
+          [[ "${RUN_INSTALL_SCRIPTS}" == "true" ]] || args+=(--ignore-scripts)
+          if [[ -n "${LOCKFILE}" ]]; then
+            npm ci "${args[@]}"
+          elif [[ "${ALLOW_NPM_INSTALL}" == "true" ]]; then
+            echo "::warning::No lockfile found; npm install resolves versions at run time."
+            npm install "${args[@]}"
+          else
+            echo "::error::No lockfile found. Commit package-lock.json, or set allow-npm-install: true."
+            exit 1
+          fi
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 

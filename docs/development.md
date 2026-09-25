@@ -30,6 +30,31 @@ The workflows in `.github/workflows/` that are not reusable, such as
 so reach its actions by `./` path directly. `check-tool-versions.yml` uses
 `set-up-uv` that way and carries no uv pin of its own.
 
+A reusable workflow's `permissions:` block is a request that the calling
+job's own grant caps, and the whole run fails at validation, before any
+job starts, when the caller grants less. **A nested job's permissions are
+validated before its `if:` condition is evaluated**, which is not
+documented upstream and was measured here on 2026-09-21: a caller
+granting `contents: read` alone failed at startup against a called
+workflow whose _skipped_ job declared `id-token: write`, while the same
+call from a caller granting `id-token: write` started, ran the other job
+and skipped that one. A workflow therefore cannot narrow what its callers
+must grant by gating a privileged job behind an input. That is why
+publishing with a token and publishing with OIDC are two files,
+`publish-to-npm.yml` and `publish-to-npm-with-oidc.yml`, rather than one
+workflow with an auth-mode input (#137).
+
+The OIDC token a nested job mints reports the caller in `workflow_ref`
+and this repository's workflow in `job_workflow_ref`, and takes its
+`environment` claim from the nested job itself. Measured on 2026-09-24
+by decoding the claims in a throwaway run. Two consequences for
+`publish-to-npm-with-oidc.yml`: an npm trusted publisher names the
+caller's own repository and workflow filename, so this repository never
+appears in a publisher configuration, and an environment-scoped
+publisher is reachable only through that workflow's `environment` input,
+since a job calling a reusable workflow may not declare an environment
+of its own. An empty name is accepted and leaves the claim absent.
+
 ### Naming
 
 - Use imperative path names for local composite actions and reusable workflows.
@@ -281,9 +306,20 @@ repo ships no value for either. The `VALIDATOR_REV` and `RUST_VERSION` in
 as its shfmt 3.13.1 fixtures.
 
 `node-version` defaults to a specific Node 24 LTS release
-(`"24.21.0"`) in `.github/workflows/lint-text.yml`, `.github/workflows/publish-to-npm.yml`, and
+(`"24.21.0"`) in `.github/workflows/lint-text.yml`, `.github/workflows/publish-to-npm.yml`,
+`.github/workflows/publish-to-npm-with-oidc.yml`, and
 `.github/workflows/deploy-to-pages.yml`; callers may override with their own pinned
 version.
+
+The npm 11.5.1 and Node 22.14.0 minimums that
+`publish-to-npm-with-oidc.yml` checks are floors npm imposes on trusted
+publishing, not versions this repository ships, so they are deliberately
+absent from `scripts/check-tool-versions.py`. They move only when npm's
+own requirements do. Its third constant, `NODE_FOR_NPM` (24.5.0), is the
+first Node release whose bundled npm clears that npm floor: no Node 22 or
+23 release does, topping out at npm 10.9.x, so the diagnostic names a
+version that can actually help instead of telling a caller on Node 22 to
+raise within a line that cannot.
 
 ### Automated Updates
 
@@ -362,13 +398,14 @@ The consumer's `lint` target runs only `golangci-lint run ./...`.
   Explicit command inputs intentionally execute through `run:`:
   `run-scrut-tests.yml` accepts `scrut-setup-cmd`; `run-go-ci.yml` and
   `run-zig-ci.yml` accept both `scrut-setup-cmd` and `scrut-build-cmd`;
-  `deploy-to-pages.yml` accepts `build-command`. Those six steps, and the two
-  ternaries in `deploy-to-pages.yml` and `publish-to-npm.yml` that select
-  between the literals `npm ci` and `npm install`, are the complete set of
-  `run:` blocks allowed to contain an expression. The
+  `deploy-to-pages.yml` accepts `build-command`. Those six steps are the
+  complete set of `run:` blocks allowed to contain an expression. The
   `workflow-arg-binding` CI job enforces that list; widening it means editing
   the allowlist in `tests/fixtures/check-workflow-arg-binding.mjs` and saying
-  why here.
+  why here. The npm install ternaries that used to sit beside them are gone:
+  the three npm install steps read the lockfile path and the caller's opt-in
+  through `env:` and choose between `npm ci` and `npm install` in the shell
+  (#137).
 - Release binaries install under `RUNNER_TEMP`. Tools called by name are added
   to `GITHUB_PATH`; the Go and Rust Codecov binaries use absolute paths instead.
   npm tools follow their lockfile trust path: `actions/run-cspell` installs
@@ -492,6 +529,9 @@ jobs:
 
 1. Create `.github/workflows/<name>.yml` with an `on: workflow_call` trigger.
 1. Define inputs with types and defaults; keep permissions minimal.
+   Every caller must grant everything the workflow declares, including
+   for a job an `if:` will skip, so a mode needing a privileged scope
+   belongs in its own workflow rather than behind an input.
 1. Set `persist-credentials: false` on every `actions/checkout` step, per
    "Checkout Credentials" above. A checkout that needs the credential has to
    name the step that consumes it and be listed in
@@ -613,6 +653,23 @@ that metacharacters, command substitutions, variables and globs arrive
 literally and leave no file behind. The two Codecov steps are asserted
 statically rather than executed, because their `run:` blocks download and
 checksum the Codecov CLI.
+
+The `npm-publish` job covers the three npm workflows on the same two
+runners, for the same bash 3.2 reason. Neither publish workflow can be
+self-hosted here, because calling either end to end would publish
+something, so `tests/fixtures/check-npm-publish.mjs` reads their steps
+out of the YAML and runs them directly: the registry gate against the
+spellings it must accept and the GitHub Packages default it must refuse,
+the version gate against stub `node` and `npm` binaries at, above and
+below the minimums, the lockfile probe against each combination of
+lockfiles, and the install step against a stub npm that records its
+argument vector. Its static half asserts what a runner cannot show: that
+`publish-to-npm-with-oidc.yml` declares `id-token: write` and no
+`packages: write`, binds no secret anywhere, and that neither publish
+workflow lets `setup-node` cache. The `parity` scenario holds the three
+copies of the install step, and the two copies of the lockfile probe,
+byte-identical, since a reusable workflow cannot reach a repository-owned
+composite action by a `./` path and the logic has to be duplicated.
 
 `tests/check-tool-version-reporting.py` executes `check-tool-versions.yml`'s
 literal `Run version check` block against stand-in audits with fixed streams
