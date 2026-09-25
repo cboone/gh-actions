@@ -43,7 +43,7 @@ later step.
   with:
     persist-credentials: false
 
-- uses: cboone/gh-actions/actions/create-pull-request@v4.1.0
+- uses: cboone/gh-actions/actions/create-pull-request@v5.0.0
   with:
     branch: chore/update-data
     commit-message: "chore: update generated data"

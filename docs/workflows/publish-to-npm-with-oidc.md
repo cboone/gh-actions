@@ -107,7 +107,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: cboone/gh-actions/.github/workflows/publish-to-npm-with-oidc.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/publish-to-npm-with-oidc.yml@v5.0.0
 ```
 
 The publisher registered on npmjs.com for this example names the repository
@@ -122,7 +122,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: cboone/gh-actions/.github/workflows/publish-to-npm-with-oidc.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/publish-to-npm-with-oidc.yml@v5.0.0
     with:
       environment: release
 ```

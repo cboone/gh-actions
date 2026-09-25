@@ -49,5 +49,5 @@ the trust model and the rejection rules.
 - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
   with:
     node-version: "24.21.0"
-- uses: cboone/gh-actions/actions/run-cspell@v4.1.0
+- uses: cboone/gh-actions/actions/run-cspell@v5.0.0
 ```

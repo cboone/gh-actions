@@ -57,7 +57,7 @@ of its own, through `gh` and `GH_TOKEN` or an explicit remote.
 ```yaml
 jobs:
   pages:
-    uses: cboone/gh-actions/.github/workflows/deploy-to-pages.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/deploy-to-pages.yml@v5.0.0
     with:
       build-command: "npm run build"
       artifact-path: ./dist

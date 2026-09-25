@@ -23,7 +23,7 @@ includes it.
 ```yaml
 jobs:
   codeql:
-    uses: cboone/gh-actions/.github/workflows/analyze-with-codeql.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/analyze-with-codeql.yml@v5.0.0
     with:
       languages: go
       go-version: "1.25"

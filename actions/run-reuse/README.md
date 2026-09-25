@@ -21,5 +21,5 @@ arm64.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-reuse@v4.1.0
+- uses: cboone/gh-actions/actions/run-reuse@v5.0.0
 ```

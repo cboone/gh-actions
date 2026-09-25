@@ -77,7 +77,7 @@ single values and are not split.
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v5.0.0
     with:
       run-deny: true
       run-audit: true
@@ -89,7 +89,7 @@ With cargo-nextest and coverage:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/run-rust-ci.yml@v5.0.0
     with:
       use-nextest: true
       coverage: true

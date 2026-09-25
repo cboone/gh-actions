@@ -51,7 +51,7 @@ detector, or printing the finding.
 ```yaml
 jobs:
   scan:
-    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v5.0.0
     with:
       tool: trufflehog
       trufflehog-allowlist: .github/trufflehog-allowlist.json
@@ -118,7 +118,7 @@ reads the checker from its own action path.
 ```yaml
 jobs:
   scan:
-    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v5.0.0
     with:
       tool: both
 ```

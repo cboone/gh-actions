@@ -60,7 +60,7 @@ are not supported on GitHub Enterprise Server.
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v5.0.0
 ```
 
 With a custom shell and environment variables:
@@ -68,7 +68,7 @@ With a custom shell and environment variables:
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v5.0.0
     with:
       scrut-shell: zsh
       scrut-env: |
@@ -82,7 +82,7 @@ For a CLI shipped as PEP 723 scripts with
 ```yaml
 jobs:
   scrut:
-    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/run-scrut-tests.yml@v5.0.0
     with:
       setup-uv: true
       scrut-test-dir: "tests/scrut/"

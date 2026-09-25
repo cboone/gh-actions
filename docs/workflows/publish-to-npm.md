@@ -47,7 +47,7 @@ own `prepack` and `prepare` scripts either way.
 ```yaml
 jobs:
   publish:
-    uses: cboone/gh-actions/.github/workflows/publish-to-npm.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/publish-to-npm.yml@v5.0.0
     secrets:
       NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```

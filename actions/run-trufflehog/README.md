@@ -107,13 +107,13 @@ requirement fails immediately rather than after the scan.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-trufflehog@v4.1.0
+- uses: cboone/gh-actions/actions/run-trufflehog@v5.0.0
 ```
 
 Each argument goes on its own line, so an argument may contain spaces:
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-trufflehog@v4.1.0
+- uses: cboone/gh-actions/actions/run-trufflehog@v5.0.0
   with:
     args: |-
       filesystem
@@ -124,7 +124,7 @@ Each argument goes on its own line, so an argument may contain spaces:
 Scanning full history with an allowlist:
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-trufflehog@v4.1.0
+- uses: cboone/gh-actions/actions/run-trufflehog@v5.0.0
   with:
     args: |-
       git

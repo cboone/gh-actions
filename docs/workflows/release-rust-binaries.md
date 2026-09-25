@@ -53,7 +53,7 @@ first. `targets` is a JSON array and is parsed as one.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v5.0.0
     with:
       targets: >-
         [
@@ -68,7 +68,7 @@ With Homebrew formula updates:
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v5.0.0
     with:
       targets: >-
         [
@@ -96,7 +96,7 @@ To assert against the binary's output instead, pass `homebrew-test`:
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v5.0.0
     with:
       targets: >-
         [
@@ -122,7 +122,7 @@ tool that also links against `openssl`):
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/release-rust-binaries.yml@v5.0.0
     with:
       targets: >-
         [

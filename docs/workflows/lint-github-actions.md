@@ -71,7 +71,7 @@ Fetching at the workflow's own commit rules out two setups, as it does for
 ```yaml
 jobs:
   github:
-    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v5.0.0
 ```
 
 Another shellcheck version, with the checksum for the `ubuntu-latest`
@@ -80,7 +80,7 @@ archive:
 ```yaml
 jobs:
   github:
-    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/lint-github-actions.yml@v5.0.0
     with:
       shellcheck-version: 0.10.0
       shellcheck-checksums: |

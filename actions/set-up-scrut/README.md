@@ -18,6 +18,6 @@ and [source-build trust model](../../docs/development.md#pinning-policy-and-trus
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-scrut@v4.1.0
+- uses: cboone/gh-actions/actions/set-up-scrut@v5.0.0
 - run: scrut test tests/
 ```

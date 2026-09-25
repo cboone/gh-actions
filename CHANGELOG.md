@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-09-25
+
 ### Added
 
 - `publish-to-npm-with-oidc.yml` reusable workflow: publishes to npmjs.com
@@ -1015,7 +1017,8 @@ install --global "<pkg>@<version>"` (no integrity check) with `npm ci`
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v4.1.0...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v5.0.0...HEAD
+[5.0.0]: https://github.com/cboone/gh-actions/compare/v4.1.0...v5.0.0
 [4.1.0]: https://github.com/cboone/gh-actions/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/cboone/gh-actions/compare/v3.2.0...v4.0.0
 [3.2.0]: https://github.com/cboone/gh-actions/compare/v3.1.1...v3.2.0

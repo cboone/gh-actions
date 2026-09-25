@@ -88,7 +88,7 @@ configurable.
   with:
     node-version: "24.21.0"
 - run: npm ci
-- uses: cboone/gh-actions/actions/install-cspell-dictionaries@v4.1.0
+- uses: cboone/gh-actions/actions/install-cspell-dictionaries@v5.0.0
   with:
     install-dir: ${{ github.workspace }}
     packages: |

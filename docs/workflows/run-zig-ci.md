@@ -80,7 +80,7 @@ With an explicit version:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v5.0.0
     with:
       zig-version: "0.14.1"
       run-cross-compile: true
@@ -91,7 +91,7 @@ Reading the version from `build.zig.zon`:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v5.0.0
     with:
       zig-version-file: build.zig.zon
       run-cross-compile: true
@@ -102,7 +102,7 @@ With additional source directories and a root-level Zig file:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v5.0.0
     with:
       zig-version-file: build.zig.zon
       fmt-paths: "build.zig build.zig.zon src tools tests build_runner.zig"
@@ -113,7 +113,7 @@ With scrut CLI tests:
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/run-zig-ci.yml@v5.0.0
     with:
       zig-version-file: build.zig.zon
       run-scrut: true

@@ -129,7 +129,7 @@ variables named after the inputs (`validator-rev` is `VALIDATOR_REV`).
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-clap-validator@v4.1.0
+- uses: cboone/gh-actions/actions/set-up-clap-validator@v5.0.0
   with:
     # Tag 0.4.1, resolved to its commit.
     validator-rev: 152b9823e992d782c5c1fd33bca0295478b919aa
@@ -151,7 +151,7 @@ jobs:
   validate-native:
     runs-on: macos-latest
     steps:
-      - uses: cboone/gh-actions/actions/set-up-clap-validator@v4.1.0
+      - uses: cboone/gh-actions/actions/set-up-clap-validator@v5.0.0
         with:
           validator-rev: ${{ env.VALIDATOR_REV }}
           rust-version: ${{ env.RUST_VERSION }}

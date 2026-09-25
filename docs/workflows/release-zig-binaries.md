@@ -38,7 +38,7 @@ first, and an empty value fails rather than building nothing.
 ```yaml
 jobs:
   release:
-    uses: cboone/gh-actions/.github/workflows/release-zig-binaries.yml@v4.1.0
+    uses: cboone/gh-actions/.github/workflows/release-zig-binaries.yml@v5.0.0
     with:
       zig-version-file: build.zig.zon
       binary-name: "my-tool"
