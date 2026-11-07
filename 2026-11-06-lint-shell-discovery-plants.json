@@ -1,0 +1,55 @@
+{
+  "inputs": [".github/workflows/lint-shell.yml", "tests/check-shell-discovery.py", "docs/reviews/2026-11-06-lint-shell-discovery-plants/comment.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/partial-manifest.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/check.py", "docs/reviews/2026-11-06-lint-shell-discovery-plants/skipped-count.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/preflight.sh", "docs/reviews/2026-11-06-lint-shell-discovery-plants/check.sh", "docs/reviews/2026-11-06-lint-shell-discovery-plants/measured-notice.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/inventory.json", "docs/reviews/2026-11-06-lint-shell-discovery-plants/fallback-manifest.patch"],
+  "setup": "docs/reviews/2026-11-06-lint-shell-discovery-plants/preflight.sh",
+  "check": "docs/reviews/2026-11-06-lint-shell-discovery-plants/check.sh",
+  "timeout": 120,
+  "green": {
+    "exit_code": 0,
+    "contains": ["VERDICT: discovery fixtures green\n"],
+    "excludes": ["ASSERTION:", "Traceback", "skipped=", "SyntaxError", "ImportError"]
+  },
+  "variants": [
+    {
+      "name": "skipped-count",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/skipped-count.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: sparse skipped count\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "measured-notice",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/measured-notice.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: measured notice\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "partial-manifest",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/partial-manifest.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: failed discovery published a partial manifest\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "fallback-manifest",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/fallback-manifest.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: failed fallback published a partial manifest\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "name": "comment-only",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/comment.patch"
+    }
+  ]
+}

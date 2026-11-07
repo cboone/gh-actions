@@ -1,0 +1,12 @@
+diff --git a/.github/workflows/run-scrut-tests.yml b/.github/workflows/run-scrut-tests.yml
+--- a/.github/workflows/run-scrut-tests.yml
++++ b/.github/workflows/run-scrut-tests.yml
+@@ -44,7 +44,7 @@ on:
+       uv-version:
+         description: uv version to install when setup-uv is true.
+         type: string
+-        default: "0.12.17"
++        default: "0.12.18"
+       runs-on:
+         description: Runner label (Windows is not supported).
+         type: string

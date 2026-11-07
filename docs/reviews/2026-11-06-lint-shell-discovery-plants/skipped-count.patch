@@ -1,0 +1,11 @@
+--- a/.github/workflows/lint-shell.yml
++++ b/.github/workflows/lint-shell.yml
+@@ -136,7 +136,7 @@
+             printf '%s\0' "${path}"
+           done < "${RUNNER_TEMP}/tracked-files.txt" \
+             > "${RUNNER_TEMP}/discovery-input.txt"
+-          echo "Worktree filter skipped ${skipped} of ${tracked} tracked paths (absent, non-regular or symlink)."
++          echo "Worktree filter skipped 0 of ${tracked} tracked paths (absent, non-regular or symlink)."
+           # This guard is load-bearing beyond skipping empty work: GNU xargs,
+           # which ubuntu-latest has, runs its command once on empty input,
+           # and `shfmt -f=0` with no operands emits a newline that would

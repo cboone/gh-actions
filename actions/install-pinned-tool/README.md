@@ -7,8 +7,7 @@ member at a time.
 
 The logic lives in `install-pinned-tool.sh` next to this file, configured
 through environment variables named after the inputs (`url-template` is
-`URL_TEMPLATE`). A reusable workflow cannot reach this action through a `./`
-path, which resolves against the caller's checkout, so
+`URL_TEMPLATE`). The reusable workflows
 [lint-github-actions](../../docs/workflows/lint-github-actions.md),
 [lint-shell](../../docs/workflows/lint-shell.md),
 [lint-text](../../docs/workflows/lint-text.md) and
@@ -18,9 +17,8 @@ their own commit and run it with those variables instead. The
 [set-up-shellcheck](../set-up-shellcheck/README.md),
 [set-up-shfmt](../set-up-shfmt/README.md), [set-up-uv](../set-up-uv/README.md)
 and [run-reuse](../run-reuse/README.md) actions run the same script through
-a path relative to their own directory. The same `./` restriction applies
-between two composite actions, which is why `run-reuse` runs the script
-itself rather than reaching for `set-up-uv`.
+a path relative to their own directory. See [the development reference](../../docs/development.md#composite-actions-vs-reusable-workflows)
+for the path rule.
 
 - **Platforms.** Linux and macOS runners, amd64 and arm64. Any other OS or
   architecture fails the step.

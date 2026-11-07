@@ -1,0 +1,90 @@
+diff --git a/actions/set-up-uv/action.yml b/actions/set-up-uv/action.yml
+--- a/actions/set-up-uv/action.yml
++++ b/actions/set-up-uv/action.yml
+@@ -5,7 +5,7 @@ inputs:
+   version:
+     description: uv version to install
+     required: false
+-    default: "0.12.17"
++    default: "0.12.18"
+ 
+ runs:
+   using: composite
+diff --git a/actions/run-reuse/action.yml b/actions/run-reuse/action.yml
+--- a/actions/run-reuse/action.yml
++++ b/actions/run-reuse/action.yml
+@@ -11,7 +11,7 @@ inputs:
+   uv-version:
+     description: uv version to install for the reuse install step.
+     required: false
+-    default: "0.12.17"
++    default: "0.12.18"
+   args:
+     description: >-
+       Arguments to pass to `reuse`. Newline-delimited; each line
+diff --git a/.github/workflows/lint-text.yml b/.github/workflows/lint-text.yml
+--- a/.github/workflows/lint-text.yml
++++ b/.github/workflows/lint-text.yml
+@@ -87,7 +87,7 @@ permissions:
+   contents: read
+ 
+ env:
+-  UV_VERSION: 0.12.17
++  UV_VERSION: 0.12.18
+   # markdownlint-cli2, prettier, cspell are pinned in this repo's
+   # package-lock.json with per-package sha512 integrity hashes; bump
+   # them by editing package.json and running `npm install`.
+diff --git a/.github/workflows/run-scrut-tests.yml b/.github/workflows/run-scrut-tests.yml
+--- a/.github/workflows/run-scrut-tests.yml
++++ b/.github/workflows/run-scrut-tests.yml
+@@ -44,7 +44,7 @@ on:
+       uv-version:
+         description: uv version to install when setup-uv is true.
+         type: string
+-        default: "0.12.17"
++        default: "0.12.18"
+       runs-on:
+         description: Runner label (Windows is not supported).
+         type: string
+diff --git a/.github/workflows/run-ci.yml b/.github/workflows/run-ci.yml
+--- a/.github/workflows/run-ci.yml
++++ b/.github/workflows/run-ci.yml
+@@ -656,7 +656,7 @@ jobs:
+         uses: ./actions/install-pinned-tool
+         with:
+           tool: uv
+-          version: 0.12.17
++          version: 0.12.18
+           url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz
+           checksums-url-template: https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-{os}.tar.gz.sha256
+           os-names: linux=unknown-linux-gnu darwin=apple-darwin
+@@ -683,7 +683,7 @@ jobs:
+           status=0
+           for spec in "shfmt 3.13.1 --version" "shfmt-single 3.13.1 --version" \
+             "actionlint 1.7.12 -version" "shellcheck 0.11.0 --version" \
+-            "uv 0.12.17 --version"; do
++            "uv 0.12.18 --version"; do
+             read -r tool want flag <<< "${spec}"
+             resolved="$(command -v "${tool}" || true)"
+             if [ "${resolved}" != "${RUNNER_TEMP}/${tool}-bin/${tool}" ]; then
+@@ -747,7 +747,7 @@ jobs:
+         run: |
+           status=0
+           for spec in "shfmt 3.14.1 --version" "actionlint 1.7.12 -version" \
+-            "shellcheck 0.11.0 --version" "uv 0.12.17 --version"; do
++            "shellcheck 0.11.0 --version" "uv 0.12.18 --version"; do
+             read -r tool want flag <<< "${spec}"
+             resolved="$(command -v "${tool}" || true)"
+             if [ "${resolved}" != "${RUNNER_TEMP}/${tool}-bin/${tool}" ]; then
+@@ -1447,9 +1447,9 @@ jobs:
+           reported="$(uv --version 2>&1)"
+           echo "uv: ${reported}"
+           case "${reported}" in
+-            *"0.12.17"*) ;;
++            *"0.12.18"*) ;;
+             *)
+-              echo "::error::uv reports '${reported}', expected 0.12.17; run-reuse's uv-version default has drifted" >&2
++              echo "::error::uv reports '${reported}', expected 0.12.18; run-reuse's uv-version default has drifted" >&2
+               status=1
+               ;;
+           esac

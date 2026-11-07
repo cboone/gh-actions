@@ -97,6 +97,7 @@ COUNT_CALL = 'set -euo pipefail\nprintf \'x\' >> "${SHFMT_CALL_LOG}"\n'
 # use because the alternative, the `shell-candidate.txt` only the fallback
 # writes, persists in the shared RUNNER_TEMP across runs.
 SLOW_PATH_NOTICE = "discovery is checking one file at a time"
+EMPTY_SET_NOTICE = "::notice::No shell scripts found among tracked regular files present in the worktree"
 
 
 def run_block(name):
@@ -165,21 +166,37 @@ def shimmed_env(base, env, label, real, source=None):
     return shimmed
 
 
+def artifact(path):
+    """Require a regular artifact before reading its bytes."""
+    assert path.is_file() and not path.is_symlink(), f"missing regular artifact: {path.name}"
+    return path.read_bytes()
+
+
+def artifact_text(path):
+    data = artifact(path)
+    assert b"\0" not in data, f"invalid text artifact: {path.name}"
+    return data.decode()
+
+
 def manifest(runtime):
-    """Decode the NUL-separated manifest the discovery step wrote."""
-    paths = (runtime / "shell-scripts.txt").read_bytes().split(b"\0")
+    """Decode the discovery step's NUL-separated manifest."""
+    paths = artifact(runtime / "shell-scripts.txt").split(b"\0")
     assert paths[-1] == b"", paths
     return set(os.fsdecode(path) for path in paths[:-1])
 
 
 def filtered_count(runtime):
-    """How many tracked paths survived the step's -f/-L filter."""
-    return (runtime / "discovery-input.txt").read_bytes().count(b"\0")
+    """Count tracked paths surviving the step's -f/-L filter."""
+    data = artifact(runtime / "discovery-input.txt")
+    assert not data or data.endswith(b"\0"), "invalid discovery input"
+    return data.count(b"\0")
 
 
 def call_count(env):
-    """How many times the step invoked shfmt through the wrapper."""
-    return len(Path(env["SHFMT_CALL_LOG"]).read_bytes())
+    """Count the step's shfmt invocations through the wrapper."""
+    data = artifact(Path(env["SHFMT_CALL_LOG"]))
+    assert data == b"x" * len(data), "invalid call log"
+    return len(data)
 
 
 def main():
@@ -206,10 +223,11 @@ def main():
 
         empty = execute("Find shell scripts", root, env)
         assert empty.returncode == 0, empty.stderr
-        assert "::notice::No tracked shell scripts found" in empty.stdout
-        assert Path(env["GITHUB_OUTPUT"]).read_text() == "found=false\n"
-        assert "checks were skipped" in Path(env["GITHUB_STEP_SUMMARY"]).read_text()
-        assert (runtime / "shell-scripts.txt").read_bytes() == b""
+        assert EMPTY_SET_NOTICE in empty.stdout, "measured notice"
+        assert "Worktree filter skipped 0 of 0 tracked paths" in empty.stdout
+        assert artifact_text(Path(env["GITHUB_OUTPUT"])) == "found=false\n"
+        assert "checks were skipped" in artifact_text(Path(env["GITHUB_STEP_SUMMARY"]))
+        assert artifact(runtime / "shell-scripts.txt") == b""
         # An empty tracked tree must not reach shfmt at all, so it cannot
         # claim anything about the pinned binary. That is what the -s guard on
         # discovery-input.txt buys beyond skipping empty work, and the call
@@ -225,6 +243,24 @@ def main():
         print("Empty tracked tree: notice and summary confirmed, shfmt never invoked")
 
         good = "#!/usr/bin/env bash\nprintf '%s\\n' hello\n"
+        sparse = ("cmake/build-helper", "ordinary.sh", "tools/posix")
+        for name in sparse:
+            write(root, name, good)
+        subprocess.run(["git", "add", "--", *sparse], cwd=root, env=env, check=True)
+        subprocess.run(
+            ["git", "update-index", "--skip-worktree", "--", *sparse], cwd=root, env=env, check=True,
+        )
+        for name in sparse:
+            (root / name).unlink()
+        absent = execute("Find shell scripts", root, env)
+        assert absent.returncode == 0, absent.stderr
+        assert "Worktree filter skipped 3 of 3 tracked paths" in absent.stdout, "sparse skipped count"
+        assert "present in the worktree" in absent.stdout, "sparse measured notice"
+        assert artifact_text(Path(env["GITHUB_OUTPUT"])) == "found=false\n"
+        assert manifest(runtime) == set()
+        subprocess.run(["git", "read-tree", "--empty"], cwd=root, env=env, check=True)
+        print("Sparse index: absent tracked scripts are counted and the notice describes the worktree")
+
         scripts = {
             "cmake/build-helper": good,
             "tools/nested/path with spaces": good,
@@ -273,8 +309,8 @@ def main():
         assert found.returncode == 0, found.stderr
         expected = {"./-" if name == "-" else name for name in scripts}
         assert manifest(runtime) == expected, found
-        assert Path(env["GITHUB_OUTPUT"]).read_text() == "found=true\n"
-        assert not Path(env["GITHUB_STEP_SUMMARY"]).read_text()
+        assert artifact_text(Path(env["GITHUB_OUTPUT"])) == "found=true\n"
+        assert not artifact_text(Path(env["GITHUB_STEP_SUMMARY"]))
         assert workspace() == before, "discovery wrote into the checkout"
         print("Tracked discovery: nested shebangs, extensions and unusual paths confirmed")
         print("Workspace: discovery leaves the checkout byte for byte unchanged")
@@ -305,10 +341,44 @@ def main():
                 assert calls == 2, (label, calls)
             else:
                 assert calls == 1 + filtered_count(runtime), (label, calls)
-            assert Path(env["GITHUB_OUTPUT"]).read_text() == "found=true\n"
-            assert not Path(env["GITHUB_STEP_SUMMARY"]).read_text()
+            assert artifact_text(Path(env["GITHUB_OUTPUT"])) == "found=true\n"
+            assert not artifact_text(Path(env["GITHUB_STEP_SUMMARY"]))
         print("Batched and per-file discovery agree, and only the fallback says so")
         print("Process count: one batched call versus one per tracked path")
+
+        # Emit a real candidate before failing, as shfmt can on a later unreadable file.
+        partial_source = SHIMS["modern"].replace(
+            '  for path in "$@"; do',
+            r'''  if [[ "$#" -gt 1 ]]; then
+    printf '%s\0' "ordinary.sh"
+    echo "injected discovery failure" >&2
+    exit 1
+  fi
+  for path in "$@"; do''',
+        )
+        partial_env = shimmed_env(base, env, "partial", real_shfmt, partial_source)
+        partial = execute("Find shell scripts", root, partial_env)
+        assert partial.returncode != 0 and "injected discovery failure" in partial.stderr, partial
+        assert call_count(partial_env) == 2, "partial failure reached the batched call"
+        assert manifest(runtime) == set(), "failed discovery published a partial manifest"
+        assert artifact_text(Path(env["GITHUB_OUTPUT"])) == "", "failed discovery published outputs"
+        print("Partial batched failure: no populated manifest or outputs published")
+
+        fallback_source = SHIMS["legacy"].replace(
+            'exec "${REAL_SHFMT}" "$@"',
+            r'''if [[ "${1-}" == '-f' && "${3-}" == 'ordinary.bash' ]]; then
+  echo "injected fallback failure" >&2
+  exit 1
+fi
+exec "${REAL_SHFMT}" "$@"''',
+        )
+        fallback_env = shimmed_env(base, env, "partial-fallback", real_shfmt, fallback_source)
+        partial = execute("Find shell scripts", root, fallback_env)
+        assert partial.returncode != 0 and "injected fallback failure" in partial.stderr, partial
+        assert call_count(fallback_env) > 2, "fallback processed earlier candidates"
+        assert manifest(runtime) == set(), "failed fallback published a partial manifest"
+        assert artifact_text(Path(env["GITHUB_OUTPUT"])) == "", "failed fallback published outputs"
+        print("Partial per-file failure: no populated manifest or outputs published")
 
         # A tracked file shfmt cannot read must fail the step, not drop
         # silently out of the manifest and go unlinted behind a green job.
@@ -355,7 +425,7 @@ def main():
         subprocess.run(["git", "add", "README.txt"], cwd=root, env=env, check=True)
         empty = execute("Find shell scripts", root, env)
         assert empty.returncode == 0, empty.stderr
-        assert "::notice::No tracked shell scripts found" in empty.stdout
+        assert EMPTY_SET_NOTICE in empty.stdout
         # Here the filter passes a file through and discovery rejects it, so
         # both branches run and must still report the empty set.
         for label in SHIMS:
@@ -364,7 +434,7 @@ def main():
             empty = execute("Find shell scripts", root, probed)
             assert empty.returncode == 0, (label, empty.stderr)
             assert manifest(runtime) == set(), (label, empty)
-            assert Path(env["GITHUB_OUTPUT"]).read_text() == "found=false\n"
+            assert artifact_text(Path(env["GITHUB_OUTPUT"])) == "found=false\n"
         print("Non-shell-only index: both branches discover nothing")
         subprocess.run(["git", "add", "--", *scripts], cwd=root, env=env, check=True)
         found = execute("Find shell scripts", root, env)

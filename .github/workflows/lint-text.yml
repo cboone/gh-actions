@@ -312,12 +312,8 @@ jobs:
             exit 1
           fi
 
-      # Fetch the installer from the repository and commit this workflow
-      # file came from, the model the manifest fetches above follow, so the
-      # script and this workflow always share a commit. A `./` action path
-      # would resolve against the caller's checkout instead. The `job`
-      # context is only available on steps, so the two values are bound
-      # here rather than at job or workflow level.
+      # Fetch install-cspell-dictionaries at this workflow's commit; see
+      # docs/development.md#composite-actions-vs-reusable-workflows.
       - name: Fetch install-cspell-dictionaries
         if: ${{ inputs.run-cspell && inputs.extra-cspell-packages != '' }}
         env:
@@ -349,12 +345,8 @@ jobs:
           INSTALL_DIR: ${{ env.CSPELL_INSTALL_DIR }}
         run: bash "${RUNNER_TEMP}/install-cspell-dictionaries.sh"
 
-      # Same fetch model as the dictionary installer above and the yamllint
-      # manifest below: the installer comes from the repository and commit
-      # this workflow file came from, so script and workflow always share a
-      # commit. A `./` action path, which is how this repository's own
-      # workflows reach set-up-uv, would resolve against the caller's
-      # checkout here.
+      # Fetch install-pinned-tool at this workflow's commit; see
+      # docs/development.md#composite-actions-vs-reusable-workflows.
       - name: Fetch install-pinned-tool
         if: inputs.run-yamllint
         env:

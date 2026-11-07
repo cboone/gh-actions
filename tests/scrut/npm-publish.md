@@ -47,3 +47,10 @@ parity: passed
 $ "${NODE_BIN}" "${NPM_PUBLISH_FIXTURE}" shape
 shape: passed
 ```
+
+## Repository CI installs use the canonical flags
+
+```scrut
+$ "${NODE_BIN}" "${NPM_PUBLISH_FIXTURE}" ci-install
+ci-install: passed
+```

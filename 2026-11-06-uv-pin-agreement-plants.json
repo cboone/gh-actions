@@ -1,0 +1,63 @@
+{
+  "inputs": [".github/workflows/analyze-with-codeql.yml", ".github/workflows/check-tool-versions.yml", ".github/workflows/create-gh-release-from-changelog.yml", ".github/workflows/create-gh-release-on-tag.yml", ".github/workflows/deploy-to-pages.yml", ".github/workflows/lint-github-actions.yml", ".github/workflows/lint-shell.yml", ".github/workflows/lint-text.yml", ".github/workflows/publish-to-npm-with-oidc.yml", ".github/workflows/publish-to-npm.yml", ".github/workflows/release-go-binaries.yml", ".github/workflows/release-rust-binaries.yml", ".github/workflows/release-zig-binaries.yml", ".github/workflows/run-ci.yml", ".github/workflows/run-go-ci.yml", ".github/workflows/run-lean-ci.yml", ".github/workflows/run-rust-ci.yml", ".github/workflows/run-scrut-tests.yml", ".github/workflows/run-zig-ci.yml", ".github/workflows/scan-for-secrets-with-gitleaks.yml", ".github/workflows/scan-for-secrets-with-trufflehog.yml", ".github/workflows/scan-for-secrets.yml", "actions/create-gh-release/action.yml", "actions/create-pull-request/action.yml", "actions/install-cspell-dictionaries/action.yml", "actions/install-pinned-tool/action.yml", "actions/run-cspell/action.yml", "actions/run-gitleaks/action.yml", "actions/run-markscribe/action.yml", "actions/run-reuse/action.yml", "actions/run-trufflehog/action.yml", "actions/set-up-actionlint/action.yml", "actions/set-up-clap-validator/action.yml", "actions/set-up-golangci-lint/action.yml", "actions/set-up-goreleaser/action.yml", "actions/set-up-scrut/action.yml", "actions/set-up-shellcheck/action.yml", "actions/set-up-shfmt/action.yml", "actions/set-up-uv/action.yml", "tests/fixtures/check-workflow-arg-binding.mjs", "tests/fixtures/workflow-steps.mjs", "docs/reviews/2026-11-06-uv-pin-agreement-plants/check.sh", "docs/reviews/2026-11-06-uv-pin-agreement-plants/lint-text.patch", "docs/reviews/2026-11-06-uv-pin-agreement-plants/reuse.patch", "docs/reviews/2026-11-06-uv-pin-agreement-plants/scrut.patch", "docs/reviews/2026-11-06-uv-pin-agreement-plants/self-test.patch", "docs/reviews/2026-11-06-uv-pin-agreement-plants/setup.sh", "docs/reviews/2026-11-06-uv-pin-agreement-plants/together.patch", "docs/reviews/2026-11-06-uv-pin-agreement-plants/verdict.mjs", "docs/reviews/2026-11-06-uv-pin-agreement-plants/wrapper.patch"],
+  "setup": "docs/reviews/2026-11-06-uv-pin-agreement-plants/setup.sh",
+  "check": "docs/reviews/2026-11-06-uv-pin-agreement-plants/check.sh",
+  "green": {
+    "exit_code": 0,
+    "contains": ["uv pin assertion reached\n", "uv pin verdict: agree\n"],
+    "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "SKIP"]
+  },
+  "variants": [
+    {
+      "name": "partial-wrapper-bump",
+      "patch": "docs/reviews/2026-11-06-uv-pin-agreement-plants/wrapper.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["uv pin assertion reached\n", "uv pin verdict: disagree\n"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "SKIP"]
+      }
+    },
+    {
+      "name": "partial-reuse-bump",
+      "patch": "docs/reviews/2026-11-06-uv-pin-agreement-plants/reuse.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["uv pin assertion reached\n", "uv pin verdict: disagree\n"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "SKIP"]
+      }
+    },
+    {
+      "name": "partial-lint-text-bump",
+      "patch": "docs/reviews/2026-11-06-uv-pin-agreement-plants/lint-text.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["uv pin assertion reached\n", "uv pin verdict: disagree\n"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "SKIP"]
+      }
+    },
+    {
+      "name": "partial-scrut-bump",
+      "patch": "docs/reviews/2026-11-06-uv-pin-agreement-plants/scrut.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["uv pin assertion reached\n", "uv pin verdict: disagree\n"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "SKIP"]
+      }
+    },
+    {
+      "name": "partial-self-test-bump",
+      "patch": "docs/reviews/2026-11-06-uv-pin-agreement-plants/self-test.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["uv pin assertion reached\n", "uv pin verdict: disagree\n"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "SKIP"]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "name": "all-pins-bumped-together",
+      "patch": "docs/reviews/2026-11-06-uv-pin-agreement-plants/together.patch"
+    }
+  ]
+}
