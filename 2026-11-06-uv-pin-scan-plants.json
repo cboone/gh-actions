@@ -1,0 +1,18 @@
+{
+  "inputs": ["docs/reviews/2026-11-06-uv-pin-agreement-plants/semgrep-accept.jq", "docs/reviews/2026-11-06-uv-pin-agreement-plants/semgrep-check.sh", "docs/reviews/2026-11-06-uv-pin-agreement-plants/semgrep-error.json", "docs/reviews/2026-11-06-uv-pin-agreement-plants/semgrep-other-rule.patch"],
+  "check": "docs/reviews/2026-11-06-uv-pin-agreement-plants/semgrep-check.sh",
+  "green": {
+    "exit_code": 0,
+    "contains": ["semgrep acceptance reached\n", "semgrep verdict: accepted\n"]
+  },
+  "variants": [
+    {
+      "name": "different-semgrep-rule-is-refused",
+      "patch": "docs/reviews/2026-11-06-uv-pin-agreement-plants/semgrep-other-rule.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["semgrep acceptance reached\n", "semgrep verdict: rejected\n"]
+      }
+    }
+  ]
+}

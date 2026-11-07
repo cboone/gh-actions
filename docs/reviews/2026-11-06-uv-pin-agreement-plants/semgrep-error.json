@@ -1,0 +1,10 @@
+{
+  "results": [],
+  "errors": [
+    {
+      "rule_id": "javascript.crypto-js.cryptojs-weak-algorithm.cryptojs-weak-algorithm",
+      "path": "docs/reviews/2026-11-06-uv-pin-agreement-plants/verdict.mjs",
+      "message": "operator is only supported in the Pro engine"
+    }
+  ]
+}
