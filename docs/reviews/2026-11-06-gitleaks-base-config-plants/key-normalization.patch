@@ -1,0 +1,11 @@
+--- a/scripts/prepare-gitleaks-config.py
++++ b/scripts/prepare-gitleaks-config.py
+@@ -23,7 +23,7 @@
+             if folded in seen:
+                 raise ValueError("Config contains duplicate case-insensitive keys")
+             seen.add(folded)
+-            result[key] = checked_config(item)
++            result[folded] = checked_config(item)
+         return result
+     if isinstance(value, list):
+         return [checked_config(item) for item in value]

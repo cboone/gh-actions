@@ -1,0 +1,11 @@
+--- a/scripts/prepare-gitleaks-config.py
++++ b/scripts/prepare-gitleaks-config.py
+@@ -109,7 +109,7 @@
+         return destination
+ 
+     default = base / ".gitleaks.toml"
+-    if config or default.exists() or default.is_symlink():
++    if config or default.exists():
+         copy_config(config or ".gitleaks.toml")
+     else:
+         write_prepared(output / "config-0.toml", "[extend]\nuseDefault = true\n")

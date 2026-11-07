@@ -1,0 +1,11 @@
+--- a/scripts/prepare-gitleaks-config.py
++++ b/scripts/prepare-gitleaks-config.py
+@@ -84,7 +84,7 @@
+         raise ValueError("Prepared files must be outside the base checkout")
+ 
+     def copy_config(name, depth=0, ancestors=()):
+-        source = trusted_file(base, name)
++        source = trusted_file(base.parent / "gitleaks-source" if depth else base, name)
+         if source in ancestors or depth > 2:
+             raise ValueError("Cyclic or over-depth config extension")
+         try:

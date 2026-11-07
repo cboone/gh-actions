@@ -1,0 +1,11 @@
+--- a/scripts/prepare-gitleaks-config.py
++++ b/scripts/prepare-gitleaks-config.py
+@@ -89,7 +89,7 @@
+             raise ValueError("Cyclic or over-depth config extension")
+         try:
+             with source.open("rb") as stream:
+-                data = checked_config(tomllib.load(stream))
++                data = {"extend": {"usedefault": True}}
+         except ValueError as error:
+             raise ValueError(f"Invalid TOML in {source.relative_to(base)}: {error}. Correct the base configuration") from None
+         except OSError as error:

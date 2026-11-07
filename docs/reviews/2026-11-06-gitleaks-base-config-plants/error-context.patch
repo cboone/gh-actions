@@ -1,0 +1,11 @@
+--- a/scripts/prepare-gitleaks-config.py
++++ b/scripts/prepare-gitleaks-config.py
+@@ -91,7 +91,7 @@
+             with source.open("rb") as stream:
+                 data = checked_config(tomllib.load(stream))
+         except ValueError as error:
+-            raise ValueError(f"Invalid TOML in {source.relative_to(base)}: {error}. Correct the base configuration") from None
++            raise ValueError(f"Invalid TOML in unknown-file: {error}. Correct the base configuration") from None
+         except OSError as error:
+             raise OSError(error.errno, f"Cannot read base config {source}: {error.strerror}") from None
+         extension_key = field_key(data, "extend")

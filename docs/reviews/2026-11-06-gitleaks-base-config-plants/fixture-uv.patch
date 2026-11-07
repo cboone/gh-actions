@@ -1,0 +1,11 @@
+--- a/.github/workflows/run-ci.yml
++++ b/.github/workflows/run-ci.yml
+@@ -66,7 +66,7 @@
+         uses: ./actions/run-gitleaks
+ 
+       - name: Install uv for gitleaks fixtures
+-        uses: ./actions/set-up-uv
++        uses: ./actions/run-gitleaks
+ 
+       - name: Check pull requests cannot weaken gitleaks rules
+         run: node tests/check-gitleaks-base-config.mjs

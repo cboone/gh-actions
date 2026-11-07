@@ -60,7 +60,7 @@ usage examples.
 
 | Component                                                    | Type     | What it does                                             |
 | ------------------------------------------------------------ | -------- | -------------------------------------------------------- |
-| [scan-for-secrets](docs/workflows/scan-for-secrets.md)       | workflow | gitleaks and/or trufflehog scanning                      |
+| [scan-for-secrets](docs/workflows/scan-for-secrets.md)       | workflow | gitleaks and/or trufflehog scanning; base config for PRs |
 | [run-gitleaks](actions/run-gitleaks/README.md)               | action   | install gitleaks and run a scan                          |
 | [run-trufflehog](actions/run-trufflehog/README.md)           | action   | install trufflehog and run a scan                        |
 | [analyze-with-codeql](docs/workflows/analyze-with-codeql.md) | workflow | GitHub CodeQL security analysis                          |

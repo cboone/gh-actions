@@ -569,6 +569,42 @@ Migration section.
 
 ## Testing
 
+`tests/check-gitleaks-base-config.mjs` executes `scan-for-secrets.yml`'s literal
+gitleaks block with the installed gitleaks binary and disposable Git histories.
+The `gitleaks-base-config` CI job runs it on Ubuntu, matching the workflow's only
+runner. It asserts the base checkout's repository, immutable ref and credential
+settings, the helper checkout's workflow-owned revision, and plants a synthetic token alongside a widened PR allowlist. Default
+discovery, explicit paths with spaces and relative extensions must still detect
+the token in both scan scopes. Clean and trusted-allowlist controls must pass;
+missing, absolute and escaping config paths must fail. Push controls preserve
+checkout-based discovery and explicit config behavior.
+
+The same fixture covers anchored path rules and allowlists on PRs and pushes,
+secrets removed before HEAD, internal/external/dangling config symlinks, extension
+chains and cycles, and a PR ignore file containing the planted secret's actual
+fingerprints. Trusted ignore entries still work. Gitleaks 8.30.1's detector loads
+`source/.gitleaksignore` even with `--gitleaks-ignore-path`, so the workflow saves
+the source file outside the checkout while scanning and restores it on exit.
+Working-tree scans inspect that file separately with the same trusted rules.
+
+`scripts/prepare-gitleaks-config.py` uses Python 3.11+ and its standard-library
+TOML parser. The Ubuntu runner provides Python; the existing checksum-pinned uv
+action selects it with downloads disabled. No Python package dependency is
+installed. The preparer rejects case-insensitive key collisions while preserving
+the original key spellings and TOML values. It rewrites extensions to copies
+under `RUNNER_TEMP`. Both it and the uv
+action come from a separate checkout of `job.workflow_repository` at
+`job.workflow_sha`, never the proposed checkout. Config and ignore paths are
+explicit, overriding config environment variables and source config discovery.
+The pinned CLI's other file inputs, baseline and report templates, require
+explicit flags that this workflow does not supply. Inline `gitleaks:allow`
+comments retain their existing behavior.
+
+Run it locally after `npm ci` with `node tests/check-gitleaks-base-config.mjs`.
+It requires already installed gitleaks and uv binaries; it installs nothing.
+`uv run --script tests/check-gitleaks-config-errors.py` covers sanitized parse,
+missing-extension and output-storage diagnostics.
+
 Scrut's installation matrix also includes macOS Intel. `scrut-installation`
 calls the standalone workflow; `scrut-language-installers` exercises the
 action and the production Go/Zig installer and execution steps. Its

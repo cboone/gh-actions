@@ -1,0 +1,11 @@
+--- a/.github/workflows/scan-for-secrets.yml
++++ b/.github/workflows/scan-for-secrets.yml
+@@ -205,7 +205,7 @@
+             # Gitleaks also loads source/.gitleaksignore even with an explicit path.
+             # Preserve it outside the source during scanning, then restore it.
+             ignore_saved=false
+-            trap 'if ${ignore_saved}; then mv -- "${trusted_dir}/proposed-ignore" .gitleaksignore; fi' EXIT
++            trap ':' EXIT
+             if [[ -f .gitleaksignore || -L .gitleaksignore ]]; then
+               if [[ "${SCAN_SCOPE}" = "working-tree" && ! -L .gitleaksignore ]]; then
+                 gitleaks detect --source .gitleaksignore --no-git "${trusted_args[@]}" --verbose
