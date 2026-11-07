@@ -25,11 +25,8 @@ runs:
     - name: Install uv
       shell: bash
       env:
-        # install-pinned-tool is a sibling of this action inside the
-        # gh-actions checkout the runner makes when loading it, so both come
-        # from the same commit. A `uses: ./` reference would resolve against
-        # the caller's workspace instead, and that applies to the sibling
-        # set-up-uv action too, so this action drives the installer directly.
+        # Run the sibling tool installer through github.action_path; see
+        # docs/development.md#composite-actions-vs-reusable-workflows.
         # Unused installer variables are set empty so a caller's job-level
         # env cannot reach the installer. INSTALLER stays in `env:` because,
         # for a job that sets `container:`, the runner translates host paths

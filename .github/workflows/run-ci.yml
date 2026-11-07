@@ -21,8 +21,8 @@ name: Run CI
 # cargo-llvm-cov install blocks, which nothing else here reaches, across
 # every target triple their committed checksum tables carry.
 # `reuse` runs `run-reuse` against tests/fixtures/reuse on Linux amd64,
-# Linux arm64 and macOS arm64, covering the uv recipe that action carries
-# for want of a `./` path to set-up-uv (#102).
+# Linux arm64 and macOS arm64, covering that action's uv recipe; see
+# docs/development.md#composite-actions-vs-reusable-workflows.
 # `checkout-credentials` holds every `actions/checkout` in the repository to
 # `persist-credentials: false`, apart from the one tap checkout that pushes,
 # so a new checkout cannot reintroduce the default that leaves the job's
@@ -1380,10 +1380,8 @@ jobs:
       - name: Check the cargo-audit and cargo-llvm-cov installs
         run: uv run tests/check-rust-tool-installs.py
 
-  # run-reuse carries its own copy of the uv install recipe, because a
-  # composite action cannot reach the sibling set-up-uv by a `./` path, so
-  # this job is the only thing that exercises it. The matrix is the installer
-  # one, per the coverage rule in .github/workflows/AGENTS.md (#102).
+  # Exercise run-reuse's uv recipe on the installer matrix; see
+  # docs/development.md#composite-actions-vs-reusable-workflows.
   #
   # What this catches, because each makes the job fail: a uv install that does
   # not reach PATH, a requirements manifest that does not resolve from

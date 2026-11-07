@@ -30,11 +30,6 @@ jobs:
         with:
           persist-credentials: false
 
-      # This workflow is not reusable, so a `./` action path resolves against
-      # this repository's own checkout above. It can use the action directly
-      # rather than fetching install-pinned-tool.sh the way the reusable
-      # workflows have to. The pinned version is set-up-uv's default, so this
-      # file carries no uv pin of its own.
       - name: Install uv
         uses: ./actions/set-up-uv
 
