@@ -3,6 +3,28 @@
 Run gitleaks, trufflehog, or both to scan for leaked secrets. Supports
 full-history and working-tree scan scopes.
 
+On `pull_request` events, gitleaks reads its configuration from the exact base
+revision. `allowlist-config` selects a file relative to that revision's repository
+root; without it, the base's `.gitleaks.toml` is used, or the built-in default
+rules when that file is absent. Adding or widening a config in a pull request
+cannot change that pull request's scan rules. Config changes take effect after
+merge. Relative config extensions resolve from the base repository root. A
+missing explicit config, or one resolving outside the base checkout, fails the
+scan. On other events, configuration comes from the scanned checkout.
+
+The base revision also supplies `.gitleaksignore`, or an empty ignore file when
+none exists there. A pull request cannot suppress its own findings by adding
+fingerprints. Configs and their extensions are prepared outside the scanned
+checkout; paths in rules and allowlists still match repository-relative names.
+Extensions and symlinks must resolve within the base checkout. Cycles, ambiguous
+case-insensitive keys and extension chains deeper than gitleaks supports fail
+closed. Python 3.11 or newer from the Ubuntu runner prepares TOML through the
+workflow repository's pinned uv action, without installing Python packages.
+
+Gitleaks pull-request scans require `job.workflow_repository` and
+`job.workflow_sha`. GitHub Enterprise Server does not populate these contexts,
+so this trusted-base scan path fails closed there before fetching helpers.
+
 TruffleHog findings fail the job. Its scan reports verified credentials and
 unknown results caused by verification errors. Unverified results are excluded
 to limit noise from invalid credentials, so revoked credentials and detections
@@ -26,16 +48,16 @@ the rules below set out.
 
 ## Inputs
 
-| Name                   | Type   | Default        | Description                                              |
-| ---------------------- | ------ | -------------- | -------------------------------------------------------- |
-| `tool`                 | string | `gitleaks`     | Which tool to run: gitleaks, trufflehog, or both         |
-| `scan-scope`           | string | `full-history` | Scan scope: full-history or working-tree                 |
-| `gitleaks-version`     | string | `"8.30.1"`     | gitleaks version to install                              |
-| `trufflehog-version`   | string | `"3.97.5"`     | trufflehog version to install                            |
-| `fetch-depth`          | number | `0`            | Git fetch depth (0 for full history)                     |
-| `allowlist-config`     | string | `""`           | Path to a gitleaks allowlist config file. gitleaks only  |
-| `trufflehog-allowlist` | string | `""`           | Path to a JSON allowlist of reviewed trufflehog findings |
-| `timeout-minutes`      | number | `15`           | Job timeout in minutes                                   |
+| Name                   | Type   | Default        | Description                                                                                                                           |
+| ---------------------- | ------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `tool`                 | string | `gitleaks`     | Which tool to run: gitleaks, trufflehog, or both                                                                                      |
+| `scan-scope`           | string | `full-history` | Scan scope: full-history or working-tree                                                                                              |
+| `gitleaks-version`     | string | `"8.30.1"`     | gitleaks version to install                                                                                                           |
+| `trufflehog-version`   | string | `"3.97.5"`     | trufflehog version to install                                                                                                         |
+| `fetch-depth`          | number | `0`            | Git fetch depth (0 for full history)                                                                                                  |
+| `allowlist-config`     | string | `""`           | Repository-relative gitleaks config; on pull requests, read from the base revision (otherwise base `.gitleaks.toml` or default rules) |
+| `trufflehog-allowlist` | string | `""`           | Path to a JSON allowlist of reviewed trufflehog findings                                                                              |
+| `timeout-minutes`      | number | `15`           | Job timeout in minutes                                                                                                                |
 
 `allowlist-config` and `trufflehog-allowlist` are separate: the first is a
 gitleaks config passed to `gitleaks --config`, the second is this repository's
