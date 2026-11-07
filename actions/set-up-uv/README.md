@@ -25,7 +25,6 @@ Composite action, within a job's `steps:`:
 - run: uv run --script script.py
 ```
 
-Reusable workflows in this repository cannot reach this action by a `./` path,
-because such a path resolves against the caller's checkout. They fetch
-`install-pinned-tool.sh` at their own commit instead; see
-[run-scrut-tests](../../docs/workflows/run-scrut-tests.md) for that pattern.
+Reusable workflows fetch `install-pinned-tool.sh` at their own commit; see
+[the development reference](../../docs/development.md#composite-actions-vs-reusable-workflows)
+for the path rule and [run-scrut-tests](../../docs/workflows/run-scrut-tests.md) for that pattern.
