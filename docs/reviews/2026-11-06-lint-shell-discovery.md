@@ -134,7 +134,7 @@ the following local validation; the trim runs did not execute repository checks.
 ## Baseline scan and lint-and-fix
 
 The initial baseline scan ran in a disposable shared clone against the merge
-base, using `SEMGREP_REPO_NAME=cboone/gh-actions`. Its receipt is /Users/ctm/.local/state/codex-mailboxes/tooling/gh-actions-144/worker/evidence/semgrep-gate-1/receipt.json. This earlier-tree receipt is not final-head evidence; the final gate rescans.
+base, using `SEMGREP_REPO_NAME=cboone/gh-actions`. Its receipt is /Users/ctm/.local/state/codex-mailboxes/tooling/gh-actions-144/worker/evidence/semgrep-gate-1/receipt.json. This earlier-tree receipt is not final-head evidence; the final gate scans again.
 
 Lint-and-fix ran with no push, using existing installed tools and lockfile npm
 dependencies. Formatters were limited to this branch's files; Scrut snapshots
