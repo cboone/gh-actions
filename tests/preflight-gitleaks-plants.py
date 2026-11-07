@@ -1,4 +1,5 @@
 """Load declared plant inputs and run unchanged baselines before a gate starts."""
+# cspell:ignore functrace
 
 import argparse
 import hashlib
