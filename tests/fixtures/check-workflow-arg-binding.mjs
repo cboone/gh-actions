@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assertExactlyOne, loadWorkflow, runSteps, runStepScript, stepOf } from "./workflow-steps.mjs";
+import { assertExactlyOne, loadWorkflow, runSteps, runStepScript, stepOf, workflowDocuments } from "./workflow-steps.mjs";
 
 // The only expressions any `run:` block may interpolate, listed per step. All
 // six are the documented shell-command inputs, which accept a whole command by
@@ -108,7 +108,46 @@ function expectNoSideEffects(...names) {
   }
 }
 
+// Add another tool name here to compare its input defaults, environment pins
+// and generic installer arguments across every workflow and action.
+const PINNED_TOOLS = ["uv"];
+
+function toolPins(tool) {
+  const pins = [];
+  const envName = `${tool.toUpperCase().replaceAll("-", "_")}_VERSION`;
+  function add(value, site) {
+    if (value === undefined || (typeof value === "string" && value.includes("${{"))) return;
+    assert.match(String(value), /^v?\d+\.\d+\.\d+$/, `invalid ${tool} pin at ${site}`);
+    pins.push({ site, version: String(value).replace(/^v/, "") });
+  }
+  function walk(value, site) {
+    if (!value || typeof value !== "object") return;
+    add(value.env?.[envName], `${site}.env.${envName}`);
+    add(value.inputs?.[`${tool}-version`]?.default, `${site}.inputs.${tool}-version.default`);
+    add(value.with?.[`${tool}-version`], `${site}.with.${tool}-version`);
+    if (value.env?.TOOL === tool) add(value.env.VERSION, `${site}.env.VERSION`);
+    if (value.with?.tool === tool || value.uses?.split("@")[0].endsWith(`/set-up-${tool}`)) {
+      add(value.with?.version, `${site}.with.version`);
+    }
+    for (const [key, child] of Object.entries(value)) walk(child, `${site}.${key}`);
+  }
+  for (const { label, doc } of workflowDocuments()) {
+    if (label === `actions/set-up-${tool}/action.yml` || label === `actions/set-up-${tool}/action.yaml`) {
+      add(doc.inputs?.version?.default, `${label}.inputs.version.default`);
+    }
+    walk(doc, label);
+  }
+  return pins;
+}
+
 const scenarios = {
+  "tool-pins"() {
+    for (const tool of PINNED_TOOLS) {
+      const pins = toolPins(tool);
+      assert.ok(pins.length > 1, `expected multiple ${tool} pins`);
+      assert.equal(new Set(pins.map(({ version }) => version)).size, 1, `${tool} pins disagree:\n${pins.map(({ site, version }) => `  ${site}: ${version}`).join("\n")}`);
+    }
+  },
   // Every `run:` block is free of expressions except the documented interfaces,
   // checked expression by expression rather than step by step.
   policy() {

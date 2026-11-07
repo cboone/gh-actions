@@ -1,0 +1,12 @@
+diff --git a/actions/run-reuse/action.yml b/actions/run-reuse/action.yml
+--- a/actions/run-reuse/action.yml
++++ b/actions/run-reuse/action.yml
+@@ -11,7 +11,7 @@ inputs:
+   uv-version:
+     description: uv version to install for the reuse install step.
+     required: false
+-    default: "0.12.17"
++    default: "0.12.18"
+   args:
+     description: >-
+       Arguments to pass to `reuse`. Newline-delimited; each line

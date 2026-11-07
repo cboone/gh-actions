@@ -88,3 +88,10 @@ empty: passed
 $ "${NODE_BIN}" "${ARG_BINDING_FIXTURE}" multiline
 multiline: passed
 ```
+
+## Every uv pin agrees across workflows and actions
+
+```scrut
+$ "${NODE_BIN}" "${ARG_BINDING_FIXTURE}" tool-pins
+tool-pins: passed
+```
