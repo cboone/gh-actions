@@ -1,0 +1,12 @@
+diff --git a/docs/reviews/2026-11-06-uv-pin-agreement-plants/semgrep-error.json b/docs/reviews/2026-11-06-uv-pin-agreement-plants/semgrep-error.json
+--- a/docs/reviews/2026-11-06-uv-pin-agreement-plants/semgrep-error.json
++++ b/docs/reviews/2026-11-06-uv-pin-agreement-plants/semgrep-error.json
+@@ -2,7 +2,7 @@
+   "results": [],
+   "errors": [
+     {
+-      "rule_id": "javascript.crypto-js.cryptojs-weak-algorithm.cryptojs-weak-algorithm",
++      "rule_id": "different.rule",
+       "path": "docs/reviews/2026-11-06-uv-pin-agreement-plants/verdict.mjs",
+       "message": "operator is only supported in the Pro engine"
+     }
