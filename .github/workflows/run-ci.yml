@@ -260,7 +260,7 @@ jobs:
           node-version: "24.21.0"
 
       - name: Install locked fixture dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
 
       - name: Generate production installer fixtures
         run: node tests/fixtures/generate-scrut-installers.mjs
@@ -359,7 +359,7 @@ jobs:
           node-version: "24.21.0"
 
       - name: Install locked test dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
 
       - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
         with:
@@ -406,7 +406,7 @@ jobs:
           node-version: "24.21.0"
 
       - name: Install locked test dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
 
       - uses: ./actions/set-up-scrut
 
@@ -445,7 +445,7 @@ jobs:
           node-version: "24.21.0"
 
       - name: Install locked test dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
 
       - uses: ./actions/set-up-scrut
 
@@ -484,7 +484,7 @@ jobs:
           node-version: "24.21.0"
 
       - name: Install locked test dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
 
       - name: Check the checkout credential policy
         run: node tests/check-checkout-credentials.mjs
