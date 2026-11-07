@@ -183,7 +183,7 @@ script path in `env:` as `INSTALLER` (never inline
   `${{ github.action_path }}/../install-cspell-dictionaries/install-cspell-dictionaries.sh`
   bound in `env:` as `INSTALLER`, the way `set-up-shfmt/action.yml:37`
   reaches `install-pinned-tool.sh`. A `uses: ./` reference would resolve
-  against the caller's workspace. `INSTALL_DIR` is
+  against the caller's checkout. `INSTALL_DIR` is
   `${{ github.action_path }}/../..`, the gh-actions checkout root where
   the preceding `npm ci` put cspell.
 

@@ -538,8 +538,8 @@ jobs:
    `tests/check-checkout-credentials.mjs`.
 1. For a release binary, fetch `install-pinned-tool.sh` from
    `job.workflow_repository` at `job.workflow_sha` and run it, as
-   `lint-shell.yml` does; a `./` composite action reference would resolve
-   against the caller's checkout. Inline anything else, following the
+   `lint-shell.yml` does; see [Composite Actions vs. Reusable Workflows](#composite-actions-vs-reusable-workflows)
+   for the path rule. Inline anything else, following the
    checksum verification pattern used by existing workflows.
 1. Create `docs/workflows/<name>.md` from the per-component template
    documented under "Documentation layout" above. Reusable workflows do
@@ -598,8 +598,7 @@ executable only runs if uv reached `PATH`.
 
 Its `reuse` job runs `actions/run-reuse` against `tests/fixtures/reuse` on
 the same three runners. `run-reuse` carries its own copy of the uv install
-recipe, because no `./` path reaches `set-up-uv` from inside a composite
-action, so this job is the only thing that exercises it. The job passes
+recipe ([path rule](#composite-actions-vs-reusable-workflows)), so this job is the only thing that exercises it. The job passes
 `--root` because this repository is not itself REUSE-compliant, which
 leaves the action's default `args: lint` deliberately uncovered. An
 unannotated file added under the fixture fails the job.
@@ -674,8 +673,7 @@ argument vector. Its static half asserts what a runner cannot show: that
 `packages: write`, binds no secret anywhere, and that neither publish
 workflow lets `setup-node` cache. The `parity` scenario holds the three
 copies of the install step, and the two copies of the lockfile probe,
-byte-identical, since a reusable workflow cannot reach a repository-owned
-composite action by a `./` path and the logic has to be duplicated.
+byte-identical; see the [path rule](#composite-actions-vs-reusable-workflows) behind the duplication.
 
 `tests/check-tool-version-reporting.py` executes `check-tool-versions.yml`'s
 literal `Run version check` block against stand-in audits with fixed streams

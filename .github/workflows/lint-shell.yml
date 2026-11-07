@@ -69,11 +69,9 @@ jobs:
         with:
           persist-credentials: false
 
-      # Fetch the installer from the repository and commit this workflow
-      # file came from, the supply-chain model lint-text.yml uses for its
-      # manifests, so the script and this workflow always share a commit. A
-      # `./` action path would resolve against the caller's checkout
-      # instead. The `job` context is only available on steps, so the two
+      # Fetch the installer at this workflow's commit; see
+      # docs/development.md#composite-actions-vs-reusable-workflows.
+      # The `job` context is only available on steps, so the two
       # values are bound here rather than at job or workflow level. The
       # step runs when either checker is enabled, because discovery itself
       # needs shfmt even when only ShellCheck is enabled.

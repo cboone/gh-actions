@@ -66,12 +66,9 @@ runs:
       if: inputs.extra-packages != ''
       shell: bash
       env:
-        # install-cspell-dictionaries is a sibling of this action inside
-        # the gh-actions checkout the runner makes when loading it, so both
-        # come from the same commit. A `uses: ./` reference would resolve
-        # against the caller's workspace instead. INSTALLER stays in `env:`
-        # because, for a job that sets `container:`, the runner translates
-        # host paths there but not in expressions in `run:`.
+        # Run the sibling dictionary installer through github.action_path; see
+        # docs/development.md#composite-actions-vs-reusable-workflows.
+        # Keep INSTALLER in env so container jobs translate the host path.
         INSTALLER: ${{ github.action_path }}/../install-cspell-dictionaries/install-cspell-dictionaries.sh
         PACKAGES: ${{ inputs.extra-packages }}
         # The dictionaries go beside the cspell the step above installed,

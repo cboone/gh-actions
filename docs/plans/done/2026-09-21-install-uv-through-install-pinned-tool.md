@@ -30,7 +30,7 @@ Taken with the user before planning:
 
 Two mechanical facts override what the issue body and the chosen options describe. Both are stated here so the divergence is deliberate and reviewable.
 
-**A. A composite action cannot reference a sibling action by `./` path.** The path resolves against the caller's workspace, not the gh-actions checkout. The repository states this at `actions/run-cspell/action.yml:71` and `docs/development.md:11-13`. Consequences:
+**A. A composite action cannot reference a sibling action by `./` path.** The path resolves against the caller's checkout, not the gh-actions checkout. The repository states this at `actions/run-cspell/action.yml:71` and `docs/development.md:11-13`. Consequences:
 
 - The issue's `- uses: ./../install-pinned-tool` snippet is not implementable. `run-reuse` instead binds `${{ github.action_path }}/../install-pinned-tool/install-pinned-tool.sh` to an `INSTALLER` variable in `env:` and runs it, exactly as `set-up-shfmt`, `set-up-actionlint` and `set-up-shellcheck` do.
 - `run-reuse` cannot delegate to `set-up-uv` either. It carries the uv recipe itself. `set-up-uv` therefore reduces the recipe's copies rather than eliminating them.
