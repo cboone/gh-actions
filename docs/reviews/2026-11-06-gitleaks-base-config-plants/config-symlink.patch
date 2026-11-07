@@ -1,0 +1,11 @@
+--- a/scripts/prepare-gitleaks-config.py
++++ b/scripts/prepare-gitleaks-config.py
+@@ -59,7 +59,7 @@
+     if Path(name).is_absolute():
+         raise ValueError("gitleaks config must be relative to the base checkout")
+     try:
+-        path = (base / name).resolve(strict=True)
++        path = Path(__import__("os").path.abspath(base / name))
+     except FileNotFoundError:
+         raise ValueError(f"Base file {name!r} is missing; config must be a file within the base checkout") from None
+     if not path.is_relative_to(base) or not path.is_file():

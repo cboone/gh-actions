@@ -1,0 +1,11 @@
+--- a/.github/workflows/scan-for-secrets.yml
++++ b/.github/workflows/scan-for-secrets.yml
+@@ -202,7 +202,7 @@
+             trusted_args=(--config "${trusted_dir}/config-0.toml" \
+               --gitleaks-ignore-path "${trusted_dir}/.gitleaksignore")
+             args+=("${trusted_args[@]}")
+-            # Gitleaks also loads source/.gitleaksignore even with an explicit path.
++            # Gitleaks loads source/.gitleaksignore despite an explicit path.
+             # Preserve it outside the source during scanning, then restore it.
+             ignore_saved=false
+             trap 'if ${ignore_saved}; then mv -- "${trusted_dir}/proposed-ignore" .gitleaksignore; fi' EXIT

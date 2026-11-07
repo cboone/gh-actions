@@ -1,0 +1,11 @@
+--- a/scripts/prepare-gitleaks-config.py
++++ b/scripts/prepare-gitleaks-config.py
+@@ -35,7 +35,7 @@
+ 
+ 
+ def quoted(value):
+-    return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007f")
++    return json.dumps(value.replace(chr(92), "") if isinstance(value, str) else value, ensure_ascii=False).replace("\x7f", "\\u007f")
+ 
+ 
+ def toml_value(value):

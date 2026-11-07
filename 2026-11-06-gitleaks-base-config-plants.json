@@ -1,0 +1,190 @@
+{
+  "inputs": [".github/workflows/scan-for-secrets.yml", "scripts/prepare-gitleaks-config.py", "tests/check-gitleaks-base-config.mjs", ".github/workflows/run-ci.yml", "tests/check-gitleaks-config-errors.py", "tests/fixtures/workflow-steps.mjs", "docs/reviews/2026-11-06-gitleaks-base-config-plants/setup.sh", "docs/reviews/2026-11-06-gitleaks-base-config-plants/check.sh", "docs/reviews/2026-11-06-gitleaks-base-config-plants/pr-config-discovery.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/explicit-config-from-head.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/extensions-from-head.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/ignore-trusted-config.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/weaken-exit-assertion.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/weaken-diagnostic-assertion.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/anchored-path.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/history-scope.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/config-symlink.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/dangling-config.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/source-ignore.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/trusted-ignore.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/restore-ignore.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/escaped-regex.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/helper-context.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/helper-context-both.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/fixture-uv.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/error-context.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/key-normalization.patch", "docs/reviews/2026-11-06-gitleaks-base-config-plants/comment-control.patch"],
+  "setup": "docs/reviews/2026-11-06-gitleaks-base-config-plants/setup.sh",
+  "check": "docs/reviews/2026-11-06-gitleaks-base-config-plants/check.sh",
+  "timeout": 60,
+  "green": {
+    "exit_code": 0,
+    "contains": ["gitleaks plant: fixture started", "gitleaks-base-config: passed ("],
+    "excludes": ["AssertionError", "SyntaxError", "SKIP"]
+  },
+  "variants": [
+    {
+      "name": "pr-config-discovery",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/pr-config-discovery.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "added-default-working-tree: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "explicit-config-from-head",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/explicit-config-from-head.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "explicit-working-tree: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "extensions-from-head",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/extensions-from-head.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "extended-working-tree: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "ignore-trusted-config",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/ignore-trusted-config.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "base-allowlist: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "weaken-exit-assertion",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/weaken-exit-assertion.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "added-default-working-tree: expected diagnostic"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "weaken-diagnostic-assertion",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/weaken-diagnostic-assertion.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "added-default-working-tree: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "anchored-path",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/anchored-path.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "anchored-rule-pull_request: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "history-scope",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/history-scope.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "history-only-full-history: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "config-symlink",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/config-symlink.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "external-config-symlink: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "dangling-config",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/dangling-config.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "dangling-config-symlink: expected diagnostic"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "source-ignore",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/source-ignore.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "proposed-ignore-working-tree: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "trusted-ignore",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/trusted-ignore.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "trusted-ignore: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "restore-ignore",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/restore-ignore.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "empty-restore: ignore file was not restored"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "escaped-regex",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/escaped-regex.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "escaped-regex: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "helper-context",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/helper-context.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "trusted helper context must fail closed on missing values"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "helper-context-both",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/helper-context-both.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "trusted helper context must fail closed on missing values"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "fixture-uv",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/fixture-uv.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "gitleaks fixtures require pinned uv installation"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "error-context",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/error-context.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "malformed TOML diagnostic must identify the extended file"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    },
+    {
+      "name": "key-normalization",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/key-normalization.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["gitleaks plant: fixture started", "unicode-key-semantics: unexpected scan exit"],
+        "excludes": ["SyntaxError", "ERR_MODULE_NOT_FOUND", "command not found", "SKIP"]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "name": "comment-control",
+      "patch": "docs/reviews/2026-11-06-gitleaks-base-config-plants/comment-control.patch"
+    }
+  ]
+}

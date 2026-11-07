@@ -1,0 +1,11 @@
+--- a/.github/workflows/scan-for-secrets.yml
++++ b/.github/workflows/scan-for-secrets.yml
+@@ -191,7 +191,7 @@
+           PREPARE_CONFIG: ${{ github.workspace }}/gitleaks-tools/scripts/prepare-gitleaks-config.py
+         run: |
+           args=(detect --source .)
+-          if [ "${SCAN_SCOPE}" = "working-tree" ]; then
++          if true; then
+             args+=(--no-git)
+           fi
+           if [ "${EVENT_NAME}" = "pull_request" ]; then

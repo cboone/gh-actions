@@ -44,6 +44,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  gitleaks-base-config:
+    name: Gitleaks base configuration control
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24.21.0"
+
+      - name: Install hash-pinned fixture dependencies
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
+
+      - name: Install pinned gitleaks and scan the checkout
+        uses: ./actions/run-gitleaks
+
+      - name: Install uv for gitleaks fixtures
+        uses: ./actions/set-up-uv
+
+      - name: Check pull requests cannot weaken gitleaks rules
+        run: node tests/check-gitleaks-base-config.mjs
+
+      - name: Check trusted config error diagnostics
+        run: uv run --script tests/check-gitleaks-config-errors.py
+
   trufflehog-positive-control:
     name: TruffleHog positive control (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
