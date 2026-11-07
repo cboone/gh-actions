@@ -1,0 +1,19 @@
+--- a/.github/workflows/lint-shell.yml
++++ b/.github/workflows/lint-shell.yml
+@@ -194,10 +194,12 @@
+                   printf '%s\0' "${path}"
+                 fi
+               done < "${RUNNER_TEMP}/discovery-input.txt" \
+-                > "${RUNNER_TEMP}/shell-scripts.pending"
+-            fi
+-          fi
+-          mv "${RUNNER_TEMP}/shell-scripts.pending" "${RUNNER_TEMP}/shell-scripts.txt"
++                > "${RUNNER_TEMP}/shell-scripts.txt"
++            fi
++          fi
++          if [[ "${batched:-false}" == true ]]; then
++            mv "${RUNNER_TEMP}/shell-scripts.pending" "${RUNNER_TEMP}/shell-scripts.txt"
++          fi
+           if [[ -s "${RUNNER_TEMP}/shell-scripts.txt" ]]; then
+             echo "found=true" >> "${GITHUB_OUTPUT}"
+           else

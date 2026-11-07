@@ -1,0 +1,5 @@
+{
+  "tests/check-shell-discovery.py": "95e9c63d9d2b6f2d214f0f449faea81ef7092dc2b3ec439a19c1847a0c64249f",
+  "docs/reviews/2026-11-06-lint-shell-discovery-plants/check.sh": "0c141d34e850c8d9edcd611a5f91303d9214ee097e8436f874e803841e65c697",
+  "docs/reviews/2026-11-06-lint-shell-discovery-plants/preflight.sh": "9a38be0f637b2511135738537ee1802311437e13a0c2f61554077f3cb71eefbb"
+}

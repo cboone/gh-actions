@@ -1,0 +1,81 @@
+{
+  "inputs": [".github/workflows/lint-shell.yml", "tests/check-shell-discovery.py", "docs/reviews/2026-11-06-lint-shell-discovery-plants/comment.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/partial-manifest.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/check.py", "docs/reviews/2026-11-06-lint-shell-discovery-plants/skipped-count.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/preflight.sh", "docs/reviews/2026-11-06-lint-shell-discovery-plants/check.sh", "docs/reviews/2026-11-06-lint-shell-discovery-plants/measured-notice.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/inventory.json", "docs/reviews/2026-11-06-lint-shell-discovery-plants/multiline-debug.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/single-line-debug.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/unlisted-wrapper.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/newline-trap.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/command-token.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/trace-option.patch", "docs/reviews/2026-11-06-lint-shell-discovery-plants/trace-name.patch"],
+  "check": "docs/reviews/2026-11-06-lint-shell-discovery-plants/preflight.sh",
+  "timeout": 120,
+  "green": {
+    "exit_code": 0,
+    "contains": ["PREFLIGHT: imports and reviewed fixture contracts loaded\n"],
+    "excludes": ["ASSERTION:", "Traceback", "SyntaxError", "ImportError"]
+  },
+  "variants": [
+    {
+      "name": "multiline-debug",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/multiline-debug.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: instrumented fixture\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "single-line-debug",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/single-line-debug.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: instrumented fixture\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "unlisted-wrapper",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/unlisted-wrapper.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: unlisted fixture form\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "newline-trap",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/newline-trap.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: instrumented fixture\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "command-token",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/command-token.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: instrumented fixture\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "trace-option",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/trace-option.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: instrumented fixture\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    },
+    {
+      "name": "trace-name",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/trace-name.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["ASSERTION: instrumented fixture\n"],
+        "excludes": ["Traceback", "SyntaxError", "ImportError"]
+      }
+    }
+  ],
+  "controls": [
+    {
+      "name": "unchanged-inventory",
+      "patch": "docs/reviews/2026-11-06-lint-shell-discovery-plants/comment.patch"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+--- a/.github/workflows/lint-shell.yml
++++ b/.github/workflows/lint-shell.yml
+@@ -119,7 +119,7 @@
+           # untracked files out of a submodule.
+           git ls-files -z > "${RUNNER_TEMP}/tracked-files.txt"
+           : > "${RUNNER_TEMP}/shell-scripts.txt"
+-          : > "${RUNNER_TEMP}/shell-scripts.pending"
++          : > "${RUNNER_TEMP}/shell-scripts.txt"
+           tracked=0
+           skipped=0
+           while IFS= read -r -d '' path; do
+@@ -175,7 +175,7 @@
+             fi
+             if [[ "${batched}" == true ]]; then
+               xargs -0 -r shfmt -f=0 -- < "${RUNNER_TEMP}/discovery-input.txt" \
+-                > "${RUNNER_TEMP}/shell-scripts.pending"
++                > "${RUNNER_TEMP}/shell-scripts.txt"
+             else
+               # Both causes, because the probe selects this branch either
+               # way and a caller below 3.11.0 has no such mode to fix.
+@@ -194,10 +194,9 @@
+                   printf '%s\0' "${path}"
+                 fi
+               done < "${RUNNER_TEMP}/discovery-input.txt" \
+-                > "${RUNNER_TEMP}/shell-scripts.pending"
++                > "${RUNNER_TEMP}/shell-scripts.txt"
+             fi
+           fi
+-          mv "${RUNNER_TEMP}/shell-scripts.pending" "${RUNNER_TEMP}/shell-scripts.txt"
+           if [[ -s "${RUNNER_TEMP}/shell-scripts.txt" ]]; then
+             echo "found=true" >> "${GITHUB_OUTPUT}"
+           else
