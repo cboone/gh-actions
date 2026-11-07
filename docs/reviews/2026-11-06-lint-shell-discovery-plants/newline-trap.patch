@@ -1,0 +1,8 @@
+--- a/docs/reviews/2026-11-06-lint-shell-discovery-plants/check.sh
++++ b/docs/reviews/2026-11-06-lint-shell-discovery-plants/check.sh
+@@ -1,3 +1,5 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ uv run --no-project python docs/reviews/2026-11-06-lint-shell-discovery-plants/check.py
++trap
++':' EXIT

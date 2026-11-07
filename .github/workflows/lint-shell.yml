@@ -117,9 +117,14 @@ jobs:
           # untracked files out of a submodule.
           git ls-files -z > "${RUNNER_TEMP}/tracked-files.txt"
           : > "${RUNNER_TEMP}/shell-scripts.txt"
+          : > "${RUNNER_TEMP}/shell-scripts.pending"
+          tracked=0
+          skipped=0
           while IFS= read -r -d '' path; do
+            tracked=$((tracked + 1))
             # Exclude submodule directories and symlinks to untracked files.
             if [[ ! -f "${path}" || -L "${path}" ]]; then
+              skipped=$((skipped + 1))
               continue
             fi
             # A bare '-' means stdin to the checkers, even after '--'.
@@ -129,6 +134,7 @@ jobs:
             printf '%s\0' "${path}"
           done < "${RUNNER_TEMP}/tracked-files.txt" \
             > "${RUNNER_TEMP}/discovery-input.txt"
+          echo "Worktree filter skipped ${skipped} of ${tracked} tracked paths (absent, non-regular or symlink)."
           # This guard is load-bearing beyond skipping empty work: GNU xargs,
           # which ubuntu-latest has, runs its command once on empty input,
           # and `shfmt -f=0` with no operands emits a newline that would
@@ -167,7 +173,7 @@ jobs:
             fi
             if [[ "${batched}" == true ]]; then
               xargs -0 -r shfmt -f=0 -- < "${RUNNER_TEMP}/discovery-input.txt" \
-                > "${RUNNER_TEMP}/shell-scripts.txt"
+                > "${RUNNER_TEMP}/shell-scripts.pending"
             else
               # Both causes, because the probe selects this branch either
               # way and a caller below 3.11.0 has no such mode to fix.
@@ -186,14 +192,16 @@ jobs:
                   printf '%s\0' "${path}"
                 fi
               done < "${RUNNER_TEMP}/discovery-input.txt" \
-                > "${RUNNER_TEMP}/shell-scripts.txt"
+                > "${RUNNER_TEMP}/shell-scripts.pending"
             fi
           fi
+          mv "${RUNNER_TEMP}/shell-scripts.pending" "${RUNNER_TEMP}/shell-scripts.txt"
           if [[ -s "${RUNNER_TEMP}/shell-scripts.txt" ]]; then
             echo "found=true" >> "${GITHUB_OUTPUT}"
           else
             echo "found=false" >> "${GITHUB_OUTPUT}"
-            msg="No tracked shell scripts found; ShellCheck and shfmt checks were skipped."
+            msg="No shell scripts found among tracked regular files present in the worktree;"
+            msg="${msg} ShellCheck and shfmt checks were skipped."
             echo "::notice::${msg}"
             echo "${msg}" >> "${GITHUB_STEP_SUMMARY}"
           fi
