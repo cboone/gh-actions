@@ -6,6 +6,8 @@ import { mkdtempSync, mkdirSync, rmSync, readFileSync, writeFileSync, existsSync
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { loadWorkflow, stepOf, runStepScript } from "./fixtures/workflow-steps.mjs";
+import { parseFindings } from "./fixtures/gitleaks-findings.mjs";
+import "./check-gitleaks-findings.mjs";
 
 const workflow = loadWorkflow("scan-for-secrets.yml");
 const steps = workflow.jobs.gitleaks.steps;
@@ -48,7 +50,7 @@ const root = mkdtempSync(join(tmpdir(), "gitleaks-base-control-"));
 let cases = 0;
 
 function git(cwd, args, input) {
-  const result = spawnSync("git", args, { cwd, input, encoding: "utf8" });
+  const result = spawnSync("git", ["-c", "gc.auto=0", "-c", "maintenance.auto=false", ...args], { cwd, input, encoding: "utf8" });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr);
   return result.stdout.trim();
@@ -86,7 +88,7 @@ function runCase(name, { base = {}, head = {}, config = "", event = "pull_reques
     const probe = spawnSync("gitleaks", probeArgs, { cwd: source, encoding: "utf8" });
     assert.ifError(probe.error);
     assert.equal(probe.status, 1, `${name}: fingerprint probe must detect the secret`);
-    const findings = JSON.parse(probe.stdout).filter((finding) => finding.File === secretPath);
+    const findings = parseFindings(probe.stdout).filter((finding) => finding.File === secretPath);
     assert.ok(findings.length > 0, `${name}: fingerprint probe must report the secret file`);
     const oldHead = git(source, ["rev-parse", "main"]);
     git(source, ["checkout", "--quiet", "--detach", baseSha]);

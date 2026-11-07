@@ -1,0 +1,9 @@
+import { AssertionError } from "node:assert";
+
+const assertions = new Set(["added-default-working-tree: unexpected scan exit", "explicit-working-tree: unexpected scan exit", "extended-working-tree: unexpected scan exit", "base-allowlist: unexpected scan exit", "added-default-working-tree: expected diagnostic", "anchored-rule-pull_request: unexpected scan exit", "history-only-full-history: unexpected scan exit", "external-config-symlink: unexpected scan exit", "dangling-config-symlink: expected diagnostic", "proposed-ignore-working-tree: unexpected scan exit", "trusted-ignore: unexpected scan exit", "empty-restore: ignore file was not restored", "escaped-regex: unexpected scan exit", "trusted helper context must fail closed on missing values", "gitleaks fixtures require pinned uv installation", "unicode-key-semantics: unexpected scan exit", "fingerprint report shape guard must reject a non-array with a named assertion", "verdict adapter must reject counterfeit assertion objects"]);
+
+export function assertionLabel(error) {
+  if (!(error instanceof AssertionError)) return null;
+  const label = error.message.split("\n", 1)[0];
+  return assertions.has(label) ? label : null;
+}

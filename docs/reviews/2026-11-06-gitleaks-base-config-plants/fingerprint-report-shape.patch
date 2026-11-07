@@ -1,0 +1,10 @@
+--- a/tests/fixtures/gitleaks-findings.mjs
++++ b/tests/fixtures/gitleaks-findings.mjs
+@@ -9,7 +9,6 @@
+   } catch {
+     assert.fail("fingerprint report must contain valid JSON");
+   }
+-  assert.ok(Array.isArray(findings), "fingerprint report must be an array");
+   for (const finding of findings) {
+     assert.ok(finding !== null && typeof finding === "object" && !Array.isArray(finding), "fingerprint finding must be an object");
+     assert.ok(typeof finding.File === "string", "fingerprint finding must have a string File");
