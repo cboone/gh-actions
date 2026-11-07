@@ -104,6 +104,22 @@ function setupNodeStep(workflow, job) {
 }
 
 const scenarios = {
+  "ci-install"() {
+    const workflow = loadWorkflow("run-ci.yml");
+    const installs = [];
+    for (const [job, config] of Object.entries(workflow.jobs)) {
+      for (const step of config.steps ?? []) {
+        for (const line of (step.run ?? "").split("\n")) {
+          if (/\bnpm\s+ci\b/.test(line)) installs.push([`${job}/${step.name}`, line.trim()]);
+        }
+      }
+    }
+    assert.ok(installs.length > 0, "run-ci.yml has no npm ci invocations");
+    for (const [label, command] of installs) {
+      assert.equal(command, "npm ci --ignore-scripts --include=dev --no-audit --no-fund", `${label}: npm ci must use the canonical flags`);
+    }
+  },
+
   // The likeliest misconfiguration is carrying the token workflow's GitHub
   // Packages default across to the OIDC one.
   registry() {
