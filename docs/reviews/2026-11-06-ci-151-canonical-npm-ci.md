@@ -16,6 +16,6 @@ Plant: add a CI job whose install omits `--ignore-scripts`; the `ci-install`
 scenario must reject that job at the canonical-flags assertion. Preserve the
 existing publish install and lockfile-probe parity assertions.
 
-Evidence and receipts live outside the checkout under the workstream mailbox's
+Evidence and receipts live outside the checkout under the session mailbox's
 `evidence/` directory. Final validation uses an argv JSON manifest there, on a
 committed head containing current `origin/main`. CI validation follows the PR.
