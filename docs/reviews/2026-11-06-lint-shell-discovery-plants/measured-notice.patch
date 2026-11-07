@@ -1,0 +1,11 @@
+--- a/.github/workflows/lint-shell.yml
++++ b/.github/workflows/lint-shell.yml
+@@ -202,7 +202,7 @@
+             echo "found=true" >> "${GITHUB_OUTPUT}"
+           else
+             echo "found=false" >> "${GITHUB_OUTPUT}"
+-            msg="No shell scripts found among tracked regular files present in the worktree;"
++            msg="No tracked shell scripts found;"
+             msg="${msg} ShellCheck and shfmt checks were skipped."
+             echo "::notice::${msg}"
+             echo "${msg}" >> "${GITHUB_STEP_SUMMARY}"

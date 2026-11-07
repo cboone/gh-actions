@@ -1,0 +1,11 @@
+--- a/.github/workflows/lint-shell.yml
++++ b/.github/workflows/lint-shell.yml
+@@ -111,7 +111,7 @@
+         id: find-scripts
+         if: inputs.run-shellcheck || inputs.run-shfmt
+         run: |
+-          # Reduce the tracked tree to the regular files a checker can read,
++          # Filter the tracked tree to the regular files a checker can read,
+           # retaining each original path in a NUL-separated list. This loop
+           # forks nothing: `[[` is a shell keyword and `printf` a builtin.
+           # Its guard is load-bearing for either discovery path, because
