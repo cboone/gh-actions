@@ -654,6 +654,12 @@ literally and leave no file behind. The two Codecov steps are asserted
 statically rather than executed, because their `run:` blocks download and
 checksum the Codecov CLI.
 
+The fixture’s `tool-pins` scenario compares uv input defaults, `UV_VERSION`
+environment pins and explicit installer arguments across all workflow and
+action definition, including `.yaml` files. Add a tool name to `PINNED_TOOLS`
+to apply the same conventions to another tool. Pin disagreement reports each
+source and version.
+
 The `npm-publish` job covers the three npm workflows on the same two
 runners, for the same bash 3.2 reason. Neither publish workflow can be
 self-hosted here, because calling either end to end would publish

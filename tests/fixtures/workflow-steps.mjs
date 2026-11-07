@@ -3,7 +3,7 @@
 // keeping the spawn in one place keeps every fixture's shell identical to the
 // runner's.
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { parse } from "yaml";
 
@@ -56,32 +56,26 @@ function* actionFiles(dir, prefix) {
   }
 }
 
-// Every step in the repository, keyed as `<file>::<job>::<step name>`. The job
-// is part of the key because step names repeat across jobs: keying on the file
-// and name alone would let one allowlist entry cover every same-named step in
-// that file. An unnamed step falls back to its index, which moves when a step
-// is inserted above it, so a step an exception set names carries a `name:`.
-export function* allSteps() {
+export function* workflowDocuments() {
   for (const name of readdirSync(workflowDir).filter(isYaml)) {
-    const doc = parse(readFileSync(new URL(name, workflowDir), "utf8"));
-    for (const [jobId, job] of Object.entries(doc.jobs ?? {})) {
-      for (const [index, step] of (job.steps ?? []).entries()) {
-        yield { key: `${name}::${jobId}::${step.name ?? `(unnamed step ${index})`}`, step };
-      }
+    yield { label: name, doc: loadWorkflow(name) };
+  }
+  for (const prefix of ["actions/", ".github/actions/"]) {
+    for (const { path, label } of actionFiles(new URL(prefix, repoRoot), prefix)) {
+      yield { label, doc: parse(readFileSync(path, "utf8")) };
     }
   }
-  for (const { path, label } of actionFiles(new URL("actions/", repoRoot), "actions/")) {
-    const doc = parse(readFileSync(path, "utf8"));
-    for (const [index, step] of (doc.runs?.steps ?? []).entries()) {
-      yield { key: `${label}::runs::${step.name ?? `(unnamed step ${index})`}`, step };
-    }
-  }
-  for (const dir of [new URL(".github/actions/", repoRoot)]) {
-    if (!existsSync(dir) || !statSync(dir).isDirectory()) continue;
-    for (const { path, label } of actionFiles(dir, ".github/actions/")) {
-      const doc = parse(readFileSync(path, "utf8"));
-      for (const [index, step] of (doc.runs?.steps ?? []).entries()) {
-        yield { key: `${label}::runs::${step.name ?? `(unnamed step ${index})`}`, step };
+}
+
+// Key every step as `<file>::<job>::<step name>` so allowlist entries cannot
+// cover same-named steps across jobs. Unnamed steps use their index, which
+// shifts on insertion; steps named in exception sets must carry a `name:`.
+export function* allSteps() {
+  for (const { label, doc } of workflowDocuments()) {
+    const groups = doc.jobs ?? { runs: doc.runs };
+    for (const [jobId, job] of Object.entries(groups)) {
+      for (const [index, step] of (job?.steps ?? []).entries()) {
+        yield { key: `${label}::${jobId}::${step.name ?? `(unnamed step ${index})`}`, step };
       }
     }
   }
