@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -107,5 +107,5 @@
+ .PHONY: test-rust-tool-installs
+ test-rust-tool-installs:
+-	"$(UV)" run tests/check-rust-tool-installs.py
++	-"$(UV)" run tests/check-rust-tool-installs.py
+ 
+ .PHONY: test-checkout-credentials

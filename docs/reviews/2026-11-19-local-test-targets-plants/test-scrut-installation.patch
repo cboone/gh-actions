@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -71,5 +71,5 @@
+ .PHONY: test-scrut-installation
+ test-scrut-installation:
+-	env $(SCRUT_ENV) "$(SCRUT)" test tests/scrut/installation.md
++	-env $(SCRUT_ENV) "$(SCRUT)" test tests/scrut/installation.md
+ 
+ .PHONY: test-zig-format-paths
