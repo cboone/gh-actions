@@ -569,6 +569,45 @@ Migration section.
 
 ## Testing
 
+### Local targets
+
+Run `npm ci --ignore-scripts --include=dev --no-audit --no-fund` and `make setup`
+before the first test run. Setup installs only actionlint and yamllint under
+`.local`; it does not install the other test prerequisites.
+
+`make test-all` runs local lint, formatting checks and tests before pushing.
+`make test` runs the Scrut suites and the Python and Node checks without
+downloading release binaries. `make test-scrut`, `make test-python` and
+`make test-node` run those groups separately. `make help` lists the aggregates;
+individual `test-*` targets in the Makefile match the direct checks in CI.
+
+Tests require Node with the locked npm dependencies, uv with Python 3.11+,
+Scrut matching the installation snapshot, Zig, shfmt, shellcheck, jq, file,
+tar, otool on macOS, gitleaks and the action-pinned TruffleHog version on
+`PATH`. The TruffleHog control uses a loopback verification server. Set `UV_PYTHON_DOWNLOADS=never`
+and `UV_OFFLINE=1` to forbid uv interpreter downloads and network access.
+Missing prerequisites are errors, not skipped tests. Use executable overrides
+`NODE`, `UV` and `SCRUT` to select an existing installation, for example
+`make test-scrut SCRUT=/absolute/path/to/scrut`. `SCRUT_ENV` binds fixture paths to this checkout.
+
+`make test-network` runs the checks that download and execute checksum-verified
+release binaries. It is excluded from `test` and `test-all`. Run
+`make test-rust-tool-installs` or `make audit-scrut-releases` separately when
+needed. The latter accepts `AUDIT_CACHE` and `AUDIT_OUTPUT` paths, including
+CI's existing runner-temporary and artifact paths. These checks also require
+curl; Linux needs zstd for older archives.
+
+CI keeps its runner matrices, tool setup, action-level installer tests,
+generated composite fixtures and reusable-workflow calls. Those need GitHub
+Actions context and are not reproduced by `make test-all`; direct test steps
+call the same Makefile targets used locally. GitHub-hosted runners supply make
+for these direct test steps; a missing make command fails the step. Default
+test suites expect existing test tools. `test-all` may provision actionlint
+and yamllint. `test-rust-tool-installs` installs the binaries it exercises in
+temporary directories.
+
+### Coverage
+
 `tests/check-gitleaks-base-config.mjs` executes `scan-for-secrets.yml`'s literal
 gitleaks block with the installed gitleaks binary and disposable Git histories.
 The `gitleaks-base-config` CI job runs it on Ubuntu, matching the workflow's only
