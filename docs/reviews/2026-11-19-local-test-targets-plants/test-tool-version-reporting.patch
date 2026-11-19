@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -99,5 +99,5 @@
+ .PHONY: test-tool-version-reporting
+ test-tool-version-reporting:
+-	"$(UV)" run --script tests/check-tool-version-reporting.py
++	-"$(UV)" run --script tests/check-tool-version-reporting.py
+ 
+ .PHONY: test-gitleaks-config-errors

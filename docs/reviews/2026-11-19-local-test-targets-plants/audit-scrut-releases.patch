@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -119,5 +119,5 @@
+ .PHONY: audit-scrut-releases
+ audit-scrut-releases:
+-	"$(UV)" run tests/audit-scrut-releases.py --native-only --cache "$(AUDIT_CACHE)" --output "$(AUDIT_OUTPUT)"
++	-"$(UV)" run tests/audit-scrut-releases.py --native-only --cache "$(AUDIT_CACHE)" --output "$(AUDIT_OUTPUT)"
+ 
+ help: ## Show this help

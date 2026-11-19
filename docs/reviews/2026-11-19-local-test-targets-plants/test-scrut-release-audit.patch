@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -91,5 +91,5 @@
+ .PHONY: test-scrut-release-audit
+ test-scrut-release-audit:
+-	SCRUT_BIN="$$(command -v "$(SCRUT)")" "$(UV)" run tests/check-scrut-release-audit.py
++	-SCRUT_BIN="$$(command -v "$(SCRUT)")" "$(UV)" run tests/check-scrut-release-audit.py
+ 
+ .PHONY: test-shell-discovery

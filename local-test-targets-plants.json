@@ -1,0 +1,138 @@
+{
+  "inputs": ["Makefile", "docs/reviews/2026-11-19-local-test-targets-plants/check.sh", "docs/reviews/2026-11-19-local-test-targets-plants/test-setup-uv.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-scrut-installation.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-zig-format-paths.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-workflow-arg-binding.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-npm-publish.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-trufflehog-positive-control.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-scrut-release-audit.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-shell-discovery.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-tool-version-reporting.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-gitleaks-config-errors.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-rust-tool-installs.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-checkout-credentials.patch", "docs/reviews/2026-11-19-local-test-targets-plants/test-gitleaks-base-config.patch", "docs/reviews/2026-11-19-local-test-targets-plants/audit-scrut-releases.patch"],
+  "check": "docs/reviews/2026-11-19-local-test-targets-plants/check.sh",
+  "timeout": 60,
+  "green": {
+    "exit_code": 0,
+    "contains": ["Checking Makefile failure propagation\n", "PASS: every target propagated a failed tool\n"],
+    "excludes": ["FAIL:", "command not found"]
+  },
+  "variants": [
+    {
+      "name": "test-setup-uv",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-setup-uv.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-setup-uv accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-scrut-installation",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-scrut-installation.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-scrut-installation accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-zig-format-paths",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-zig-format-paths.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-zig-format-paths accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-workflow-arg-binding",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-workflow-arg-binding.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-workflow-arg-binding accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-npm-publish",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-npm-publish.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-npm-publish accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-trufflehog-positive-control",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-trufflehog-positive-control.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-trufflehog-positive-control accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-scrut-release-audit",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-scrut-release-audit.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-scrut-release-audit accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-shell-discovery",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-shell-discovery.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-shell-discovery accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-tool-version-reporting",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-tool-version-reporting.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-tool-version-reporting accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-gitleaks-config-errors",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-gitleaks-config-errors.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-gitleaks-config-errors accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-rust-tool-installs",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-rust-tool-installs.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-rust-tool-installs accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-checkout-credentials",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-checkout-credentials.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-checkout-credentials accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "test-gitleaks-base-config",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/test-gitleaks-base-config.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: test-gitleaks-base-config accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    },
+    {
+      "name": "audit-scrut-releases",
+      "patch": "docs/reviews/2026-11-19-local-test-targets-plants/audit-scrut-releases.patch",
+      "red": {
+        "exit_code": 1,
+        "contains": ["FAIL: audit-scrut-releases accepted a failing tool (make exit 0)"],
+        "excludes": ["command not found", "SyntaxError"]
+      }
+    }
+  ]
+}

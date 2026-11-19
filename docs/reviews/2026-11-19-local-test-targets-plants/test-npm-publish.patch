@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -83,5 +83,5 @@
+ .PHONY: test-npm-publish
+ test-npm-publish:
+-	env $(SCRUT_ENV) "$(SCRUT)" test tests/scrut/npm-publish.md
++	-env $(SCRUT_ENV) "$(SCRUT)" test tests/scrut/npm-publish.md
+ 
+ .PHONY: test-trufflehog-positive-control

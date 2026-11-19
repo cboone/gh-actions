@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -115,5 +115,5 @@
+ .PHONY: test-gitleaks-base-config
+ test-gitleaks-base-config:
+-	"$(NODE)" tests/check-gitleaks-base-config.mjs
++	-"$(NODE)" tests/check-gitleaks-base-config.mjs
+ 
+ .PHONY: audit-scrut-releases

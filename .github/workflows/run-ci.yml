@@ -69,10 +69,10 @@ jobs:
         uses: ./actions/set-up-uv
 
       - name: Check pull requests cannot weaken gitleaks rules
-        run: node tests/check-gitleaks-base-config.mjs
+        run: make test-gitleaks-base-config
 
       - name: Check trusted config error diagnostics
-        run: uv run --script tests/check-gitleaks-config-errors.py
+        run: make test-gitleaks-config-errors
 
   trufflehog-positive-control:
     name: TruffleHog positive control (${{ matrix.os }})
@@ -112,7 +112,7 @@ jobs:
         uses: ./actions/set-up-uv
 
       - name: Check findings fail both TruffleHog entry points
-        run: uv run --script tests/trufflehog-positive-control.py
+        run: make test-trufflehog-positive-control
 
   # The control above runs the extracted scan step directly, so it never
   # reaches the fetch step, which needs real workflow context. This call
@@ -301,17 +301,13 @@ jobs:
           CARGO_BUILD_TARGET: x86_64-unknown-linux-gnu
 
       - name: Check Scrut action installation and execution
-        env:
-          SCRUT_BIN: scrut
-        run: scrut test tests/scrut/installation.md
+        run: make test-scrut-installation
 
       - name: Install uv for release audit controls
         uses: ./actions/set-up-uv
 
       - name: Check release audit defect controls
-        env:
-          SCRUT_BIN: scrut
-        run: uv run tests/check-scrut-release-audit.py
+        run: make test-scrut-release-audit
 
       - name: Reject unsupported Scrut version
         id: unsupported-scrut
@@ -359,7 +355,7 @@ jobs:
         env:
           AUDIT_CACHE: ${{ runner.temp }}/scrut-release-audit
           AUDIT_OUTPUT: ${{ runner.temp }}/scrut-release-audit.json
-        run: uv run tests/audit-scrut-releases.py --native-only --cache "${AUDIT_CACHE}" --output "${AUDIT_OUTPUT}"
+        run: make audit-scrut-releases
 
       - name: Save release audit evidence
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -398,18 +394,11 @@ jobs:
       - uses: ./actions/set-up-scrut
 
       - name: Check Scrut installation
-        env:
-          SCRUT_BIN: scrut
-        run: scrut test tests/scrut/installation.md
+        run: make test-scrut-installation
 
       - name: Check Zig formatting behavior
         shell: bash
-        env:
-          ZIG_FORMAT_FIXTURE: ${{ github.workspace }}/tests/fixtures/check-zig-format-paths.mjs
-        run: |
-          NODE_BIN="$(command -v node)"
-          export NODE_BIN
-          scrut test tests/scrut/zig-format-paths.md
+        run: make test-zig-format-paths
 
   # Neither run-go-ci.yml nor release-go-binaries.yml is self-hosted here, so
   # this job runs their production steps directly against hostile input values.
@@ -442,12 +431,7 @@ jobs:
 
       - name: Check argument binding behavior
         shell: bash
-        env:
-          ARG_BINDING_FIXTURE: ${{ github.workspace }}/tests/fixtures/check-workflow-arg-binding.mjs
-        run: |
-          NODE_BIN="$(command -v node)"
-          export NODE_BIN
-          scrut test tests/scrut/workflow-arg-binding.md
+        run: make test-workflow-arg-binding
 
   # Neither publish workflow can be self-hosted here, because calling either end
   # to end would publish something, so this job runs their steps directly: the
@@ -481,12 +465,7 @@ jobs:
 
       - name: Check npm publish behavior
         shell: bash
-        env:
-          NPM_PUBLISH_FIXTURE: ${{ github.workspace }}/tests/fixtures/check-npm-publish.mjs
-        run: |
-          NODE_BIN="$(command -v node)"
-          export NODE_BIN
-          scrut test tests/scrut/npm-publish.md
+        run: make test-npm-publish
 
   # One runner, not the installer matrix: the checker reads YAML and executes
   # nothing platform-dependent, so a second runner would repeat an identical
@@ -517,7 +496,7 @@ jobs:
         run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
 
       - name: Check the checkout credential policy
-        run: node tests/check-checkout-credentials.mjs
+        run: make test-checkout-credentials
   # check-tool-versions.yml runs weekly on a schedule, so nothing here would
   # otherwise execute its reporting logic until it next fired, and the failure
   # mode it guards against is one that reports green. This job runs that
@@ -541,7 +520,7 @@ jobs:
         uses: ./actions/set-up-uv
 
       - name: Check the version check refuses incomplete runs
-        run: uv run --script tests/check-tool-version-reporting.py
+        run: make test-tool-version-reporting
 
   # The action job below proves that an installed dictionary resolves; the two
   # jobs here prove the workflow wiring, which is the half that job cannot
@@ -700,7 +679,7 @@ jobs:
       # cases drive the batched call. Neither run is redundant: each is the
       # only real-binary exercise of its branch.
       - name: Check tracked shell discovery against shfmt 3.13.1
-        run: uv run tests/check-shell-discovery.py
+        run: make test-shell-discovery
 
       # Each binary must resolve to the pinned install rather than a copy
       # the runner image ships, and must report the pinned version. Newlines
@@ -807,7 +786,7 @@ jobs:
       # needs both tools the teardown above removed: shfmt at 3.14.1, and the
       # uv that runs it, which `set-up-uv` restores.
       - name: Check tracked shell discovery against shfmt 3.14.1
-        run: uv run tests/check-shell-discovery.py
+        run: make test-shell-discovery
 
       # actionlint shells out to shellcheck for every `run:` block, and with
       # no shellcheck on PATH it skips all of them and still exits 0, which
@@ -1403,12 +1382,10 @@ jobs:
       - name: Install uv
         uses: ./actions/set-up-uv
 
-      # run-rust-ci.yml is never invoked by this workflow, so its committed
-      # cargo-audit and cargo-llvm-cov digests would otherwise reach a
-      # release unexercised. The matrix covers every target triple the two
-      # checksum tables carry.
+      # Check the cargo-audit and cargo-llvm-cov digests for every target
+      # triple in their checksum tables; run-rust-ci.yml is not invoked here.
       - name: Check the cargo-audit and cargo-llvm-cov installs
-        run: uv run tests/check-rust-tool-installs.py
+        run: make test-rust-tool-installs
 
   # Exercise run-reuse's uv recipe on the installer matrix; see
   # docs/development.md#composite-actions-vs-reusable-workflows.

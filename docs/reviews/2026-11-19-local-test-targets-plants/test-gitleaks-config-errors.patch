@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -103,5 +103,5 @@
+ .PHONY: test-gitleaks-config-errors
+ test-gitleaks-config-errors:
+-	"$(UV)" run --script tests/check-gitleaks-config-errors.py
++	-"$(UV)" run --script tests/check-gitleaks-config-errors.py
+ 
+ .PHONY: test-rust-tool-installs

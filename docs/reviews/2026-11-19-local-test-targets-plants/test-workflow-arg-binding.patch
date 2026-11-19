@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -79,5 +79,5 @@
+ .PHONY: test-workflow-arg-binding
+ test-workflow-arg-binding:
+-	env $(SCRUT_ENV) "$(SCRUT)" test tests/scrut/workflow-arg-binding.md
++	-env $(SCRUT_ENV) "$(SCRUT)" test tests/scrut/workflow-arg-binding.md
+ 
+ .PHONY: test-npm-publish

@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -95,5 +95,5 @@
+ .PHONY: test-shell-discovery
+ test-shell-discovery:
+-	"$(UV)" run tests/check-shell-discovery.py
++	-"$(UV)" run tests/check-shell-discovery.py
+ 
+ .PHONY: test-tool-version-reporting

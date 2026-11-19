@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -75,5 +75,5 @@
+ .PHONY: test-zig-format-paths
+ test-zig-format-paths:
+-	env $(SCRUT_ENV) "$(SCRUT)" test tests/scrut/zig-format-paths.md
++	-env $(SCRUT_ENV) "$(SCRUT)" test tests/scrut/zig-format-paths.md
+ 
+ .PHONY: test-workflow-arg-binding

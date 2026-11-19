@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -67,5 +67,5 @@
+ .PHONY: test-setup-uv
+ test-setup-uv:
+-	env $(SCRUT_ENV) "$(SCRUT)" test tests/scrut/setup-uv.md
++	-env $(SCRUT_ENV) "$(SCRUT)" test tests/scrut/setup-uv.md
+ 
+ .PHONY: test-scrut-installation

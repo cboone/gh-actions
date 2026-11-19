@@ -1,0 +1,9 @@
+--- a/Makefile
++++ b/Makefile
+@@ -87,5 +87,5 @@
+ .PHONY: test-trufflehog-positive-control
+ test-trufflehog-positive-control:
+-	"$(UV)" run --script tests/trufflehog-positive-control.py
++	-"$(UV)" run --script tests/trufflehog-positive-control.py
+ 
+ .PHONY: test-scrut-release-audit
