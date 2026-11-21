@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 #
-# Decide whether TruffleHog's findings are all covered by a reviewed
-# allowlist, and report them with safe metadata only.
+# Report TruffleHog finding metadata and apply a reviewed allowlist when supplied.
 #
-# Usage: check-allowlist.sh --findings <path> --allowlist <path>
+# Usage: check-allowlist.sh --findings <path> [--allowlist <path>]
 #                          [--expect-findings]
 #
 # --expect-findings says TruffleHog exited 183, meaning it reported results.
@@ -17,7 +16,7 @@
 #
 # Exit status:
 #   0  every finding is allowlisted, or there were none
-#   1  at least one finding is not allowlisted
+#   1  at least one finding is not covered by an allowlist
 #   2  the allowlist or the findings file could not be used
 
 set -euo pipefail
@@ -38,7 +37,7 @@ function cleanup() {
 trap cleanup EXIT
 
 function usage() {
-  echo "Usage: ${0##*/} --findings <path> --allowlist <path> [--expect-findings]" >&2
+  echo "Usage: ${0##*/} --findings <path> [--allowlist <path>] [--expect-findings]" >&2
 }
 
 # Encode a workflow-command annotation's data, mirroring the helper in
@@ -82,7 +81,7 @@ function main() {
       shift 2
       ;;
     --allowlist)
-      [[ $# -ge 2 ]] || {
+      [[ $# -ge 2 && -n "${2}" ]] || {
         usage
         exit "${EXIT_INVALID}"
       }
@@ -100,7 +99,7 @@ function main() {
     esac
   done
 
-  if [[ -z "${findings}" || -z "${allowlist}" ]]; then
+  if [[ -z "${findings}" ]]; then
     usage
     exit "${EXIT_INVALID}"
   fi
@@ -109,15 +108,20 @@ function main() {
   # tool to the image can fail open, so its absence is a hard failure here
   # instead of a skipped check that would pass every finding silently.
   if ! command -v jq >/dev/null 2>&1; then
-    fail_invalid "jq is required to apply a TruffleHog allowlist and was not found on PATH."
+    fail_invalid "jq is required to report TruffleHog findings and was not found on PATH."
   fi
 
   if [[ ! -f "${findings}" ]]; then
     fail_invalid "TruffleHog findings file not found: ${findings}"
   fi
 
-  if [[ ! -f "${allowlist}" ]]; then
-    fail_invalid "TruffleHog allowlist file not found: ${allowlist}"
+  # cspell:ignore argjson
+  local allowlist_args=(--argjson allowlist null)
+  if [[ -n "${allowlist}" ]]; then
+    if [[ ! -f "${allowlist}" ]]; then
+      fail_invalid "TruffleHog allowlist file not found: ${allowlist}"
+    fi
+    allowlist_args=(--slurpfile allowlist "${allowlist}")
   fi
 
   local program
@@ -147,7 +151,7 @@ function main() {
   local status=0
   report="$(
     jq -r \
-      --slurpfile allowlist "${allowlist}" \
+      "${allowlist_args[@]}" \
       --slurpfile findings "${findings}" \
       -n -f "${program}" 2>"${diagnostics}"
   )" || status=$?
@@ -159,7 +163,7 @@ function main() {
     while IFS= read -r line; do
       printf 'checker: %s\n' "$(escape_data "${line}")" >&2
     done <"${diagnostics}"
-    fail_invalid "Could not match TruffleHog findings against ${allowlist}; see the jq error above."
+    fail_invalid "Could not process TruffleHog findings; see the jq error above."
   fi
 
   # The first line is the verdict, and nothing the allowlist controls can
@@ -187,7 +191,9 @@ function main() {
   fi
 
   if [[ "${blocked}" -gt 0 ]]; then
-    echo "::error::TruffleHog reported findings that no allowlist entry covers." >&2
+    if [[ -n "${allowlist}" ]]; then
+      echo "::error::TruffleHog reported findings that no allowlist entry covers." >&2
+    fi
     exit "${EXIT_BLOCKED}"
   fi
 }

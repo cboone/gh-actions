@@ -8,7 +8,7 @@ inputs:
     default: "8.30.1"
   args:
     description: >-
-      Arguments to pass to gitleaks, one per line.
+      Scan arguments to pass to gitleaks, one per line. The action controls redaction and reports.
     required: false
     default: |-
       detect
@@ -74,8 +74,58 @@ runs:
       env:
         GITLEAKS_ARGS: ${{ inputs.args }}
       run: |
+        set +x
+        umask 077
         args=()
         while IFS= read -r line; do
-          [[ -n "${line}" ]] && args+=("${line}")
+          case "${line}" in
+            "") continue ;;
+            --redact|--redact=100) ;;
+            --redact=*|--report-path|--report-path=*|--report-format|--report-format=*|\
+            --report-template|--report-template=*|--diagnostics|--diagnostics=*|\
+            --diagnostics-dir|--diagnostics-dir=*)
+              echo "::error::run-gitleaks controls redaction, report options and diagnostics." >&2
+              exit 1
+              ;;
+          esac
+          # -f and -r can have attached values or follow -v in a short option group.
+          if [[ "${line}" =~ ^-[vh]*[fr] ]]; then
+            echo "::error::run-gitleaks controls report options (-f and -r)." >&2
+            exit 1
+          fi
+          args+=("${line}")
         done <<< "${GITLEAKS_ARGS}"
-        gitleaks "${args[@]}" --verbose
+        if ! command -v jq >/dev/null 2>&1; then
+          echo "::error::jq is required to report Gitleaks findings and is not on PATH." >&2
+          exit 1
+        fi
+        scan_dir="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/gitleaks-scan.XXXXXX")"
+        report="${scan_dir}/findings.json"
+        stdout="${scan_dir}/stdout"
+        diagnostics="${scan_dir}/stderr"
+        trap 'rm -f -- "${report}" "${stdout}" "${diagnostics}" && rmdir -- "${scan_dir}"' EXIT
+        status=0
+        # Verbose output can expose matches from required rules even with redaction.
+        gitleaks --redact=100 --report-format json --report-path "${report}" \
+          ${args[@]+"${args[@]}"} >"${stdout}" 2>"${diagnostics}" || status=$?
+        if [[ ! -f "${report}" && "${status}" -ne 0 ]]; then
+          echo "::error::gitleaks could not complete the scan (exit ${status})." >&2
+          exit "${status}"
+        fi
+        if ! jq -ser --arg status "${status}" '
+          if length != 1 or (.[0] | type) != "array" then error("invalid report")
+          else .[0] end
+          | if all(.[]; (.Fingerprint | type) == "string" and (.File | type) == "string"
+              and (.StartLine | type) == "number" and (.RuleID | type) == "string") then .
+            else error("invalid finding") end
+          | if length == 0 and $status != "0" then error("scan failed")
+            elif length == 0 then "no leaks found"
+            else (
+              .[] | "fingerprint=\(.Fingerprint | tojson) file=\(.File | tojson)"
+                + " line=\(.StartLine | tojson) rule=\(.RuleID | tojson)"
+            ), "leaks found: \(length)" end
+        ' "${report}" 2>/dev/null; then
+          echo "::error::gitleaks did not produce a usable findings report (exit ${status})." >&2
+          exit "$((status == 0 ? 1 : status))"
+        fi
+        exit "${status}"

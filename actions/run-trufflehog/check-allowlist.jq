@@ -1,8 +1,7 @@
-# Match TruffleHog findings against a reviewed allowlist.
+# Report TruffleHog findings and apply a reviewed allowlist if supplied.
 #
-# Inputs, both supplied with --slurpfile so a stream of JSON values arrives as
-# one array:
-#   $allowlist  the caller's allowlist document, as a one-element array
+# Inputs:
+#   $allowlist  the caller's allowlist document as a one-element array, or null
 #   $findings   TruffleHog's --json output, one finding per element
 #
 # The first output line is the machine-readable verdict the caller acts on:
@@ -166,6 +165,20 @@ def check_location($field; $value; $wanted):
     )
   end;
 
+# Other sources can supply a display location without supplying an allowlist tuple.
+def other_location:
+  (select(type == "object") | to_entries | select(length == 1) | .[0]
+    | select((.value | type) == "object")) as $source
+  | {
+      source: $source.key,
+      commit: ($source.value.commit // null),
+      path: ($source.value.file // $source.value.path // null),
+      line: ($source.value.line // null),
+    }
+  | check_location("commit"; .commit; "string")
+  | check_location("path"; .path; "string")
+  | check_location("line"; .line; "number");
+
 def describe:
   (.SourceMetadata.Data // {}) as $data
   | ($data | has("Git")) as $git
@@ -198,6 +211,7 @@ def describe:
       commit: $commit,
       path: $path,
       line: $line,
+      display: (if $git or $filesystem then null else first($data | other_location) // null end),
     };
 
 def matches($finding):
@@ -207,11 +221,13 @@ def matches($finding):
   and .detector == $finding.detector;
 
 def render($finding):
-  "detector=\($finding.detector | one_line)"
+  ($finding.display // $finding) as $location
+  | "detector=\($finding.detector | one_line)"
   + " verified=\($finding.verified)"
-  + " commit=\($finding.commit // "none" | one_line)"
-  + " path=\($finding.path // "none" | one_line)"
-  + " line=\($finding.line // "none" | one_line)";
+  + (if $location.source then " source=\($location.source | one_line)" else "" end)
+  + " commit=\($location.commit // "none" | one_line)"
+  + " path=\($location.path // "none" | one_line)"
+  + " line=\($location.line // "none" | one_line)";
 
 # Only the unused-entry warning uses this, and that line is a workflow
 # command, so its fields need command_data rather than one_line.
@@ -226,7 +242,9 @@ def render_entry($index; $entry):
 def verdict($entries):
   . as $finding
   | ([$entries | to_entries[] | select(.value | matches($finding))] | .[0]) as $match
-  | if $finding.verified then
+  | if $allowlist == null then
+      {state: "blocked", matched: null, text: "finding: \(render($finding))"}
+    elif $finding.verified then
       {
         state: "blocked",
         matched: ($match | if . == null then null else .key end),
@@ -257,7 +275,7 @@ def verdict($entries):
       }
     end;
 
-($allowlist | validate_allowlist) as $entries
+(if $allowlist == null then [] else $allowlist | validate_allowlist end) as $entries
 | [
     $findings
     | to_entries[]
@@ -279,10 +297,10 @@ def verdict($entries):
       + " (no finding matched; the entry may be stale)"
   ] as $unused
 | ["status blocked=\($blocked) findings=\($verdicts | length)"]
-  + [
+  + (if $allowlist == null then ["trufflehog findings: \($blocked)"] else [
       "trufflehog allowlist: \($allowed) allowed, \($blocked) blocked,"
       + " \($unused | length) of \($entries | length) entries unused"
-    ]
+    ] end)
   + ($verdicts | map(.text))
   + $unused
 | .[]

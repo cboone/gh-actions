@@ -1,17 +1,20 @@
 // Execute the workflow's scan block with real gitleaks and disposable PR histories.
+// cspell:ignore drwx
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, mkdirSync, rmSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { loadWorkflow, stepOf, runStepScript } from "./fixtures/workflow-steps.mjs";
+import { allSteps, loadWorkflow, stepOf, runStepScript, RUNNER_BASH_ARGS } from "./fixtures/workflow-steps.mjs";
 import { parseFindings } from "./fixtures/gitleaks-findings.mjs";
 import "./check-gitleaks-findings.mjs";
 
 const workflow = loadWorkflow("scan-for-secrets.yml");
 const steps = workflow.jobs.gitleaks.steps;
 const scan = stepOf(workflow, "gitleaks", "Run gitleaks");
+const standalone = [...allSteps()].find(({ key }) => key === "actions/run-gitleaks/action.yml::runs::Run gitleaks");
+assert.ok(standalone, "standalone gitleaks scan step must exist");
 const checkout = stepOf(workflow, "gitleaks", "Check out trusted gitleaks configuration");
 assert.equal(checkout.if, "github.event_name == 'pull_request'");
 assert.equal(checkout.with.repository, "${{ github.repository }}");
@@ -45,7 +48,10 @@ const prepareConfig = resolve("scripts/prepare-gitleaks-config.py");
 const defaults = "[extend]\nuseDefault = true\n";
 const widened = `${defaults}\n[allowlist]\npaths = ['''.*''']\n`;
 // Synthetic token assembled at runtime so the self-scan does not flag this fixture.
-const secret = `token = "${"ghp_"}${randomBytes(18).toString("hex")}"\n`;
+const token = `${"ghp_"}${randomBytes(18).toString("hex")}`;
+const secret = `token = "${token}"\n`;
+const primary = randomBytes(12).toString("hex");
+const auxiliary = randomBytes(12).toString("hex");
 const root = mkdtempSync(join(tmpdir(), "gitleaks-base-control-"));
 let cases = 0;
 
@@ -67,6 +73,119 @@ function commit(files, mark, parent = "") {
     stream += `M ${mode} inline ${JSON.stringify(path)}\ndata ${Buffer.byteLength(content)}\n${content}\n`;
   }
   return `${stream}\n`;
+}
+
+function checkStandalone(config) {
+  const source = join(root, "standalone source");
+  const temp = join(root, "standalone-temp");
+  mkdirSync(source);
+  mkdirSync(temp);
+  const configPath = join(source, "fixture rules.toml");
+  writeFileSync(configPath, config);
+  const args = ["dir", "--config", configPath, "--exit-code=23", "--redact", source];
+  function run(label, scanArgs, status, message, cwd = root) {
+    const result = runStepScript(standalone.step.run, {
+      cwd,
+      env: { ...process.env, RUNNER_TEMP: temp, GITLEAKS_ARGS: scanArgs.join("\n") },
+    });
+    assert.equal(result.status, status, `${label}: expected exit ${status}`);
+    assert.match(result.output, message, `${label}: missing scan summary`);
+    for (const value of [token, primary, auxiliary]) {
+      assert.ok(!result.output.includes(value), `${label}: the scan logged a matched value`);
+    }
+    console.log(`${label}: exit ${status}`);
+    return result.output;
+  }
+  run("standalone clean", args, 0, /no leaks found/);
+  writeFileSync(join(source, "sample.txt"), `primary=${primary}\nauxiliary=${auxiliary}\n`);
+  const finding = run("standalone composite finding", args, 23, /leaks found: 1/);
+  assert.match(finding, /^fingerprint="[^"]+" file="[^"]*sample\.txt" line=1 rule="primary"\nleaks found: 1\n$/, "standalone composite finding: the log must contain only finding metadata and the count");
+  run("standalone caller exit zero", [...args, "--exit-code", "0"], 0, /leaks found: 1/);
+  const unknown = `--unknown-${auxiliary}`;
+  const errorProbe = spawnSync("gitleaks", [...args, unknown], { cwd: root, encoding: "utf8" });
+  assert.ifError(errorProbe.error);
+  assert.equal(errorProbe.status, 126, "pinned gitleaks returns 126 for unknown flags");
+  assert.ok(errorProbe.stderr.includes(auxiliary), "gitleaks error probe must write the marker");
+  run("standalone scanner error", [...args, unknown], 126, /could not complete the scan \(exit 126\)/);
+  for (const options of [["--redact=0"], ["--report-path", "-"], ["--report-format=csv"], ["--report-template", "alternate"], ["-r-"], ["-f", "csv"], ["-vvr-"], ["-vf=csv"]]) {
+    run(`standalone refuses ${options[0]}`, [...args, ...options], 1, /controls .*report options/);
+  }
+  const history = join(root, "standalone-history");
+  mkdirSync(history);
+  git(history, ["init", "--quiet"]);
+  git(history, ["fast-import", "--quiet"], `${commit({ "history.txt": secret }, 1)}done\n`);
+  git(history, ["checkout", "--quiet", "main"]);
+  run("standalone default history", ["detect", "--source", "."], 1, /file="history\.txt" line=1 rule="github-pat"/, history);
+}
+
+function checkScannerOutput() {
+  const bin = join(root, "scanner-stub");
+  const temp = join(root, "scanner-temp");
+  mkdirSync(bin);
+  mkdirSync(temp);
+  const modes = join(root, "scanner-modes");
+  writeFileSync(join(bin, "gitleaks"), ["#!/bin/bash", 'while [[ $# -gt 0 && "$1" != --report-path ]]; do shift; done', 'if [[ "$2" == "-" ]]; then', '  printf "%s\\n" "${FIXTURE_REPORT}"', "else", '  printf "%s\\n" "${FIXTURE_REPORT}" > "$2"', '  printf "%s\\n" "${FIXTURE_MARKER}"', "fi", 'printf "%s\\n" "${FIXTURE_MARKER}" >&2', 'ls -ld "${RUNNER_TEMP}"/gitleaks-scan.* "${RUNNER_TEMP}"/gitleaks-scan.*/* > "${FIXTURE_MODES}"', 'exit "${FIXTURE_STATUS}"', ""].join("\n"), { mode: 0o755 });
+  const finding = { Fingerprint: "fixture", File: "sample.txt", StartLine: 1, RuleID: "sample", Secret: primary };
+  function run(label, script, report, scannerStatus, scanArgs = ["dir", "."]) {
+    const result = spawnSync("/bin/bash", [...RUNNER_BASH_ARGS, "-x", "-c", `umask 022\n${script}`], {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        RUNNER_TEMP: temp,
+        SCAN_SCOPE: "working-tree",
+        EVENT_NAME: "push",
+        ALLOWLIST_CONFIG: "",
+        GITLEAKS_ARGS: scanArgs.join("\n"),
+        FIXTURE_REPORT: JSON.stringify(report),
+        FIXTURE_STATUS: String(scannerStatus),
+        FIXTURE_MARKER: primary,
+        FIXTURE_MODES: modes,
+      },
+    });
+    assert.ifError(result.error);
+    assert.ok(!result.stderr.includes(primary), `${label}: scanner value reached stderr`);
+    assert.ok(!result.stdout.includes(primary), `${label}: scanner value reached stdout`);
+    assert.doesNotMatch(result.stderr, /\+.*gitleaks-scan\./, `${label}: scanner handling was traced`);
+    assert.deepEqual(readdirSync(temp), [], `${label}: private directory survived`);
+    return result;
+  }
+  for (const [name, script, fileCount] of [
+    ["standalone", standalone.step.run, 3],
+    ["workflow", scan.run, 2],
+  ]) {
+    const label = `${name} scanner error with findings`;
+    const result = run(label, script, [finding], 42);
+    assert.equal(result.status, 42, `${label}: scanner exit was lost\n${result.stderr}`);
+    assert.match(result.stdout, /^fingerprint="fixture" file="sample\.txt" line=1 rule="sample"\nleaks found: 1\n$/, `${label}: findings were lost`);
+    const permissions = readFileSync(modes, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => line.slice(0, 10));
+    assert.deepEqual(permissions, ["drwx------", ...Array(fileCount).fill("-rw-------")], `${label}: scanner capture was not private`);
+    console.log(`${label}: exit 42 and private capture`);
+  }
+  const malformed = run("workflow malformed report", scan.run, [finding, { ...finding, File: { marker: primary } }], 10);
+  assert.equal(malformed.status, 1, "workflow malformed report: exit must indicate failure");
+  assert.equal(malformed.stdout, "", "workflow malformed report: no finding should be printed");
+  assert.match(malformed.stderr, /::error::gitleaks did not produce a usable findings report \(exit 10\)\./);
+  console.log("workflow malformed report: status-only error");
+
+  const diagnosticDir = join(temp, "caller-diagnostics");
+  rmSync(modes);
+  for (const [flag, value] of [
+    ["--diagnostics", "trace"],
+    ["--diagnostics-dir", diagnosticDir],
+  ]) {
+    for (const option of [[flag, value], [`${flag}=${value}`]]) {
+      const refused = run(`standalone reserves ${flag}`, standalone.step.run, [], 0, ["dir", ".", ...option]);
+      assert.equal(refused.status, 1, `standalone reserves ${flag}: expected refusal`);
+      assert.match(refused.stderr, /controls redaction, report options and diagnostics/);
+      assert.ok(!existsSync(modes), `standalone reserves ${flag}: scanner was invoked`);
+    }
+    console.log(`standalone reserves ${flag}: separate and attached values rejected`);
+  }
 }
 
 function runCase(name, { base = {}, head = {}, config = "", event = "pull_request", scope = "working-tree", expected = 1, expectSecret = false, secretPath = "secret.txt", historyOnly = false, prIgnore = false, message = "leaks found: [1-9]" } = {}) {
@@ -103,7 +222,15 @@ function runCase(name, { base = {}, head = {}, config = "", event = "pull_reques
   });
   assert.equal(result.status, expected, `${name}: unexpected scan exit\n${result.output}`);
   assert.match(result.output, new RegExp(message), `${name}: expected diagnostic\n${result.output}`);
-  if (expectSecret) assert.ok(result.output.includes(secretPath), `${name}: planted secret was not detected`);
+  for (const value of [token, primary, auxiliary]) {
+    assert.ok(!result.output.includes(value), `${name}: the scan logged a matched value`);
+  }
+  if (expectSecret) {
+    assert.ok(
+      result.output.split("\n").some((line) => /^fingerprint=".+" file=".+" line=\d+ rule=".+"$/.test(line) && line.includes(`file=${JSON.stringify(secretPath)}`)),
+      `${name}: expected fingerprint, file, line and rule`,
+    );
+  }
   if (originalIgnore !== null) {
     assert.ok(existsSync(join(source, ".gitleaksignore")), `${name}: ignore file was not restored`);
     assert.equal(readFileSync(join(source, ".gitleaksignore"), "utf8"), originalIgnore, `${name}: ignore file was not restored`);
@@ -113,6 +240,7 @@ function runCase(name, { base = {}, head = {}, config = "", event = "pull_reques
 }
 
 try {
+  checkScannerOutput();
   for (const scope of ["working-tree", "full-history"]) {
     runCase(`added-default-${scope}`, { head: { ".gitleaks.toml": widened }, scope, expectSecret: true });
     runCase(`edited-default-${scope}`, { base: { ".gitleaks.toml": defaults }, head: { ".gitleaks.toml": widened }, scope, expectSecret: true });
@@ -178,6 +306,25 @@ regexes = ["fixture-canary"]
   }
   runCase("proposed-ignore-push", { prIgnore: true, event: "push", expected: 0, message: "no leaks found" });
   runCase("ignore-content", { secretPath: ".gitleaksignore", expectSecret: true });
+  const compositeRule = `[[rules]]
+id = "primary"
+regex = 'primary=([a-f0-9]+)'
+secretGroup = 1
+[[rules.required]]
+id = "auxiliary"
+
+[[rules]]
+id = "auxiliary"
+regex = 'auxiliary=([a-f0-9]+)'
+secretGroup = 1
+skipReport = true
+`;
+  runCase("composite-rule", {
+    base: { ".gitleaks.toml": compositeRule },
+    head: { "secret.txt": `primary=${primary}\nauxiliary=${auxiliary}\n` },
+    expectSecret: true,
+  });
+  checkStandalone(compositeRule);
   console.log(`gitleaks-base-config: passed (${cases} cases)`);
 } finally {
   // Only this fixture's recorded, exclusively owned directory is removed.

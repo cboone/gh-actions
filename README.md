@@ -60,9 +60,9 @@ usage examples.
 
 | Component                                                    | Type     | What it does                                             |
 | ------------------------------------------------------------ | -------- | -------------------------------------------------------- |
-| [scan-for-secrets](docs/workflows/scan-for-secrets.md)       | workflow | gitleaks and/or trufflehog scanning; base config for PRs |
-| [run-gitleaks](actions/run-gitleaks/README.md)               | action   | install gitleaks and run a scan                          |
-| [run-trufflehog](actions/run-trufflehog/README.md)           | action   | install trufflehog and run a scan                        |
+| [scan-for-secrets](docs/workflows/scan-for-secrets.md)       | workflow | redacted scanner output and base config for PRs          |
+| [run-gitleaks](actions/run-gitleaks/README.md)               | action   | install gitleaks and scan with redacted output           |
+| [run-trufflehog](actions/run-trufflehog/README.md)           | action   | scan with TruffleHog and log finding metadata            |
 | [analyze-with-codeql](docs/workflows/analyze-with-codeql.md) | workflow | GitHub CodeQL security analysis                          |
 | [install-pinned-tool](actions/install-pinned-tool/README.md) | action   | install a release binary pinned to a version and SHA-256 |
 

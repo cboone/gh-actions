@@ -5,6 +5,7 @@
 # ///
 """Exercise the actual TruffleHog scan steps with locally verified sample data."""
 
+# cspell:ignore drwx
 import http.server
 import json
 import os
@@ -85,7 +86,7 @@ class Verifier(http.server.BaseHTTPRequestHandler):
         pass
 
 
-def run_scan(script, directory, env, expected, label, found="Found verified result"):
+def run_scan(script, directory, env, expected, label, found="detector=CustomRegex"):
     result = subprocess.run(
         ["bash", "-euo", "pipefail", "-c", script],
         cwd=directory,
@@ -102,7 +103,7 @@ def run_scan(script, directory, env, expected, label, found="Found verified resu
         )
     if expected == 183 and found not in result.stdout:
         raise AssertionError(f"{label}: no '{found}' in {result.stdout}")
-    if expected == 0 and "Found verified result" in result.stdout:
+    if expected == 0 and "finding: " in result.stdout:
         raise AssertionError(f"{label}: clean scan reported a finding")
     print(f"{label}: exit {expected}")
     return result
@@ -552,67 +553,45 @@ def check_malformed_findings(base, findings, entry):
 
 
 def check_action_output_flags(base, env, action, repo):
-    """The action owns the output format the allowlist is matched against."""
+    """The action owns the output format in both scan modes."""
     allowlist = base / "allow-exact.json"
-    # The =value forms matter as much as the bare ones: --json-legacy=true
-    # wins over the appended --json and leaves the findings file empty, which
-    # a checker seeing no findings would otherwise read as a clean scan.
-    for flag in (
-        "--json-legacy",
-        "--json-legacy=true",
-        "--sarif",
-        "--sarif=true",
-        "--github-actions",
-        "--github-actions=true",
-    ):
-        label = f"action rejects {flag} with an allowlist"
-        result = run_scan(
-            action,
-            repo,
-            {
-                **env,
-                "SCAN_SCOPE": "full-history",
-                "TRUFFLEHOG_ARGS": f"git\nfile://.\n{flag}",
-                "TRUFFLEHOG_ALLOWLIST": str(allowlist),
-                "ALLOWLIST_CHECKER": str(CHECKER),
-            },
-            1,
-            label,
-        )
-        if flag not in result.stdout + result.stderr:
-            raise AssertionError(f"{label}: the refusal did not name the flag")
-
-    # Without an allowlist there is nothing to match, so a caller's choice of
-    # output format is left alone rather than quietly dropped.
-    run_scan(
-        action,
-        repo,
-        {
+    for path in ("", str(allowlist)):
+        scan_env = {
             **env,
-            "SCAN_SCOPE": "full-history",
-            "TRUFFLEHOG_ARGS": "git\nfile://.\n--json",
-            "TRUFFLEHOG_ALLOWLIST": "",
-        },
-        183,
-        "action keeps a caller's --json without an allowlist",
-        found='"DetectorName":"URI"',
-    )
-    run_scan(
-        action,
-        repo,
-        {
-            **env,
-            "SCAN_SCOPE": "full-history",
-            "TRUFFLEHOG_ARGS": "git\nfile://.",
-            "TRUFFLEHOG_ALLOWLIST": "",
-        },
-        183,
-        "action reports as text without an allowlist",
-        found="Found unverified result",
-    )
+            "TRUFFLEHOG_ALLOWLIST": path,
+            "ALLOWLIST_CHECKER": str(CHECKER),
+        }
+        for flag in ("--json-legacy", "--sarif", "--github-actions"):
+            for argument in (flag, f"{flag}={MARKER}"):
+                label = f"action rejects {flag} (allowlist={bool(path)})"
+                result = run_scan(
+                    action,
+                    repo,
+                    {**scan_env, "TRUFFLEHOG_ARGS": f"git\nfile://.\n{argument}"},
+                    1,
+                    label,
+                )
+                output = result.stdout + result.stderr
+                if f"Remove {flag} from args" not in output:
+                    raise AssertionError(f"{label}: the refusal did not name the flag")
+                check_report(output, label)
+
+        for flag in ("-j", "--json", "--json=false", "--no-json"):
+            label = f"action accepts {flag} (allowlist={bool(path)})"
+            result = run_scan(
+                action,
+                repo,
+                {**scan_env, "TRUFFLEHOG_ARGS": f"git\nfile://.\n{flag}"},
+                0 if path else 183,
+                label,
+                found="detector=URI",
+            )
+            check_report(result.stdout + result.stderr, label)
+            if path and "allowed: detector=URI" not in result.stdout:
+                raise AssertionError(f"{label}: the reviewed finding was not reported")
 
 
-def check_fetch_step_rejections(base):
+def check_fetch_step_rejections(base, action):
     """The workflow's fetch step refuses what it cannot do, before scanning.
 
     Only CI reaches this step, because it needs the `job` context, so its
@@ -650,15 +629,16 @@ def check_fetch_step_rejections(base):
     # GitHub Enterprise Server populates neither value, and the step says so
     # rather than fetching from a URL it cannot build.
     for missing in ("REQ_REPO", "REQ_SHA"):
-        result = run_scan(
-            fetch,
-            base,
-            {**ready, missing: ""},
-            1,
-            f"fetch step rejects an empty {missing}",
-        )
-        if "Enterprise" not in result.stdout + result.stderr:
-            raise AssertionError(f"{missing}: the GHES cause was not named")
+        for path in ("", str(allowlist)):
+            result = run_scan(
+                fetch,
+                base,
+                {**ready, missing: "", "TRUFFLEHOG_ALLOWLIST": path},
+                1,
+                f"fetch step rejects an empty {missing} (allowlist={bool(path)})",
+            )
+            if "Enterprise" not in result.stdout + result.stderr:
+                raise AssertionError(f"{missing}: the GHES cause was not named")
 
     label = "fetch step rejects a missing allowlist file"
     result = run_scan(
@@ -687,6 +667,136 @@ def check_fetch_step_rejections(base):
     )
     if "jq is required" not in result.stdout + result.stderr:
         raise AssertionError(f"{label}: the cause was not named")
+
+    for path in ("", str(allowlist)):
+        label = f"action rejects a missing jq (allowlist={bool(path)})"
+        result = run_scan(
+            action,
+            base,
+            {
+                **os.environ,
+                "PATH": str(without_jq),
+                "TRUFFLEHOG_ARGS": "filesystem\n--directory\n.",
+                "TRUFFLEHOG_ALLOWLIST": path,
+                "ALLOWLIST_CHECKER": str(CHECKER),
+            },
+            1,
+            label,
+        )
+        if "jq is required" not in result.stderr:
+            raise AssertionError(f"{label}: the cause was not named")
+
+
+def check_scanner_diagnostics(base, name, script, allowlist, entry):
+    """Failed scans retain their status and report only usable finding metadata."""
+    shim = base / f"failing-trufflehog-{name}" / "trufflehog"
+    shim.parent.mkdir()
+    modes = shim.parent / "modes"
+    shim.write_text(
+        '#!/bin/bash\n'
+        'printf "%s" "${FIXTURE_FINDING}"\n'
+        'printf "%s\\n" "${FIXTURE_MARKER}" >&2\n'
+        'ls -ld "${RUNNER_TEMP}"/trufflehog-scan.* '
+        '"${RUNNER_TEMP}"/trufflehog-scan.*/* > "${FIXTURE_MODES}"\n'
+        'exit "${FIXTURE_STATUS}"\n'
+    )
+    shim.chmod(0o755)
+    metadata = {"commit": entry["commit"], "file": entry["path"], "line": entry["line"]}
+    finding = {
+        "DetectorName": entry["detector"],
+        "Verified": False,
+        "Raw": MARKER,
+        "SourceMetadata": {"Data": {"Git": metadata}},
+    }
+    env = {
+        **os.environ,
+        "PATH": f"{shim.parent}{os.pathsep}{os.environ['PATH']}",
+        "RUNNER_TEMP": str(base),
+        "SCAN_SCOPE": "working-tree",
+        "TRUFFLEHOG_ARGS": "filesystem\n--directory\n.",
+        "ALLOWLIST_CHECKER": str(CHECKER),
+        "FIXTURE_MARKER": MARKER,
+        "FIXTURE_MODES": str(modes),
+    }
+    for path in ("", str(allowlist)):
+        scan_env = {**env, "TRUFFLEHOG_ALLOWLIST": path}
+        for report in ("", json.dumps(finding)):
+            label = (
+                f"{name} private scanner error (allowlist={bool(path)}, "
+                f"finding={bool(report)})"
+            )
+            result = run_scan(
+                "umask 022\nset -x\n" + script,
+                base,
+                {**scan_env, "FIXTURE_FINDING": report, "FIXTURE_STATUS": "42"},
+                42,
+                label,
+            )
+            if "could not complete the scan (exit 42)" not in result.stderr:
+                raise AssertionError(f"{label}: no status-only scanner error")
+            check_report(result.stdout + result.stderr, label)
+            if re.search(r"\+.*trufflehog-scan\.", result.stderr):
+                raise AssertionError(f"{label}: scanner handling was traced")
+            prefix = "allowed:" if path else "finding:"
+            expected = f"{prefix} detector={entry['detector']} verified=false"
+            if report and expected not in result.stdout:
+                raise AssertionError(f"{label}: findings were lost")
+            if not report and result.stdout:
+                raise AssertionError(f"{label}: a failed scan was reported as clean")
+            permissions = [line[:10] for line in modes.read_text().splitlines()]
+            if permissions != ["drwx------", "-rw-------", "-rw-------"]:
+                raise AssertionError(f"{label}: scanner capture was not private")
+            if list(base.glob("trufflehog-scan.*")):
+                raise AssertionError(f"{label}: the private directory survived")
+
+        if name != "action":
+            continue
+        modes.unlink()
+        for option in (f"--output-report\n{MARKER}", f"--output-report={MARKER}"):
+            label = f"action reserves --output-report (allowlist={bool(path)})"
+            result = run_scan(
+                script,
+                base,
+                {
+                    **scan_env,
+                    "TRUFFLEHOG_ARGS": f"filesystem\n--directory\n.\n{option}",
+                    "FIXTURE_FINDING": json.dumps(finding),
+                    "FIXTURE_STATUS": "42",
+                },
+                1,
+                label,
+            )
+            if "Remove --output-report from args" not in result.stderr or modes.exists():
+                raise AssertionError(f"{label}: scanner was not refused at the wrapper")
+            check_report(result.stdout + result.stderr, label)
+
+        # The displayed tuple is identical to the allowlist entry. Its source
+        # still excludes it from matching, even when all four fields agree.
+        github_metadata = (
+            {"commit": entry["commit"], "path": entry["path"], "line": entry["line"]}
+            if path
+            else metadata
+        )
+        github = {
+            **finding,
+            "SourceMetadata": {"Data": {"Github": github_metadata}},
+        }
+        label = f"action Github metadata (allowlist={bool(path)})"
+        result = run_scan(
+            script,
+            base,
+            {**scan_env, "FIXTURE_FINDING": json.dumps(github), "FIXTURE_STATUS": "183"},
+            1 if path else 183,
+            label,
+            found=f"detector={entry['detector']}",
+        )
+        expected = (
+            f"source=Github commit={entry['commit']} "
+            f"path={entry['path']} line={entry['line']}"
+        )
+        if expected not in result.stdout:
+            raise AssertionError(f"{label}: missing generic source metadata")
+        check_report(result.stdout + result.stderr, label)
 
 
 def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow):
@@ -722,7 +832,7 @@ def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow)
     check_expected_findings(base, findings, entry)
     check_malformed_findings(base, findings, entry)
     check_no_command_injection(base, entry)
-    check_fetch_step_rejections(base)
+    check_fetch_step_rejections(base, action)
     check_verified_never_allowlisted(base, custom_wrapper_dir, planted)
     check_planted_defect(base, findings, entry)
 
@@ -742,13 +852,30 @@ def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow)
     check_step_annotation_escaping(env, action, repo)
     exact = base / "allow-exact.json"
     wrong = base / "allow-wrong-line.json"
+    expected_metadata = (
+        "detector=URI",
+        "verified=false",
+        f"commit={commit}",
+        f"path={FIXTURE_PATH}",
+        f"line={FIXTURE_LINE}",
+    )
     for name, script in (("action", action), ("workflow", workflow)):
+        check_scanner_diagnostics(base, name, script, exact, entry)
         scan_env = {
             **env,
             "SCAN_SCOPE": "full-history",
             "TRUFFLEHOG_ARGS": "git\nfile://.",
             "ALLOWLIST_CHECKER": str(CHECKER),
         }
+        label = f"{name} default reports an unknown finding"
+        result = run_scan(
+            script, repo, {**scan_env, "TRUFFLEHOG_ALLOWLIST": ""},
+            183, label, found="detector=URI",
+        )
+        check_report(result.stdout + result.stderr, label)
+        for field in expected_metadata:
+            if field not in result.stdout:
+                raise AssertionError(f"{label}: missing finding metadata {field}")
         label = f"{name} allowlist accepts the reviewed tuple"
         result = run_scan(
             script,
@@ -759,6 +886,9 @@ def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow)
         )
         output = result.stdout + result.stderr
         check_report(output, label)
+        for field in expected_metadata:
+            if field not in output:
+                raise AssertionError(f"{label}: missing finding metadata {field}")
         # Exit 0 alone would also be what a checker that reported nothing
         # returns, which is the shape a fail-open defect takes.
         if "allowed: " not in output or entry["reason"] not in output:
@@ -841,13 +971,20 @@ def main():
                     **env,
                     "SCAN_SCOPE": scope,
                     "TRUFFLEHOG_ARGS": args,
-                    # Empty means the enforced-flag path, unchanged by #123.
                     "TRUFFLEHOG_ALLOWLIST": "",
+                    "ALLOWLIST_CHECKER": str(CHECKER),
                 }
                 for name, script in (("action", action), ("workflow", workflow)):
                     label = f"{name} {scope}"
                     run_scan(script, clean, scan_env, 0, label + " clean")
-                    run_scan(script, planted, scan_env, 183, label + " finding")
+                    result = run_scan(
+                        script, planted, scan_env, 183, label + " finding",
+                    )
+                    output = result.stdout + result.stderr
+                    check_report(output, label)
+                    for field in ("verified=true", "path=sample.txt", "line=1", "commit="):
+                        if field not in output:
+                            raise AssertionError(f"{label}: missing finding metadata {field}")
                     if name == "action":
                         caller_env = {
                             **scan_env,
@@ -872,7 +1009,7 @@ def main():
                             defective, planted, scan_env, 183, label + " without --fail"
                         )
                     except AssertionError as error:
-                        if "expected exit 183, got 0" not in str(error):
+                        if "expected exit 183, got 2" not in str(error):
                             raise
                         print(f"{label}: removal of --fail detected")
                     else:

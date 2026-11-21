@@ -106,14 +106,14 @@ that does not install one passes vacuously (#85). `run-ci.yml`'s
 `Check actionlint runs shellcheck` step guards that integration by linting a
 planted `SC2086`.
 
-`jq` is the other runner-provided exception, used by
-`actions/run-trufflehog/check-allowlist.sh` and by `scan-for-secrets.yml`
-when a TruffleHog allowlist is configured. It answers the fail-open concern
-directly rather than inheriting it: both entry points check for `jq` before
-scanning and fail with a named requirement when it is missing, so an image
-without it stops the job instead of passing every finding. The allowlist
-matching itself is plain JSON comparison, which no `jq` version has reason to
-change, and the path is inert until a caller sets the input.
+`jq` is the other runner-provided exception. The TruffleHog job in
+`scan-for-secrets.yml` uses it to report findings with or without an
+allowlist. The `run-trufflehog` action uses it for the same purpose. Both
+check for `jq` before scanning, and the checker also requires it.
+
+The Gitleaks job in `scan-for-secrets.yml` and the `run-gitleaks` action use
+runner-provided `jq` to print fingerprint, file, line and rule from private
+JSON reports. A missing `jq` or an unusable report fails the step.
 
 ### Pinning Policy and Trust Model
 
@@ -625,6 +625,9 @@ fingerprints. Trusted ignore entries still work. Gitleaks 8.30.1's detector load
 `source/.gitleaksignore` even with `--gitleaks-ignore-path`, so the workflow saves
 the source file outside the checkout while scanning and restores it on exit.
 Working-tree scans inspect that file separately with the same trusted rules.
+The fixture checks that both scan sites report finding metadata without matched
+values. A composite-rule case checks that the auxiliary value stays out of the
+log. Gitleaks can print that value in verbose mode even with full redaction.
 
 `scripts/prepare-gitleaks-config.py` uses Python 3.11+ and its standard-library
 TOML parser. The Ubuntu runner provides Python; the existing checksum-pinned uv
@@ -831,10 +834,10 @@ reports `DetectorName: CustomRegex`, so the allowlist cases use the built-in
 `URI` detector instead. A URI pointing at a local address is refused before any
 connection is attempted, which makes it indeterminate without a network. A
 planted defect removing the detector comparison confirms the field matching is
-what makes a changed field fail. The rejected inputs are covered too: with an
-allowlist set, the action refuses `--json-legacy`, `--sarif` and
-`--github-actions`, which would replace the output being matched, while a
-caller's `--json` is dropped like `--fail` and `--no-update`.
+what makes a changed field fail. Both action modes refuse `--json-legacy`,
+`--sarif` and `--github-actions`. The control checks that caller-supplied
+`-j` and `--json` keep metadata reporting in place and that scanner
+diagnostics stay private on both scan paths in the action and workflow.
 
 The control runs the extracted step directly, so it never reaches the
 workflow's fetch step, which needs real workflow context. `run-ci.yml`'s
