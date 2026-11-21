@@ -3,9 +3,13 @@
 Install gitleaks binary and run a scan.
 
 The action applies full redaction and logs each finding's fingerprint, file,
-line and rule from a private JSON report. The scan step preserves Gitleaks
-exit codes, including a caller-supplied `--exit-code`. Scanner errors report
-the exit status. The runner must provide `jq`.
+line and rule from a private JSON report, including any usable findings written
+before a scanner error. The scan step preserves Gitleaks exit codes, including
+a caller-supplied `--exit-code`. The runner must provide `jq`.
+
+With `--exit-code 0`, a completed scan can succeed with findings.
+Filenames containing the legacy `##[` marker may trigger runner annotations.
+Finding metadata can expose a credential used as a filename.
 
 ## Inputs
 
@@ -41,7 +45,8 @@ Each argument goes on its own line, so an argument may contain spaces:
 
 Use scan subcommands such as `detect`, `git`, `dir` or `stdin`. The action
 accepts `--redact` and `--redact=100` and rejects other redaction settings.
-It reserves `--report-path` (`-r`), `--report-format` (`-f`) and
-`--report-template`, including attached values and short option groups.
+It reserves `--report-path` (`-r`), `--report-format` (`-f`),
+`--report-template`, `--diagnostics` and `--diagnostics-dir`, including
+attached values and short option groups.
 Use the `gitleaks` binary directly when a separate report or diagnostic
 output is needed.

@@ -74,14 +74,17 @@ runs:
       env:
         GITLEAKS_ARGS: ${{ inputs.args }}
       run: |
+        set +x
+        umask 077
         args=()
         while IFS= read -r line; do
           case "${line}" in
             "") continue ;;
             --redact|--redact=100) ;;
             --redact=*|--report-path|--report-path=*|--report-format|--report-format=*|\
-            --report-template|--report-template=*)
-              echo "::error::run-gitleaks controls redaction and report options." >&2
+            --report-template|--report-template=*|--diagnostics|--diagnostics=*|\
+            --diagnostics-dir|--diagnostics-dir=*)
+              echo "::error::run-gitleaks controls redaction, report options and diagnostics." >&2
               exit 1
               ;;
           esac
@@ -98,11 +101,13 @@ runs:
         fi
         scan_dir="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/gitleaks-scan.XXXXXX")"
         report="${scan_dir}/findings.json"
-        trap 'rm -f -- "${report}" && rmdir -- "${scan_dir}"' EXIT
+        stdout="${scan_dir}/stdout"
+        diagnostics="${scan_dir}/stderr"
+        trap 'rm -f -- "${report}" "${stdout}" "${diagnostics}" && rmdir -- "${scan_dir}"' EXIT
         status=0
         # Verbose output can expose matches from required rules even with redaction.
         gitleaks --redact=100 --report-format json --report-path "${report}" \
-          ${args[@]+"${args[@]}"} >/dev/null 2>&1 || status=$?
+          ${args[@]+"${args[@]}"} >"${stdout}" 2>"${diagnostics}" || status=$?
         if [[ ! -f "${report}" && "${status}" -ne 0 ]]; then
           echo "::error::gitleaks could not complete the scan (exit ${status})." >&2
           exit "${status}"

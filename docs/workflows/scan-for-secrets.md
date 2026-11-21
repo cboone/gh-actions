@@ -7,6 +7,8 @@ Gitleaks redacts matched values and logs each finding's fingerprint, file, line
 and rule. Findings fail the scan, including findings in a proposed
 `.gitleaksignore` during a working-tree pull-request scan. The job uses the
 Ubuntu runner's `jq` to format this report.
+On a scanner error, Gitleaks reports any usable findings before returning the
+scanner's exit status. A malformed report produces a status-only error.
 
 On `pull_request` events, gitleaks reads its configuration from the exact base
 revision. `allowlist-config` selects a file relative to that revision's repository
@@ -38,7 +40,7 @@ without verification are outside the TruffleHog gate.
 Both TruffleHog paths log the detector, verification state, commit, path and
 line from a private JSON report. Raw findings and scanner diagnostics stay in
 private temporary files that the step removes. If the scanner cannot complete,
-the job reports its exit status and exits with that status.
+the job reports any usable findings and returns the scanner's exit status.
 
 Without `trufflehog-allowlist`, any reported finding fails the job with
 TruffleHog's own exit code 183.
@@ -51,10 +53,8 @@ reviewed allowlist using the checker from its own action path.
 
 With it set, a scan that completes hands its findings to the checker, whose
 exit code the job then takes: `0` when every finding is allowed, `1` when any
-finding is not, and `2` for an allowlist or scan output it could not use. A
-scan that does not complete never reaches the checker, and the job exits with
-TruffleHog's own status instead, so a failed scan is never reported as a clean
-one. Only 183, meaning results were found, continues to matching.
+finding is not, and `2` for an allowlist or scan output it could not use.
+A scanner error takes precedence over the checker's exit code.
 
 Only an indeterminate finding whose commit, path, line and detector all match
 an entry is allowed. A verified finding fails even when an entry matches it, as

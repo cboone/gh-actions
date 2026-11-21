@@ -5,6 +5,7 @@
 # ///
 """Exercise the actual TruffleHog scan steps with locally verified sample data."""
 
+# cspell:ignore drwx
 import http.server
 import json
 import os
@@ -686,35 +687,88 @@ def check_fetch_step_rejections(base, action):
             raise AssertionError(f"{label}: the cause was not named")
 
 
-def check_scanner_diagnostics(base, name, script, allowlist):
-    """Scanner diagnostics stay private when a scan fails on either path."""
+def check_scanner_diagnostics(base, name, script, allowlist, entry):
+    """Failed scans retain their status and report only usable finding metadata."""
     shim = base / f"failing-trufflehog-{name}" / "trufflehog"
     shim.parent.mkdir()
-    shim.write_text(f"#!/bin/bash\nprintf '%s\\n' {shlex.quote(MARKER)} >&2\nexit 42\n")
+    modes = shim.parent / "modes"
+    shim.write_text(
+        '#!/bin/bash\n'
+        'printf "%s" "${FIXTURE_FINDING}"\n'
+        'printf "%s\\n" "${FIXTURE_MARKER}" >&2\n'
+        'ls -ld "${RUNNER_TEMP}"/trufflehog-scan.* '
+        '"${RUNNER_TEMP}"/trufflehog-scan.*/* > "${FIXTURE_MODES}"\n'
+        'exit "${FIXTURE_STATUS}"\n'
+    )
     shim.chmod(0o755)
+    metadata = {"commit": entry["commit"], "file": entry["path"], "line": entry["line"]}
+    finding = {
+        "DetectorName": entry["detector"],
+        "Verified": False,
+        "Raw": MARKER,
+        "SourceMetadata": {"Data": {"Git": metadata}},
+    }
+    env = {
+        **os.environ,
+        "PATH": f"{shim.parent}{os.pathsep}{os.environ['PATH']}",
+        "RUNNER_TEMP": str(base),
+        "SCAN_SCOPE": "working-tree",
+        "TRUFFLEHOG_ARGS": "filesystem\n--directory\n.",
+        "ALLOWLIST_CHECKER": str(CHECKER),
+        "FIXTURE_MARKER": MARKER,
+        "FIXTURE_MODES": str(modes),
+    }
     for path in ("", str(allowlist)):
-        label = f"{name} private scanner error (allowlist={bool(path)})"
-        result = run_scan(
-            script,
-            base,
-            {
-                **os.environ,
-                "PATH": f"{shim.parent}{os.pathsep}{os.environ['PATH']}",
-                "RUNNER_TEMP": str(base),
-                "SCAN_SCOPE": "working-tree",
-                "TRUFFLEHOG_ARGS": "filesystem\n--directory\n.",
-                "TRUFFLEHOG_ALLOWLIST": path,
-                "ALLOWLIST_CHECKER": str(CHECKER),
-            },
-            42,
-            label,
-        )
-        output = result.stdout + result.stderr
-        if "could not complete the scan (exit 42)" not in output:
-            raise AssertionError(f"{label}: no status-only scanner error")
-        check_report(output, label)
-        if list(base.glob("trufflehog-scan.*")):
-            raise AssertionError(f"{label}: the private directory survived")
+        scan_env = {**env, "TRUFFLEHOG_ALLOWLIST": path}
+        for report in ("", json.dumps(finding)):
+            label = (
+                f"{name} private scanner error (allowlist={bool(path)}, "
+                f"finding={bool(report)})"
+            )
+            result = run_scan(
+                "umask 022\nset -x\n" + script,
+                base,
+                {**scan_env, "FIXTURE_FINDING": report, "FIXTURE_STATUS": "42"},
+                42,
+                label,
+            )
+            if "could not complete the scan (exit 42)" not in result.stderr:
+                raise AssertionError(f"{label}: no status-only scanner error")
+            check_report(result.stdout + result.stderr, label)
+            if re.search(r"\+.*trufflehog-scan\.", result.stderr):
+                raise AssertionError(f"{label}: scanner handling was traced")
+            prefix = "allowed:" if path else "finding:"
+            expected = f"{prefix} detector={entry['detector']} verified=false"
+            if report and expected not in result.stdout:
+                raise AssertionError(f"{label}: findings were lost")
+            if not report and result.stdout:
+                raise AssertionError(f"{label}: a failed scan was reported as clean")
+            permissions = [line[:10] for line in modes.read_text().splitlines()]
+            if permissions != ["drwx------", "-rw-------", "-rw-------"]:
+                raise AssertionError(f"{label}: scanner capture was not private")
+            if list(base.glob("trufflehog-scan.*")):
+                raise AssertionError(f"{label}: the private directory survived")
+
+        if name != "action":
+            continue
+        modes.unlink()
+        for option in (f"--output-report\n{MARKER}", f"--output-report={MARKER}"):
+            label = f"action reserves --output-report (allowlist={bool(path)})"
+            result = run_scan(
+                script,
+                base,
+                {
+                    **scan_env,
+                    "TRUFFLEHOG_ARGS": f"filesystem\n--directory\n.\n{option}",
+                    "FIXTURE_FINDING": json.dumps(finding),
+                    "FIXTURE_STATUS": "42",
+                },
+                1,
+                label,
+            )
+            if "Remove --output-report from args" not in result.stderr or modes.exists():
+                raise AssertionError(f"{label}: scanner was not refused at the wrapper")
+            check_report(result.stdout + result.stderr, label)
 
 
 def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow):
@@ -778,7 +832,7 @@ def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow)
         f"line={FIXTURE_LINE}",
     )
     for name, script in (("action", action), ("workflow", workflow)):
-        check_scanner_diagnostics(base, name, script, exact)
+        check_scanner_diagnostics(base, name, script, exact, entry)
         scan_env = {
             **env,
             "SCAN_SCOPE": "full-history",

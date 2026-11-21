@@ -13,9 +13,8 @@ exit code `183`.
 With `allowlist` set, a scan that completes hands its findings to the checker,
 whose exit code the step then takes: `0` when every finding is allowed, `1`
 when any finding is not, and `2` for an allowlist or scan output it could not
-use. A scan that does not complete never reaches the checker, and the step
-exits with TruffleHog's own status instead, so a failed scan is never reported
-as a clean one. Only 183, meaning results were found, continues to matching.
+use. If a scan fails after writing usable findings, the checker still reports
+them and the step returns TruffleHog's error status.
 
 Only an indeterminate finding whose commit, path, line and detector all match
 an entry is allowed. A verified finding fails even when an entry matches it, as
@@ -27,12 +26,15 @@ and findings cannot exit successfully.
 
 The action controls the output format in both modes. It adds `--json`,
 strips `-j`, `--json` and `--no-json` from `args`, and refuses
-`--json-legacy`, `--sarif` and `--github-actions`.
+`--json-legacy`, `--sarif`, `--github-actions` and `--output-report`,
+including forms with an attached value.
 
 Each finding's log line contains its detector, verification state, commit,
 path and line. The action captures scanner JSON and stderr in a private
-temporary directory and removes it when the step exits. If the scanner
-fails, the action logs its exit status and returns that status.
+temporary directory and removes it when the step exits.
+
+Filenames containing the legacy `##[` marker may trigger runner annotations.
+Finding metadata can expose a credential used as a filename.
 
 Reporting requires `jq`, which GitHub-hosted Linux and macOS images provide.
 The action checks for it before scanning, even when `allowlist` is unset.

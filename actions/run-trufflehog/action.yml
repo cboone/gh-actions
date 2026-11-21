@@ -83,6 +83,8 @@ runs:
         TRUFFLEHOG_ALLOWLIST: ${{ inputs.allowlist }}
         ALLOWLIST_CHECKER: ${{ github.action_path }}/check-allowlist.sh
       run: |
+        set +x
+        umask 077
         # Encode a workflow-command annotation's data, mirroring the helper in
         # install-pinned-tool.sh. The allowlist error repeats a caller-supplied
         # path, and a CR or LF in it would otherwise start a line the
@@ -101,8 +103,8 @@ runs:
         while IFS= read -r line; do
           case "${line%%=*}" in
             --no-update | --fail | -j | --json | --no-json) continue ;;
-            --json-legacy | --sarif | --github-actions)
-              printf '::error::run-trufflehog controls the output format. Remove %s from args.\n' \
+            --json-legacy | --sarif | --github-actions | --output-report)
+              printf '::error::run-trufflehog controls scanner output. Remove %s from args.\n' \
                 "${line%%=*}" >&2
               exit 1
               ;;
@@ -129,10 +131,6 @@ runs:
         status=0
         trufflehog ${args[@]+"${args[@]}"} --no-update --results=verified,unknown --fail \
           --json >"${findings}" 2>"${diagnostics}" || status=$?
-        if [[ "${status}" -ne 0 && "${status}" -ne 183 ]]; then
-          echo "::error::trufflehog could not complete the scan (exit ${status})." >&2
-          exit "${status}"
-        fi
         checker_args=(--findings "${findings}")
         if [[ -n "${TRUFFLEHOG_ALLOWLIST}" ]]; then
           checker_args+=(--allowlist "${TRUFFLEHOG_ALLOWLIST}")
@@ -143,7 +141,13 @@ runs:
           checker_args+=(--expect-findings)
         fi
         checker_status=0
-        "${ALLOWLIST_CHECKER}" "${checker_args[@]}" || checker_status=$?
+        if [[ "${status}" -eq 0 || "${status}" -eq 183 || -s "${findings}" ]]; then
+          "${ALLOWLIST_CHECKER}" "${checker_args[@]}" || checker_status=$?
+        fi
+        if [[ "${status}" -ne 0 && "${status}" -ne 183 ]]; then
+          echo "::error::trufflehog could not complete the scan (exit ${status})." >&2
+          exit "${status}"
+        fi
         if [[ -z "${TRUFFLEHOG_ALLOWLIST}" && "${checker_status}" -eq 1 ]]; then
           if [[ "${status}" -eq 183 ]]; then
             exit "${status}"
