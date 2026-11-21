@@ -30,8 +30,10 @@ strips `-j`, `--json` and `--no-json` from `args`, and refuses
 including forms with an attached value.
 
 Each finding's log line contains its detector, verification state, commit,
-path and line. The action captures scanner JSON and stderr in a private
-temporary directory and removes it when the step exits.
+path and line. For other sources besides Git and Filesystem, the log also
+includes the source type and any available location fields. The action
+captures scanner JSON and stderr in a private temporary directory and
+removes it when the step exits.
 
 Filenames containing the legacy `##[` marker may trigger runner annotations.
 Finding metadata can expose a credential used as a filename.

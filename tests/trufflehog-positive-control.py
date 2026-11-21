@@ -770,6 +770,34 @@ def check_scanner_diagnostics(base, name, script, allowlist, entry):
                 raise AssertionError(f"{label}: scanner was not refused at the wrapper")
             check_report(result.stdout + result.stderr, label)
 
+        # The displayed tuple is identical to the allowlist entry. Its source
+        # still excludes it from matching, even when all four fields agree.
+        github_metadata = (
+            {"commit": entry["commit"], "path": entry["path"], "line": entry["line"]}
+            if path
+            else metadata
+        )
+        github = {
+            **finding,
+            "SourceMetadata": {"Data": {"Github": github_metadata}},
+        }
+        label = f"action Github metadata (allowlist={bool(path)})"
+        result = run_scan(
+            script,
+            base,
+            {**scan_env, "FIXTURE_FINDING": json.dumps(github), "FIXTURE_STATUS": "183"},
+            1 if path else 183,
+            label,
+            found=f"detector={entry['detector']}",
+        )
+        expected = (
+            f"source=Github commit={entry['commit']} "
+            f"path={entry['path']} line={entry['line']}"
+        )
+        if expected not in result.stdout:
+            raise AssertionError(f"{label}: missing generic source metadata")
+        check_report(result.stdout + result.stderr, label)
+
 
 def check_allowlist(base, binary, custom_wrapper_dir, planted, action, workflow):
     """Cover the allowlist end to end, and through both entry points."""

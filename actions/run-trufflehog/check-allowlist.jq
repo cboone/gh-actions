@@ -165,6 +165,20 @@ def check_location($field; $value; $wanted):
     )
   end;
 
+# Other sources can supply a display location without supplying an allowlist tuple.
+def other_location:
+  (select(type == "object") | to_entries | select(length == 1) | .[0]
+    | select((.value | type) == "object")) as $source
+  | {
+      source: $source.key,
+      commit: ($source.value.commit // null),
+      path: ($source.value.file // $source.value.path // null),
+      line: ($source.value.line // null),
+    }
+  | check_location("commit"; .commit; "string")
+  | check_location("path"; .path; "string")
+  | check_location("line"; .line; "number");
+
 def describe:
   (.SourceMetadata.Data // {}) as $data
   | ($data | has("Git")) as $git
@@ -197,6 +211,7 @@ def describe:
       commit: $commit,
       path: $path,
       line: $line,
+      display: (if $git or $filesystem then null else first($data | other_location) // null end),
     };
 
 def matches($finding):
@@ -206,11 +221,13 @@ def matches($finding):
   and .detector == $finding.detector;
 
 def render($finding):
-  "detector=\($finding.detector | one_line)"
+  ($finding.display // $finding) as $location
+  | "detector=\($finding.detector | one_line)"
   + " verified=\($finding.verified)"
-  + " commit=\($finding.commit // "none" | one_line)"
-  + " path=\($finding.path // "none" | one_line)"
-  + " line=\($finding.line // "none" | one_line)";
+  + (if $location.source then " source=\($location.source | one_line)" else "" end)
+  + " commit=\($location.commit // "none" | one_line)"
+  + " path=\($location.path // "none" | one_line)"
+  + " line=\($location.line // "none" | one_line)";
 
 # Only the unused-entry warning uses this, and that line is a workflow
 # command, so its fields need command_data rather than one_line.
