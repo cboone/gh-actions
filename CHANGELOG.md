@@ -13,11 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   finding's fingerprint, file, line and rule, including findings in a proposed
   `.gitleaksignore` (#174).
 - Both TruffleHog paths in `scan-for-secrets.yml` log finding metadata and keep
-  scanner diagnostics private. The default path now also needs the pinned
-  checker context that GitHub Enterprise Server does not provide (#174).
+  scanner diagnostics private. The default path now also needs
+  `job.workflow_repository` and `job.workflow_sha` to fetch the pinned checker.
+  GitHub Enterprise Server does not provide those fields (#174).
 - `run-gitleaks` applies full redaction and logs finding metadata from a
   private report. It preserves caller-supplied scan arguments and exit codes,
   requires `jq`, and rejects report flags and redaction below 100% (#174).
+- `run-trufflehog` logs finding metadata from private JSON in both modes and
+  reports scanner errors by exit status. It requires `jq` and controls the
+  report format even when no allowlist is configured (#174).
 
 ## [5.0.0] - 2026-09-25
 

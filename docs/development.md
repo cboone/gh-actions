@@ -108,9 +108,8 @@ planted `SC2086`.
 
 `jq` is the other runner-provided exception. The TruffleHog job in
 `scan-for-secrets.yml` uses it to report findings with or without an
-allowlist. The `run-trufflehog` action uses it when an allowlist is configured.
-Both check for `jq` before scanning when they need it, and the checker also
-requires it.
+allowlist. The `run-trufflehog` action uses it for the same purpose. Both
+check for `jq` before scanning, and the checker also requires it.
 
 The Gitleaks job in `scan-for-secrets.yml` and the `run-gitleaks` action use
 runner-provided `jq` to print fingerprint, file, line and rule from private
@@ -835,10 +834,10 @@ reports `DetectorName: CustomRegex`, so the allowlist cases use the built-in
 `URI` detector instead. A URI pointing at a local address is refused before any
 connection is attempted, which makes it indeterminate without a network. A
 planted defect removing the detector comparison confirms the field matching is
-what makes a changed field fail. The rejected inputs are covered too: with an
-allowlist set, the action refuses `--json-legacy`, `--sarif` and
-`--github-actions`, which would replace the output being matched, while a
-caller's `--json` is dropped like `--fail` and `--no-update`.
+what makes a changed field fail. Both action modes refuse `--json-legacy`,
+`--sarif` and `--github-actions`. The control checks that caller-supplied
+`-j` and `--json` keep metadata reporting in place and that scanner
+diagnostics stay private on both scan paths in the action and workflow.
 
 The control runs the extracted step directly, so it never reaches the
 workflow's fetch step, which needs real workflow context. `run-ci.yml`'s

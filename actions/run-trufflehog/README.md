@@ -8,7 +8,7 @@ to limit noise from invalid credentials, so revoked credentials and detections
 without verification are outside this gate.
 
 Without `allowlist`, any reported finding fails the step with TruffleHog's own
-exit code 183.
+exit code `183`.
 
 With `allowlist` set, a scan that completes hands its findings to the checker,
 whose exit code the step then takes: `0` when every finding is allowed, `1`
@@ -25,10 +25,17 @@ the rules below set out.
 `args`, so the pinned, checksum-verified binary cannot update itself mid-scan
 and findings cannot exit successfully.
 
-When `allowlist` is set, the action also owns the output format: it adds
-`--json`, strips `--json` from `args`, and refuses `--json-legacy`, `--sarif`
-and `--github-actions`, which would replace the output being matched. Without
-an allowlist there is nothing to match, so those flags are left alone.
+The action controls the output format in both modes. It adds `--json`,
+strips `-j`, `--json` and `--no-json` from `args`, and refuses
+`--json-legacy`, `--sarif` and `--github-actions`.
+
+Each finding's log line contains its detector, verification state, commit,
+path and line. The action captures scanner JSON and stderr in a private
+temporary directory and removes it when the step exits. If the scanner
+fails, the action logs its exit status and returns that status.
+
+Reporting requires `jq`, which GitHub-hosted Linux and macOS images provide.
+The action checks for it before scanning, even when `allowlist` is unset.
 
 ## Inputs
 
@@ -87,22 +94,14 @@ Three rules keep the gate strict:
 - **An unused entry warns rather than fails**, so a stale entry is visible
   without breaking a scan that legitimately no longer reaches it.
 
-The report names the detector, verification state, commit, path and line of
-every finding, and nothing else the scan read. An allowed finding also names
-the entry that covered it and that entry's `reason`, so the log says why it
-was permitted; both come from your own reviewed allowlist file, not from the
-scanned content. Raw, decoded and structured values stay out of the log: the
-scan writes them to a private temporary file that the checker reads and the
-step deletes, and the checker never reads the fields that carry them. A
-findings file that does not parse is reported as such without reproducing what
-failed to parse.
+An allowed finding also names the entry that covered it and that entry's
+`reason`. Both come from your reviewed allowlist. The checker reports invalid
+findings JSON without quoting the input.
 
 If TruffleHog reports results but the checker sees none in the file, the two
 disagree and the step fails rather than treating the scan as clean.
 
-Matching needs `jq`, which GitHub-hosted Linux and macOS images provide. The
-step checks for it, and for the allowlist file, before scanning, so a missing
-requirement fails immediately rather than after the scan.
+The action checks that a configured allowlist file exists before scanning.
 
 ## Usage
 
