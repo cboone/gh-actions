@@ -29,13 +29,13 @@ detect
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-gitleaks@v5.0.0
+- uses: cboone/gh-actions/actions/run-gitleaks@v6.0.0
 ```
 
 Each argument goes on its own line, so an argument may contain spaces:
 
 ```yaml
-- uses: cboone/gh-actions/actions/run-gitleaks@v5.0.0
+- uses: cboone/gh-actions/actions/run-gitleaks@v6.0.0
   with:
     args: |-
       detect

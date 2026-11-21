@@ -7,21 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-11-21
+
+### Changed
+
+- **Breaking:** `scan-for-secrets.yml` uses the exact base revision's Gitleaks
+  configuration and `.gitleaksignore` on pull requests. An `allowlist-config`
+  path must already exist in the base revision, and changes to rules or ignores
+  take effect after merge. This path requires `job.workflow_repository` and
+  `job.workflow_sha`, which GitHub Enterprise Server does not provide
+  (`069d8cb`).
+
 ### Fixed
 
-- `scan-for-secrets.yml` applies full Gitleaks redaction and logs only each
-  finding's fingerprint, file, line and rule, including findings in a proposed
-  `.gitleaksignore` (#174).
-- Both TruffleHog paths in `scan-for-secrets.yml` log finding metadata and keep
-  scanner diagnostics private. The default path now also needs
+- **Breaking:** `scan-for-secrets.yml` applies full Gitleaks redaction and logs
+  each finding's fingerprint, file, line and rule, including findings in a
+  proposed `.gitleaksignore` (#174).
+- **Breaking:** Both TruffleHog paths in `scan-for-secrets.yml` log finding
+  metadata and keep scanner diagnostics private. The default path now also needs
   `job.workflow_repository` and `job.workflow_sha` to fetch the pinned checker.
   GitHub Enterprise Server does not provide those fields (#174).
-- `run-gitleaks` applies full redaction and logs finding metadata from a
-  private report. It preserves caller-supplied scan arguments and exit codes,
-  requires `jq`, and rejects report flags and redaction below 100% (#174).
-- `run-trufflehog` logs finding metadata from private JSON in both modes and
-  reports scanner errors by exit status. It requires `jq` and controls the
-  report format even when no allowlist is configured (#174).
+- **Breaking:** `run-gitleaks` applies full redaction and logs finding metadata
+  from a private report. It preserves caller-supplied scan arguments and exit
+  codes, requires `jq`, and rejects report flags, diagnostics flags and
+  redaction overrides other than `--redact` and `--redact=100` (#174).
+- **Breaking:** `run-trufflehog` logs finding metadata from private JSON in both
+  modes and reports scanner errors by exit status. It requires `jq` and
+  controls the report format even when no allowlist is configured (#174).
 
 ## [5.0.0] - 2026-09-25
 
@@ -1033,7 +1045,8 @@ install --global "<pkg>@<version>"` (no integrity check) with `npm ci`
 - Avoid running tests twice when coverage is enabled
 - Install Codecov CLI for the correct runner OS
 
-[unreleased]: https://github.com/cboone/gh-actions/compare/v5.0.0...HEAD
+[unreleased]: https://github.com/cboone/gh-actions/compare/v6.0.0...HEAD
+[6.0.0]: https://github.com/cboone/gh-actions/compare/v5.0.0...v6.0.0
 [5.0.0]: https://github.com/cboone/gh-actions/compare/v4.1.0...v5.0.0
 [4.1.0]: https://github.com/cboone/gh-actions/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/cboone/gh-actions/compare/v3.2.0...v4.0.0

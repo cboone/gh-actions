@@ -23,7 +23,7 @@ something to shell out to.
 ## Usage
 
 ```yaml
-- uses: cboone/gh-actions/actions/set-up-shellcheck@v5.0.0
-- uses: cboone/gh-actions/actions/set-up-actionlint@v5.0.0
+- uses: cboone/gh-actions/actions/set-up-shellcheck@v6.0.0
+- uses: cboone/gh-actions/actions/set-up-actionlint@v6.0.0
 - run: actionlint
 ```

@@ -89,7 +89,7 @@ detector, or printing the finding.
 ```yaml
 jobs:
   scan:
-    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v5.0.0
+    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v6.0.0
     with:
       tool: trufflehog
       trufflehog-allowlist: .github/trufflehog-allowlist.json
@@ -150,7 +150,7 @@ allowlist file when one is configured.
 ```yaml
 jobs:
   scan:
-    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v5.0.0
+    uses: cboone/gh-actions/.github/workflows/scan-for-secrets.yml@v6.0.0
     with:
       tool: both
 ```

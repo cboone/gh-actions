@@ -68,7 +68,7 @@ first. `codecov-files` is a single path and may contain spaces.
 ```yaml
 jobs:
   ci:
-    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@v5.0.0
+    uses: cboone/gh-actions/.github/workflows/run-go-ci.yml@v6.0.0
     with:
       run-lint: true
       run-format-check: true
