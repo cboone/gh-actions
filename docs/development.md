@@ -106,18 +106,15 @@ that does not install one passes vacuously (#85). `run-ci.yml`'s
 `Check actionlint runs shellcheck` step guards that integration by linting a
 planted `SC2086`.
 
-`jq` is the other runner-provided exception, used by
-`actions/run-trufflehog/check-allowlist.sh` and by `scan-for-secrets.yml`
-when a TruffleHog allowlist is configured. It answers the fail-open concern
-directly rather than inheriting it: both entry points check for `jq` before
-scanning and fail with a named requirement when it is missing, so an image
-without it stops the job instead of passing every finding. The allowlist
-matching itself is plain JSON comparison, which no `jq` version has reason to
-change, and the path is inert until a caller sets the input.
+`jq` is the other runner-provided exception. The TruffleHog job in
+`scan-for-secrets.yml` uses it to report findings with or without an
+allowlist. The `run-trufflehog` action uses it when an allowlist is configured.
+Both check for `jq` before scanning when they need it, and the checker also
+requires it.
 
-The Gitleaks job in `scan-for-secrets.yml` also uses runner-provided `jq`.
-It prints fingerprint, file, line and rule from the scanner's private JSON
-report. A missing `jq` or an unusable report fails the step.
+The Gitleaks job in `scan-for-secrets.yml` and the `run-gitleaks` action use
+runner-provided `jq` to print fingerprint, file, line and rule from private
+JSON reports. A missing `jq` or an unusable report fails the step.
 
 ### Pinning Policy and Trust Model
 

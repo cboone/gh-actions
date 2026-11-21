@@ -35,8 +35,19 @@ unknown results caused by verification errors. Unverified results are excluded
 to limit noise from invalid credentials, so revoked credentials and detections
 without verification are outside the TruffleHog gate.
 
+Both TruffleHog paths log the detector, verification state, commit, path and
+line from a private JSON report. Raw findings and scanner diagnostics stay in
+private temporary files that the step removes. If the scanner cannot complete,
+the job reports its exit status and exits with that status.
+
 Without `trufflehog-allowlist`, any reported finding fails the job with
 TruffleHog's own exit code 183.
+
+Both paths fetch the checker from `job.workflow_repository` at
+`job.workflow_sha`. GitHub Enterprise Server does not populate these
+contexts. On that server, the
+[run-trufflehog](../../actions/run-trufflehog/README.md) action can apply a
+reviewed allowlist using the checker from its own action path.
 
 With it set, a scan that completes hands its findings to the checker, whose
 exit code the job then takes: `0` when every finding is allowed, `1` when any
@@ -130,15 +141,9 @@ failed to parse.
 If TruffleHog reports results but the checker sees none in the file, the two
 disagree and the job fails rather than treating the scan as clean.
 
-Matching needs `jq`, which GitHub-hosted Linux and macOS images provide. The
-job checks for it, and for the allowlist file, before scanning, so a missing
-requirement fails immediately rather than after the scan.
-
-Setting this input makes the job fetch its checker from
-`job.workflow_repository` at `job.workflow_sha`, which GitHub Enterprise Server
-does not populate. Leave it unset there, or call the
-[run-trufflehog](../../actions/run-trufflehog/README.md) action directly, which
-reads the checker from its own action path.
+Reporting and matching require `jq`, which GitHub-hosted Linux and macOS
+images provide. Before scanning, the job checks for `jq` and for the
+allowlist file when one is configured.
 
 ## Usage
 

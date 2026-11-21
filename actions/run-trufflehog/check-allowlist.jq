@@ -1,8 +1,7 @@
-# Match TruffleHog findings against a reviewed allowlist.
+# Report TruffleHog findings and apply a reviewed allowlist if supplied.
 #
-# Inputs, both supplied with --slurpfile so a stream of JSON values arrives as
-# one array:
-#   $allowlist  the caller's allowlist document, as a one-element array
+# Inputs:
+#   $allowlist  the caller's allowlist document as a one-element array, or null
 #   $findings   TruffleHog's --json output, one finding per element
 #
 # The first output line is the machine-readable verdict the caller acts on:
@@ -226,7 +225,9 @@ def render_entry($index; $entry):
 def verdict($entries):
   . as $finding
   | ([$entries | to_entries[] | select(.value | matches($finding))] | .[0]) as $match
-  | if $finding.verified then
+  | if $allowlist == null then
+      {state: "blocked", matched: null, text: "finding: \(render($finding))"}
+    elif $finding.verified then
       {
         state: "blocked",
         matched: ($match | if . == null then null else .key end),
@@ -257,7 +258,7 @@ def verdict($entries):
       }
     end;
 
-($allowlist | validate_allowlist) as $entries
+(if $allowlist == null then [] else $allowlist | validate_allowlist end) as $entries
 | [
     $findings
     | to_entries[]
@@ -279,10 +280,10 @@ def verdict($entries):
       + " (no finding matched; the entry may be stale)"
   ] as $unused
 | ["status blocked=\($blocked) findings=\($verdicts | length)"]
-  + [
+  + (if $allowlist == null then ["trufflehog findings: \($blocked)"] else [
       "trufflehog allowlist: \($allowed) allowed, \($blocked) blocked,"
       + " \($unused | length) of \($entries | length) entries unused"
-    ]
+    ] end)
   + ($verdicts | map(.text))
   + $unused
 | .[]

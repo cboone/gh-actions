@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import { mkdtempSync, mkdirSync, rmSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { loadWorkflow, stepOf, runStepScript } from "./fixtures/workflow-steps.mjs";
+import { allSteps, loadWorkflow, stepOf, runStepScript } from "./fixtures/workflow-steps.mjs";
 import { parseFindings } from "./fixtures/gitleaks-findings.mjs";
 import "./check-gitleaks-findings.mjs";
 
@@ -70,6 +70,51 @@ function commit(files, mark, parent = "") {
     stream += `M ${mode} inline ${JSON.stringify(path)}\ndata ${Buffer.byteLength(content)}\n${content}\n`;
   }
   return `${stream}\n`;
+}
+
+function checkStandalone(config) {
+  const action = [...allSteps()].find(({ key }) => key === "actions/run-gitleaks/action.yml::runs::Run gitleaks");
+  assert.ok(action, "standalone gitleaks scan step must exist");
+  const source = join(root, "standalone source");
+  const temp = join(root, "standalone-temp");
+  mkdirSync(source);
+  mkdirSync(temp);
+  const configPath = join(source, "fixture rules.toml");
+  writeFileSync(configPath, config);
+  const args = ["dir", "--config", configPath, "--exit-code=23", "--redact", source];
+  function run(label, scanArgs, status, message, cwd = root) {
+    const result = runStepScript(action.step.run, {
+      cwd,
+      env: { ...process.env, RUNNER_TEMP: temp, GITLEAKS_ARGS: scanArgs.join("\n") },
+    });
+    assert.equal(result.status, status, `${label}: expected exit ${status}`);
+    assert.match(result.output, message, `${label}: missing scan summary`);
+    for (const value of [token, primary, auxiliary]) {
+      assert.ok(!result.output.includes(value), `${label}: the scan logged a matched value`);
+    }
+    console.log(`${label}: exit ${status}`);
+    return result.output;
+  }
+  run("standalone clean", args, 0, /no leaks found/);
+  writeFileSync(join(source, "sample.txt"), `primary=${primary}\nauxiliary=${auxiliary}\n`);
+  const finding = run("standalone composite finding", args, 23, /leaks found: 1/);
+  assert.match(finding, /fingerprint="[^"]+" file="[^"]*sample\.txt" line=1 rule="primary"/);
+  run("standalone caller exit zero", [...args, "--exit-code", "0"], 0, /leaks found: 1/);
+  const unknown = `--unknown-${auxiliary}`;
+  const errorProbe = spawnSync("gitleaks", [...args, unknown], { cwd: root, encoding: "utf8" });
+  assert.ifError(errorProbe.error);
+  assert.equal(errorProbe.status, 126, "pinned gitleaks returns 126 for unknown flags");
+  assert.ok(errorProbe.stderr.includes(auxiliary), "gitleaks error probe must write the marker");
+  run("standalone scanner error", [...args, unknown], 126, /could not complete the scan \(exit 126\)/);
+  for (const options of [["--redact=0"], ["--report-path", "-"], ["--report-format=csv"], ["--report-template", "alternate"], ["-r-"], ["-f", "csv"], ["-vvr-"], ["-vf=csv"]]) {
+    run(`standalone refuses ${options[0]}`, [...args, ...options], 1, /controls .*report options/);
+  }
+  const history = join(root, "standalone-history");
+  mkdirSync(history);
+  git(history, ["init", "--quiet"]);
+  git(history, ["fast-import", "--quiet"], `${commit({ "history.txt": secret }, 1)}done\n`);
+  git(history, ["checkout", "--quiet", "main"]);
+  run("standalone default history", ["detect", "--source", "."], 1, /file="history\.txt" line=1 rule="github-pat"/, history);
 }
 
 function runCase(name, { base = {}, head = {}, config = "", event = "pull_request", scope = "working-tree", expected = 1, expectSecret = false, secretPath = "secret.txt", historyOnly = false, prIgnore = false, message = "leaks found: [1-9]" } = {}) {
@@ -207,6 +252,7 @@ skipReport = true
     head: { "secret.txt": `primary=${primary}\nauxiliary=${auxiliary}\n` },
     expectSecret: true,
   });
+  checkStandalone(compositeRule);
   console.log(`gitleaks-base-config: passed (${cases} cases)`);
 } finally {
   // Only this fixture's recorded, exclusively owned directory is removed.
