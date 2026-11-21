@@ -100,7 +100,7 @@ runs:
         report="${scan_dir}/findings.json"
         trap 'rm -f -- "${report}" && rmdir -- "${scan_dir}"' EXIT
         status=0
-        # Required rules can still carry matched values after --redact=100.
+        # Verbose output can expose matches from required rules even with redaction.
         gitleaks --redact=100 --report-format json --report-path "${report}" \
           ${args[@]+"${args[@]}"} >/dev/null 2>&1 || status=$?
         if [[ ! -f "${report}" && "${status}" -ne 0 ]]; then

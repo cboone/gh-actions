@@ -98,7 +98,7 @@ function checkStandalone(config) {
   run("standalone clean", args, 0, /no leaks found/);
   writeFileSync(join(source, "sample.txt"), `primary=${primary}\nauxiliary=${auxiliary}\n`);
   const finding = run("standalone composite finding", args, 23, /leaks found: 1/);
-  assert.match(finding, /fingerprint="[^"]+" file="[^"]*sample\.txt" line=1 rule="primary"/);
+  assert.match(finding, /^fingerprint="[^"]+" file="[^"]*sample\.txt" line=1 rule="primary"\nleaks found: 1\n$/, "standalone composite finding: the log must contain only finding metadata and the count");
   run("standalone caller exit zero", [...args, "--exit-code", "0"], 0, /leaks found: 1/);
   const unknown = `--unknown-${auxiliary}`;
   const errorProbe = spawnSync("gitleaks", [...args, unknown], { cwd: root, encoding: "utf8" });
