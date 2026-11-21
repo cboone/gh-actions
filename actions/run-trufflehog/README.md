@@ -29,6 +29,11 @@ strips `-j`, `--json` and `--no-json` from `args`, and refuses
 `--json-legacy`, `--sarif`, `--github-actions` and `--output-report`,
 including forms with an attached value.
 
+The action trusts `args`. Its checks match the spellings listed above, not
+every way an option can reach TruffleHog: options in an `@file` argument file
+are not checked. Report output a caller enables that way is the caller's to
+keep out of logs and artifacts.
+
 Each finding's log line contains its detector, verification state, commit,
 path and line. For other sources besides Git and Filesystem, the log also
 includes the source type and any available location fields. The action

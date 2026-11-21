@@ -50,3 +50,7 @@ It reserves `--report-path` (`-r`), `--report-format` (`-f`),
 attached values and short option groups.
 Use the `gitleaks` binary directly when a separate report or diagnostic
 output is needed.
+
+The action trusts `args`. Its checks match the spellings listed above, not
+every way an option can reach Gitleaks. Report or diagnostic output a caller
+enables another way is the caller's to keep out of logs and artifacts.
