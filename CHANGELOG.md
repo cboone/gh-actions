@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [6.0.0] - 2026-11-21
 
+### Added
+
+- Contributors can run the local suites with `make test` and include lint and
+  format checks with `make test-all`. The `test-scrut`, `test-python` and
+  `test-node` targets group suites shared with CI (`6d36579`).
+
 ### Changed
 
 - **Breaking:** `scan-for-secrets.yml` uses the exact base revision's Gitleaks
@@ -17,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   take effect after merge. This path requires `job.workflow_repository` and
   `job.workflow_sha`, which GitHub Enterprise Server does not provide
   (`069d8cb`).
+- Updated reusable workflow dependencies for CodeQL, `actions/setup-node`,
+  Rust release artifact upload and download, `lean-action` and `typos`
+  (`e4e6cc1`).
 
 ### Fixed
 
@@ -32,8 +41,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   codes, requires `jq`, and rejects report flags, diagnostics flags and
   redaction overrides other than `--redact` and `--redact=100` (#174).
 - **Breaking:** `run-trufflehog` logs finding metadata from private JSON in both
-  modes and reports scanner errors by exit status. It requires `jq` and
-  controls the report format even when no allowlist is configured (#174).
+  modes and reports scanner errors by exit status. For sources other than Git
+  and Filesystem, the log includes the source type and any available location
+  fields. The action requires `jq` and controls the report format even when no
+  allowlist is configured (#174).
+- `lint-shell.yml` reports how many tracked paths the worktree filter skipped,
+  gives a more precise notice when it finds no scripts and publishes the
+  manifest only after discovery succeeds (`8a6ac5f`).
 
 ## [5.0.0] - 2026-09-25
 
