@@ -115,6 +115,10 @@ without it stops the job instead of passing every finding. The allowlist
 matching itself is plain JSON comparison, which no `jq` version has reason to
 change, and the path is inert until a caller sets the input.
 
+The Gitleaks job in `scan-for-secrets.yml` also uses runner-provided `jq`.
+It prints fingerprint, file, line and rule from the scanner's private JSON
+report. A missing `jq` or an unusable report fails the step.
+
 ### Pinning Policy and Trust Model
 
 A condensed summary lives in [README.md](../README.md#trust-model-and-pinning).
@@ -625,6 +629,9 @@ fingerprints. Trusted ignore entries still work. Gitleaks 8.30.1's detector load
 `source/.gitleaksignore` even with `--gitleaks-ignore-path`, so the workflow saves
 the source file outside the checkout while scanning and restores it on exit.
 Working-tree scans inspect that file separately with the same trusted rules.
+The fixture checks that both scan sites report finding metadata without matched
+values. A composite-rule case checks that the auxiliary value stays out of the
+log. Gitleaks can print that value in verbose mode even with full redaction.
 
 `scripts/prepare-gitleaks-config.py` uses Python 3.11+ and its standard-library
 TOML parser. The Ubuntu runner provides Python; the existing checksum-pinned uv

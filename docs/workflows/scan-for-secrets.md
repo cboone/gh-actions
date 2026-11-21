@@ -3,6 +3,11 @@
 Run gitleaks, trufflehog, or both to scan for leaked secrets. Supports
 full-history and working-tree scan scopes.
 
+Gitleaks redacts matched values and logs each finding's fingerprint, file, line
+and rule. Findings fail the scan, including findings in a proposed
+`.gitleaksignore` during a working-tree pull-request scan. The job uses the
+Ubuntu runner's `jq` to format this report.
+
 On `pull_request` events, gitleaks reads its configuration from the exact base
 revision. `allowlist-config` selects a file relative to that revision's repository
 root; without it, the base's `.gitleaks.toml` is used, or the built-in default

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `scan-for-secrets.yml` applies full Gitleaks redaction and logs only each
+  finding's fingerprint, file, line and rule, including findings in a proposed
+  `.gitleaksignore` (#174).
+
 ## [5.0.0] - 2026-09-25
 
 ### Added

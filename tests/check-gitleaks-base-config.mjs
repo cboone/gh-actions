@@ -45,7 +45,10 @@ const prepareConfig = resolve("scripts/prepare-gitleaks-config.py");
 const defaults = "[extend]\nuseDefault = true\n";
 const widened = `${defaults}\n[allowlist]\npaths = ['''.*''']\n`;
 // Synthetic token assembled at runtime so the self-scan does not flag this fixture.
-const secret = `token = "${"ghp_"}${randomBytes(18).toString("hex")}"\n`;
+const token = `${"ghp_"}${randomBytes(18).toString("hex")}`;
+const secret = `token = "${token}"\n`;
+const primary = randomBytes(12).toString("hex");
+const auxiliary = randomBytes(12).toString("hex");
 const root = mkdtempSync(join(tmpdir(), "gitleaks-base-control-"));
 let cases = 0;
 
@@ -103,7 +106,15 @@ function runCase(name, { base = {}, head = {}, config = "", event = "pull_reques
   });
   assert.equal(result.status, expected, `${name}: unexpected scan exit\n${result.output}`);
   assert.match(result.output, new RegExp(message), `${name}: expected diagnostic\n${result.output}`);
-  if (expectSecret) assert.ok(result.output.includes(secretPath), `${name}: planted secret was not detected`);
+  for (const value of [token, primary, auxiliary]) {
+    assert.ok(!result.output.includes(value), `${name}: the scan logged a matched value`);
+  }
+  if (expectSecret) {
+    assert.ok(
+      result.output.split("\n").some((line) => /^fingerprint=".+" file=".+" line=\d+ rule=".+"$/.test(line) && line.includes(`file=${JSON.stringify(secretPath)}`)),
+      `${name}: expected fingerprint, file, line and rule`,
+    );
+  }
   if (originalIgnore !== null) {
     assert.ok(existsSync(join(source, ".gitleaksignore")), `${name}: ignore file was not restored`);
     assert.equal(readFileSync(join(source, ".gitleaksignore"), "utf8"), originalIgnore, `${name}: ignore file was not restored`);
@@ -178,6 +189,24 @@ regexes = ["fixture-canary"]
   }
   runCase("proposed-ignore-push", { prIgnore: true, event: "push", expected: 0, message: "no leaks found" });
   runCase("ignore-content", { secretPath: ".gitleaksignore", expectSecret: true });
+  const compositeRule = `[[rules]]
+id = "primary"
+regex = 'primary=([a-f0-9]+)'
+secretGroup = 1
+[[rules.required]]
+id = "auxiliary"
+
+[[rules]]
+id = "auxiliary"
+regex = 'auxiliary=([a-f0-9]+)'
+secretGroup = 1
+skipReport = true
+`;
+  runCase("composite-rule", {
+    base: { ".gitleaks.toml": compositeRule },
+    head: { "secret.txt": `primary=${primary}\nauxiliary=${auxiliary}\n` },
+    expectSecret: true,
+  });
   console.log(`gitleaks-base-config: passed (${cases} cases)`);
 } finally {
   // Only this fixture's recorded, exclusively owned directory is removed.
